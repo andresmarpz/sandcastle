@@ -15,6 +15,7 @@
         "@effect/cli": "^0.54.0",
         "@effect/platform": "^0.77.0",
         "@effect/platform-node": "^0.72.0",
+        "@sandcastle/petname": "workspace:*",
         "@sandcastle/worktree": "workspace:*",
         "effect": "^3.19.14",
       },
