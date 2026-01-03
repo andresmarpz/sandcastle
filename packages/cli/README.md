@@ -123,7 +123,7 @@ Manage git worktrees for isolated development environments. All worktree command
 Create a new worktree with a new branch.
 
 ```bash
-sandcastle worktree create [--from <ref>] <project> <name>
+sandcastle worktree create [--from <ref>] [--open] [--editor <cmd>] <project> <name>
 ```
 
 **Arguments:**
@@ -134,6 +134,8 @@ sandcastle worktree create [--from <ref>] <project> <name>
 **Options:**
 
 - `--from <ref>` - Branch or ref to base the worktree from (defaults to HEAD)
+- `-o, --open` - Open worktree in editor after creation
+- `-e, --editor <cmd>` - Editor command to use (default: cursor)
 
 **Example:**
 
@@ -143,6 +145,12 @@ bun run index.ts worktree create my-app feature-auth
 
 # Create worktree from main branch
 bun run index.ts worktree create --from main my-app feature-auth
+
+# Create worktree and open in editor
+bun run index.ts worktree create --open my-app feature-auth
+
+# Create worktree and open in VS Code
+bun run index.ts worktree create --open --editor code my-app feature-auth
 ```
 
 ---
@@ -211,10 +219,10 @@ bun run index.ts worktree delete -f my-app feature-auth
 
 #### `worktree open`
 
-Open a worktree in VS Code.
+Open a worktree in your editor.
 
 ```bash
-sandcastle worktree open <project> <name>
+sandcastle worktree open [--editor <cmd>] <project> <name>
 ```
 
 **Arguments:**
@@ -222,10 +230,18 @@ sandcastle worktree open <project> <name>
 - `<project>` - Project name
 - `<name>` - Name of the worktree to open
 
+**Options:**
+
+- `-e, --editor <cmd>` - Editor command to use (default: cursor)
+
 **Example:**
 
 ```bash
+# Open in Cursor (default)
 bun run index.ts worktree open my-app feature-auth
+
+# Open in VS Code
+bun run index.ts worktree open --editor code my-app feature-auth
 ```
 
 ---
