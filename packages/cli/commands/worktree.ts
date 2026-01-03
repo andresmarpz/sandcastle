@@ -1,6 +1,7 @@
 import { Args, Command, Options } from "@effect/cli"
 import { Console, Effect, Option } from "effect"
 import { WorktreeService } from "@sandcastle/worktree"
+import { petname } from "@sandcastle/petname"
 import { ProjectService } from "../services/index.ts"
 import * as path from "node:path"
 import * as os from "node:os"
@@ -16,6 +17,11 @@ const projectArg = Args.text({ name: "project" }).pipe(
 )
 
 const worktreeNameArg = Args.text({ name: "name" }).pipe(
+  Args.withDescription("Worktree/branch name (auto-generated if not provided)"),
+  Args.optional
+)
+
+const worktreeNameArgRequired = Args.text({ name: "name" }).pipe(
   Args.withDescription("Worktree/branch name")
 )
 
@@ -34,12 +40,15 @@ const forceOption = Options.boolean("force").pipe(
 export const worktreeCreate = Command.make(
   "create",
   { project: projectArg, name: worktreeNameArg, from: fromOption },
-  ({ project, name, from }) =>
+  ({ project, name: nameOption, from }) =>
     Effect.gen(function* () {
       // Resolve project name to repo path
       const projects = yield* ProjectService
       const proj = yield* projects.get(project)
       const repoPath = proj.gitPath
+
+      // Use provided name or auto-generate with petname
+      const name = Option.getOrElse(nameOption, () => petname())
 
       const service = yield* WorktreeService
       const worktreePath = computeWorktreePath(proj.name, name)
@@ -93,7 +102,7 @@ export const worktreeList = Command.make(
 
 export const worktreeDelete = Command.make(
   "delete",
-  { project: projectArg, name: worktreeNameArg, force: forceOption },
+  { project: projectArg, name: worktreeNameArgRequired, force: forceOption },
   ({ project, name, force }) =>
     Effect.gen(function* () {
       // Resolve project name to repo path
@@ -117,7 +126,7 @@ export const worktreeDelete = Command.make(
 
 export const worktreeOpen = Command.make(
   "open",
-  { project: projectArg, name: worktreeNameArg },
+  { project: projectArg, name: worktreeNameArgRequired },
   ({ project, name }) =>
     Effect.gen(function* () {
       // Resolve project name to repo path
