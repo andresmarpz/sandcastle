@@ -1,3 +1,4 @@
+#!/usr/bin/env bun
 import { Command } from "@effect/cli"
 import { NodeContext, NodeRuntime } from "@effect/platform-node"
 import { Effect, Layer } from "effect"
