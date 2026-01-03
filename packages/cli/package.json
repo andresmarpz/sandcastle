@@ -3,6 +3,9 @@
   "module": "index.ts",
   "type": "module",
   "private": true,
+  "bin": {
+    "sandcastle": "index.ts"
+  },
   "scripts": {
     "dev": "bun run index.ts",
     "test": "bun test",
