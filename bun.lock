@@ -26,6 +26,19 @@
         "typescript": "^5",
       },
     },
+    "packages/config": {
+      "name": "@sandcastle/config",
+      "version": "0.1.0",
+      "dependencies": {
+        "effect": "^3.19.14",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+      },
+      "peerDependencies": {
+        "typescript": "^5",
+      },
+    },
     "packages/petname": {
       "name": "@sandcastle/petname",
       "version": "0.1.0",
@@ -97,6 +110,8 @@
     "@parcel/watcher-win32-x64": ["@parcel/watcher-win32-x64@2.5.1", "", { "os": "win32", "cpu": "x64" }, "sha512-9lHBdJITeNR++EvSQVUcaZoWupyHfXe1jZvGZ06O/5MflPcuPLtEphScIBL+AiCWBO46tDSHzWyD0uDmmZqsgA=="],
 
     "@sandcastle/cli": ["@sandcastle/cli@workspace:packages/cli"],
+
+    "@sandcastle/config": ["@sandcastle/config@workspace:packages/config"],
 
     "@sandcastle/petname": ["@sandcastle/petname@workspace:packages/petname"],
 
