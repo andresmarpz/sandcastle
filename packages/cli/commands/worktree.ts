@@ -30,11 +30,22 @@ const forceOption = Options.boolean("force").pipe(
   Options.withDescription("Force removal even if worktree is dirty")
 )
 
+const editorOption = Options.text("editor").pipe(
+  Options.optional,
+  Options.withAlias("e"),
+  Options.withDescription("Editor command to use (default: cursor)")
+)
+
+const openOption = Options.boolean("open").pipe(
+  Options.withAlias("o"),
+  Options.withDescription("Open worktree in editor after creation")
+)
+
 // Commands
 export const worktreeCreate = Command.make(
   "create",
-  { project: projectArg, name: worktreeNameArg, from: fromOption },
-  ({ project, name, from }) =>
+  { project: projectArg, name: worktreeNameArg, from: fromOption, open: openOption, editor: editorOption },
+  ({ project, name, from, open, editor }) =>
     Effect.gen(function* () {
       // Resolve project name to repo path
       const projects = yield* ProjectService
@@ -60,6 +71,15 @@ export const worktreeCreate = Command.make(
       yield* Console.log(`Worktree created successfully.`)
       yield* Console.log(`  Branch: ${result.branch}`)
       yield* Console.log(`  Commit: ${result.commit}`)
+
+      // Open in editor if requested
+      if (open) {
+        const editorCmd = Option.getOrElse(editor, () => "cursor")
+        yield* Effect.promise(() =>
+          Bun.$`${editorCmd} ${worktreePath}`.quiet()
+        )
+        yield* Console.log(`Opened in ${editorCmd}.`)
+      }
     })
 ).pipe(Command.withDescription("Create a new worktree for a project"))
 
@@ -117,8 +137,8 @@ export const worktreeDelete = Command.make(
 
 export const worktreeOpen = Command.make(
   "open",
-  { project: projectArg, name: worktreeNameArg },
-  ({ project, name }) =>
+  { project: projectArg, name: worktreeNameArg, editor: editorOption },
+  ({ project, name, editor }) =>
     Effect.gen(function* () {
       // Resolve project name to repo path
       const projects = yield* ProjectService
@@ -130,14 +150,14 @@ export const worktreeOpen = Command.make(
       // Verify worktree exists
       yield* service.get(proj.gitPath, worktreePath)
 
+      const editorCmd = Option.getOrElse(editor, () => "cursor")
       yield* Console.log(`Opening worktree '${name}' at ${worktreePath}`)
 
-      // Open in VS Code
       yield* Effect.promise(() =>
-        Bun.$`code ${worktreePath}`.quiet()
+        Bun.$`${editorCmd} ${worktreePath}`.quiet()
       )
 
-      yield* Console.log("Opened in editor.")
+      yield* Console.log(`Opened in ${editorCmd}.`)
     })
 ).pipe(Command.withDescription("Open a worktree in your editor"))
 
