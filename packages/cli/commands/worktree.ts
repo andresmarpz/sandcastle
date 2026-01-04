@@ -233,25 +233,26 @@ export const worktreeDelete = Command.make(
   deleteWorktreeHandler
 ).pipe(Command.withDescription("Delete a worktree"));
 
+// Alias for delete (consistency with project remove)
+export const worktreeRemove = Command.make(
+  "remove",
+  { project: projectArg, name: worktreeNameArgRequired, force: forceOption },
+  deleteWorktreeHandler
+).pipe(Command.withDescription("Delete a worktree (alias for 'delete')"));
+
 export interface OpenWorktreeOptions {
   project: string;
-  name: Option.Option<string>;
+  name: string;
   editor: Option.Option<string>;
 }
 
 export const openWorktreeHandler = (options: OpenWorktreeOptions) =>
   Effect.gen(function* () {
-    const { project, name: nameOption, editor } = options;
+    const { project, name: worktreeName, editor } = options;
 
     // Resolve project name to repo path
     const projects = yield* ProjectService;
     const proj = yield* projects.get(project);
-
-    // Name is required for open command
-    const worktreeName = Option.getOrThrowWith(
-      nameOption,
-      () => new Error("Worktree name is required for 'open' command")
-    );
 
     const service = yield* WorktreeService;
     const worktreePath = computeWorktreePath(proj.name, worktreeName);
@@ -269,7 +270,7 @@ export const openWorktreeHandler = (options: OpenWorktreeOptions) =>
 
 export const worktreeOpen = Command.make(
   "open",
-  { project: projectArg, name: worktreeNameArg, editor: editorOption },
+  { project: projectArg, name: worktreeNameArgRequired, editor: editorOption },
   openWorktreeHandler
 ).pipe(Command.withDescription("Open a worktree in your editor"));
 
@@ -305,6 +306,7 @@ export const worktreeCommand = Command.make("worktree").pipe(
     worktreeCreate,
     worktreeList,
     worktreeDelete,
+    worktreeRemove,
     worktreeOpen,
     worktreePrune,
   ])

@@ -210,6 +210,7 @@ describe("worktree prune", () => {
 describe("worktree open", () => {
   // Note: We skip the Bun.$ execution in tests by not mocking it
   // The test verifies the flow up to the shell command
+  // Note: Missing name argument is now validated by @effect/cli framework
 
   test("validates worktree exists before opening", async () => {
     const project = mockProject({ name: "my-project", gitPath: "/path/to/repo" })
@@ -218,7 +219,7 @@ describe("worktree open", () => {
     const error = await runTestCommandExpectError(
       openWorktreeHandler({
         project: "my-project",
-        name: Option.some("nonexistent"),
+        name: "nonexistent",
         editor: Option.none(),
       }),
       {
@@ -228,21 +229,6 @@ describe("worktree open", () => {
     )
 
     expect(error).toBeInstanceOf(WorktreeNotFoundError)
-  })
-
-  test("fails when name is not provided", async () => {
-    const project = mockProject({ name: "my-project", gitPath: "/path/to/repo" })
-
-    await expect(
-      runTestCommand(
-        openWorktreeHandler({
-          project: "my-project",
-          name: Option.none(), // Missing required name
-          editor: Option.none(),
-        }),
-        { project: { initialProjects: [project] } }
-      )
-    ).rejects.toThrow("Worktree name is required")
   })
 })
 
