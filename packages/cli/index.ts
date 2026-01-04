@@ -2,6 +2,7 @@
 import { Command } from "@effect/cli"
 import { NodeContext, NodeRuntime } from "@effect/platform-node"
 import { Effect, Layer } from "effect"
+import { ConfigServiceLive } from "@sandcastle/config"
 import { WorktreeServiceLive } from "@sandcastle/worktree"
 import { ProjectServiceLive } from "./services/index.ts"
 import { projectCommand, worktreeCommand } from "./commands/index.ts"
@@ -19,7 +20,12 @@ const cli = Command.run(sandcastle, {
 })
 
 // Combine all layers
-const MainLayer = Layer.mergeAll(NodeContext.layer, WorktreeServiceLive, ProjectServiceLive)
+const MainLayer = Layer.mergeAll(
+  NodeContext.layer,
+  ConfigServiceLive,
+  WorktreeServiceLive,
+  ProjectServiceLive
+)
 
 // Run the CLI
 cli(process.argv).pipe(
