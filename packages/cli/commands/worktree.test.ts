@@ -1,5 +1,6 @@
 import { describe, test, expect } from "bun:test"
 import { Option } from "effect"
+import { InitHookError } from "@sandcastle/config"
 import { WorktreeNotFoundError } from "@sandcastle/worktree"
 import { ProjectNotFoundError } from "../services/errors.ts"
 import {
@@ -242,5 +243,96 @@ describe("worktree open", () => {
         { project: { initialProjects: [project] } }
       )
     ).rejects.toThrow("Worktree name is required")
+  })
+})
+
+describe("worktree create with init hook", () => {
+  test("runs init hook after creating worktree", async () => {
+    const project = mockProject({ name: "my-project", gitPath: "/path/to/repo" })
+    const mockConfig = { init: async () => {} }
+
+    const logs = await runTestCommand(
+      createWorktreeHandler({
+        project: "my-project",
+        name: Option.some("feature-branch"),
+        from: Option.none(),
+        open: false,
+        editor: Option.none(),
+      }),
+      {
+        project: { initialProjects: [project] },
+        config: { mockConfig },
+      }
+    )
+
+    expect(logs.some(l => l.includes("Creating worktree"))).toBe(true)
+    expect(logs.some(l => l.includes("Worktree created successfully"))).toBe(true)
+  })
+
+  test("skips init hook with skipInit flag", async () => {
+    const project = mockProject({ name: "my-project", gitPath: "/path/to/repo" })
+    const mockConfig = { init: async () => {} }
+
+    const logs = await runTestCommand(
+      createWorktreeHandler({
+        project: "my-project",
+        name: Option.some("feature-branch"),
+        from: Option.none(),
+        open: false,
+        editor: Option.none(),
+        skipInit: true,
+      }),
+      {
+        project: { initialProjects: [project] },
+        config: { mockConfig },
+      }
+    )
+
+    expect(logs.some(l => l.includes("Worktree created successfully"))).toBe(true)
+  })
+
+  test("succeeds when no config file exists", async () => {
+    const project = mockProject({ name: "my-project", gitPath: "/path/to/repo" })
+
+    const logs = await runTestCommand(
+      createWorktreeHandler({
+        project: "my-project",
+        name: Option.some("feature-branch"),
+        from: Option.none(),
+        open: false,
+        editor: Option.none(),
+      }),
+      {
+        project: { initialProjects: [project] },
+        config: { mockConfig: undefined },
+      }
+    )
+
+    expect(logs.some(l => l.includes("Worktree created successfully"))).toBe(true)
+  })
+
+  test("rolls back worktree when init hook fails", async () => {
+    const project = mockProject({ name: "my-project", gitPath: "/path/to/repo" })
+
+    const error = await runTestCommandExpectError(
+      createWorktreeHandler({
+        project: "my-project",
+        name: Option.some("feature-branch"),
+        from: Option.none(),
+        open: false,
+        editor: Option.none(),
+      }),
+      {
+        project: { initialProjects: [project] },
+        config: {
+          mockConfig: { init: async () => {} },
+          initShouldFail: true,
+          initErrorMessage: "bun install failed",
+        },
+      }
+    )
+
+    expect(error).toBeInstanceOf(InitHookError)
+    expect((error as InitHookError).message).toBe("bun install failed")
   })
 })

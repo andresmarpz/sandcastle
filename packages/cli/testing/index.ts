@@ -2,24 +2,29 @@ import { Effect, Layer, Ref, Logger, LogLevel } from "effect"
 import { NodeContext } from "@effect/platform-node"
 import { makeProjectServiceTest, type ProjectServiceTestConfig } from "../services/project-test.ts"
 import { makeWorktreeServiceTest, type WorktreeServiceTestConfig } from "./worktree-test.ts"
+import { makeConfigServiceTest, type ConfigServiceTestConfig } from "./config-test.ts"
 import type { Project } from "../services/project.ts"
 
 export { makeProjectServiceTest, ProjectServiceTest } from "../services/project-test.ts"
 export { makeWorktreeServiceTest, WorktreeServiceTest } from "./worktree-test.ts"
+export { makeConfigServiceTest, ConfigServiceTest } from "./config-test.ts"
+export type { ConfigServiceTestConfig } from "./config-test.ts"
 
 export interface TestConfig {
   project?: ProjectServiceTestConfig
   worktree?: WorktreeServiceTestConfig
+  config?: ConfigServiceTestConfig
 }
 
 /**
- * Creates a combined test layer with both services.
+ * Creates a combined test layer with all services.
  */
 export const makeTestLayer = (config: TestConfig = {}) =>
   Layer.mergeAll(
     NodeContext.layer,
     makeProjectServiceTest(config.project),
-    makeWorktreeServiceTest(config.worktree)
+    makeWorktreeServiceTest(config.worktree),
+    makeConfigServiceTest(config.config)
   )
 
 /**
@@ -40,6 +45,7 @@ export const makeTestLayerWithCapture = (config: TestConfig = {}) => {
       NodeContext.layer,
       makeProjectServiceTest(config.project),
       makeWorktreeServiceTest(config.worktree),
+      makeConfigServiceTest(config.config),
       loggerLayer
     ),
     getLogs: () => [...logs],
