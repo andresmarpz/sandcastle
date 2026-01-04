@@ -1,5 +1,6 @@
 import { Args, Command, Options } from "@effect/cli";
 import { Effect, Option } from "effect";
+import { ConfigService } from "@sandcastle/config";
 import { WorktreeService } from "@sandcastle/worktree";
 import { petname } from "@sandcastle/petname";
 import { ProjectService } from "../services/index.ts";
@@ -58,6 +59,10 @@ const openOption = Options.boolean("open").pipe(
   Options.withDescription("Open worktree in editor after creation")
 );
 
+const noInitOption = Options.boolean("no-init").pipe(
+  Options.withDescription("Skip running the init hook from sandcastle.config.ts")
+);
+
 // Handler functions (exported for testing)
 export interface CreateWorktreeOptions {
   project: string;
@@ -65,11 +70,12 @@ export interface CreateWorktreeOptions {
   from: Option.Option<string>;
   open: boolean;
   editor: Option.Option<string>;
+  skipInit?: boolean;
 }
 
 export const createWorktreeHandler = (options: CreateWorktreeOptions) =>
   Effect.gen(function* () {
-    const { project, name: nameOption, from, open, editor } = options;
+    const { project, name: nameOption, from, open, editor, skipInit = false } = options;
 
     // Resolve project name to repo path
     const projects = yield* ProjectService;
@@ -101,6 +107,40 @@ export const createWorktreeHandler = (options: CreateWorktreeOptions) =>
     yield* Effect.log(`  Branch: ${result.branch}`);
     yield* Effect.log(`  Commit: ${result.commit}`);
 
+    // Run init hook (unless skipped)
+    if (!skipInit) {
+      const configService = yield* ConfigService;
+      const initParams = {
+        baseRepoPath: repoPath,
+        worktreePath,
+        projectName: proj.name,
+        worktreeName,
+        branch: worktreeName,
+        baseBranch: fromRef,
+      };
+
+      yield* configService.loadAndRunInit(repoPath, initParams).pipe(
+        Effect.tapError((error) =>
+          Effect.gen(function* () {
+            yield* Effect.logWarning(`Init hook failed: ${error}`);
+            yield* Effect.logWarning("Rolling back worktree...");
+
+            // Rollback: remove the created worktree
+            yield* service.remove({
+              repoPath,
+              worktreePath,
+              force: true,
+            }).pipe(
+              Effect.tapError((removeErr) =>
+                Effect.logError(`Failed to rollback worktree: ${removeErr}`)
+              ),
+              Effect.catchAll(() => Effect.void)
+            );
+          })
+        )
+      );
+    }
+
     // Open in editor if requested
     if (open) {
       const editorCmd = Option.getOrElse(editor, () => "cursor");
@@ -118,8 +158,9 @@ export const worktreeCreate = Command.make(
     from: fromOption,
     open: openOption,
     editor: editorOption,
+    noInit: noInitOption,
   },
-  createWorktreeHandler
+  (args) => createWorktreeHandler({ ...args, skipInit: args.noInit })
 ).pipe(Command.withDescription("Create a new worktree for a project"));
 
 export interface ListWorktreesOptions {
