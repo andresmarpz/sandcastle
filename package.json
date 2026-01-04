@@ -10,7 +10,8 @@
   },
   "devDependencies": {
     "turbo": "^2.7.2",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "@sandcastle/config": "workspace:*"
   },
   "workspaces": [
     "apps/*",
