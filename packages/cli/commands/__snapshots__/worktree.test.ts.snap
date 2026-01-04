@@ -1,6 +1,6 @@
 // Bun Snapshot v1, https://bun.sh/docs/test/snapshots
 
-exports[`worktree create creates worktree with new branch 1`] = `
+exports[`worktree create creates worktree with explicit name 1`] = `
 "Creating worktree 'feature-branch' for project 'my-project'
   Path: /Users/andresmartinezperez/sandcastle/worktrees/my-project/feature-branch
   Based on: HEAD
@@ -48,9 +48,4 @@ Worktree deleted successfully."
 exports[`worktree prune prunes stale worktrees 1`] = `
 "Pruning stale worktree references for 'my-project'...
 Pruned successfully."
-`;
-
-exports[`worktree open opens worktree in editor 1`] = `
-"Opening worktree 'feature-x' at /Users/andresmartinezperez/sandcastle/worktrees/my-project/feature-x
-Opened in editor."
 `;

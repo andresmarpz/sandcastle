@@ -1,5 +1,5 @@
 import { Args, Command, Options } from "@effect/cli"
-import { Console, Effect, Option } from "effect"
+import { Effect, Option } from "effect"
 import { WorktreeService } from "@sandcastle/worktree"
 import { petname } from "@sandcastle/petname"
 import { ProjectService } from "../services/index.ts"
@@ -7,7 +7,7 @@ import * as path from "node:path"
 import * as os from "node:os"
 
 // Helper to compute worktree path using project name
-const computeWorktreePath = (projectName: string, worktreeName: string): string => {
+export const computeWorktreePath = (projectName: string, worktreeName: string): string => {
   return path.join(os.homedir(), "sandcastle", "worktrees", projectName, worktreeName)
 }
 
@@ -47,144 +47,199 @@ const openOption = Options.boolean("open").pipe(
   Options.withDescription("Open worktree in editor after creation")
 )
 
+// Handler functions (exported for testing)
+export interface CreateWorktreeOptions {
+  project: string
+  name: Option.Option<string>
+  from: Option.Option<string>
+  open: boolean
+  editor: Option.Option<string>
+}
+
+export const createWorktreeHandler = (options: CreateWorktreeOptions) =>
+  Effect.gen(function* () {
+    const { project, name: nameOption, from, open, editor } = options
+
+    // Resolve project name to repo path
+    const projects = yield* ProjectService
+    const proj = yield* projects.get(project)
+    const repoPath = proj.gitPath
+
+    // Use provided name or auto-generate with petname
+    const worktreeName = Option.getOrElse(nameOption, () => petname())
+
+    const service = yield* WorktreeService
+    const worktreePath = computeWorktreePath(proj.name, worktreeName)
+    const fromRef = Option.getOrElse(from, () => "HEAD")
+
+    yield* Effect.log(`Creating worktree '${worktreeName}' for project '${project}'`)
+    yield* Effect.log(`  Path: ${worktreePath}`)
+    yield* Effect.log(`  Based on: ${fromRef}`)
+
+    const result = yield* service.create({
+      repoPath,
+      worktreePath,
+      branch: worktreeName,
+      createBranch: true,
+      fromRef,
+    })
+
+    yield* Effect.log(`Worktree created successfully.`)
+    yield* Effect.log(`  Branch: ${result.branch}`)
+    yield* Effect.log(`  Commit: ${result.commit}`)
+
+    // Open in editor if requested
+    if (open) {
+      const editorCmd = Option.getOrElse(editor, () => "cursor")
+      yield* Effect.promise(() =>
+        Bun.$`${editorCmd} ${worktreePath}`.quiet()
+      )
+      yield* Effect.log(`Opened in ${editorCmd}.`)
+    }
+  })
+
 // Commands
 export const worktreeCreate = Command.make(
   "create",
   { project: projectArg, name: worktreeNameArg, from: fromOption, open: openOption, editor: editorOption },
-  ({ project, name, from, open, editor }) =>
-    Effect.gen(function* () {
-      // Resolve project name to repo path
-      const projects = yield* ProjectService
-      const proj = yield* projects.get(project)
-      const repoPath = proj.gitPath
-
-      // Use provided name or auto-generate with petname
-      const name = Option.getOrElse(nameOption, () => petname())
-
-      const service = yield* WorktreeService
-      const worktreePath = computeWorktreePath(proj.name, name)
-      const fromRef = Option.getOrElse(from, () => "HEAD")
-
-      yield* Console.log(`Creating worktree '${name}' for project '${project}'`)
-      yield* Console.log(`  Path: ${worktreePath}`)
-      yield* Console.log(`  Based on: ${fromRef}`)
-
-      const result = yield* service.create({
-        repoPath,
-        worktreePath,
-        branch: name,
-        createBranch: true,
-        fromRef,
-      })
-
-      yield* Console.log(`Worktree created successfully.`)
-      yield* Console.log(`  Branch: ${result.branch}`)
-      yield* Console.log(`  Commit: ${result.commit}`)
-
-      // Open in editor if requested
-      if (open) {
-        const editorCmd = Option.getOrElse(editor, () => "cursor")
-        yield* Effect.promise(() =>
-          Bun.$`${editorCmd} ${worktreePath}`.quiet()
-        )
-        yield* Console.log(`Opened in ${editorCmd}.`)
-      }
-    })
+  createWorktreeHandler
 ).pipe(Command.withDescription("Create a new worktree for a project"))
+
+export interface ListWorktreesOptions {
+  project: string
+}
+
+export const listWorktreesHandler = (options: ListWorktreesOptions) =>
+  Effect.gen(function* () {
+    const { project } = options
+
+    // Resolve project name to repo path
+    const projects = yield* ProjectService
+    const proj = yield* projects.get(project)
+
+    const service = yield* WorktreeService
+
+    yield* Effect.log(`Worktrees for '${project}':\n`)
+    const worktrees = yield* service.list(proj.gitPath)
+
+    if (worktrees.length === 0) {
+      yield* Effect.log("No worktrees found.")
+      return
+    }
+
+    for (const wt of worktrees) {
+      const mainIndicator = wt.isMain ? " (main)" : ""
+      yield* Effect.log(`${wt.branch}${mainIndicator}`)
+      yield* Effect.log(`  Path: ${wt.path}`)
+      yield* Effect.log(`  Commit: ${wt.commit}`)
+    }
+  })
 
 export const worktreeList = Command.make(
   "list",
   { project: projectArg },
-  ({ project }) =>
-    Effect.gen(function* () {
-      // Resolve project name to repo path
-      const projects = yield* ProjectService
-      const proj = yield* projects.get(project)
-
-      const service = yield* WorktreeService
-
-      yield* Console.log(`Worktrees for '${project}':\n`)
-      const worktrees = yield* service.list(proj.gitPath)
-
-      if (worktrees.length === 0) {
-        yield* Console.log("No worktrees found.")
-        return
-      }
-
-      for (const wt of worktrees) {
-        const mainIndicator = wt.isMain ? " (main)" : ""
-        yield* Console.log(`${wt.branch}${mainIndicator}`)
-        yield* Console.log(`  Path: ${wt.path}`)
-        yield* Console.log(`  Commit: ${wt.commit}`)
-      }
-    })
+  listWorktreesHandler
 ).pipe(Command.withDescription("List worktrees for a project"))
+
+export interface DeleteWorktreeOptions {
+  project: string
+  name: string
+  force: boolean
+}
+
+export const deleteWorktreeHandler = (options: DeleteWorktreeOptions) =>
+  Effect.gen(function* () {
+    const { project, name, force } = options
+
+    // Resolve project name to repo path
+    const projects = yield* ProjectService
+    const proj = yield* projects.get(project)
+
+    const service = yield* WorktreeService
+    const worktreePath = computeWorktreePath(proj.name, name)
+
+    yield* Effect.log(`Deleting worktree '${name}' from project '${project}'`)
+
+    yield* service.remove({
+      repoPath: proj.gitPath,
+      worktreePath,
+      force,
+    })
+
+    yield* Effect.log("Worktree deleted successfully.")
+  })
 
 export const worktreeDelete = Command.make(
   "delete",
   { project: projectArg, name: worktreeNameArgRequired, force: forceOption },
-  ({ project, name, force }) =>
-    Effect.gen(function* () {
-      // Resolve project name to repo path
-      const projects = yield* ProjectService
-      const proj = yield* projects.get(project)
-
-      const service = yield* WorktreeService
-      const worktreePath = computeWorktreePath(proj.name, name)
-
-      yield* Console.log(`Deleting worktree '${name}' from project '${project}'`)
-
-      yield* service.remove({
-        repoPath: proj.gitPath,
-        worktreePath,
-        force,
-      })
-
-      yield* Console.log("Worktree deleted successfully.")
-    })
+  deleteWorktreeHandler
 ).pipe(Command.withDescription("Delete a worktree"))
+
+export interface OpenWorktreeOptions {
+  project: string
+  name: Option.Option<string>
+  editor: Option.Option<string>
+}
+
+export const openWorktreeHandler = (options: OpenWorktreeOptions) =>
+  Effect.gen(function* () {
+    const { project, name: nameOption, editor } = options
+
+    // Resolve project name to repo path
+    const projects = yield* ProjectService
+    const proj = yield* projects.get(project)
+
+    // Name is required for open command
+    const worktreeName = Option.getOrThrowWith(
+      nameOption,
+      () => new Error("Worktree name is required for 'open' command")
+    )
+
+    const service = yield* WorktreeService
+    const worktreePath = computeWorktreePath(proj.name, worktreeName)
+
+    // Verify worktree exists
+    yield* service.get(proj.gitPath, worktreePath)
+
+    const editorCmd = Option.getOrElse(editor, () => "cursor")
+    yield* Effect.log(`Opening worktree '${worktreeName}' at ${worktreePath}`)
+
+    yield* Effect.promise(() =>
+      Bun.$`${editorCmd} ${worktreePath}`.quiet()
+    )
+
+    yield* Effect.log(`Opened in ${editorCmd}.`)
+  })
 
 export const worktreeOpen = Command.make(
   "open",
   { project: projectArg, name: worktreeNameArg, editor: editorOption },
-  ({ project, name, editor }) =>
-    Effect.gen(function* () {
-      // Resolve project name to repo path
-      const projects = yield* ProjectService
-      const proj = yield* projects.get(project)
-
-      const service = yield* WorktreeService
-      const worktreePath = computeWorktreePath(proj.name, name)
-
-      // Verify worktree exists
-      yield* service.get(proj.gitPath, worktreePath)
-
-      const editorCmd = Option.getOrElse(editor, () => "cursor")
-      yield* Console.log(`Opening worktree '${name}' at ${worktreePath}`)
-
-      yield* Effect.promise(() =>
-        Bun.$`${editorCmd} ${worktreePath}`.quiet()
-      )
-
-      yield* Console.log(`Opened in ${editorCmd}.`)
-    })
+  openWorktreeHandler
 ).pipe(Command.withDescription("Open a worktree in your editor"))
+
+export interface PruneWorktreesOptions {
+  project: string
+}
+
+export const pruneWorktreesHandler = (options: PruneWorktreesOptions) =>
+  Effect.gen(function* () {
+    const { project } = options
+
+    // Resolve project name to repo path
+    const projects = yield* ProjectService
+    const proj = yield* projects.get(project)
+
+    const service = yield* WorktreeService
+
+    yield* Effect.log(`Pruning stale worktree references for '${project}'...`)
+    yield* service.prune(proj.gitPath)
+    yield* Effect.log("Pruned successfully.")
+  })
 
 export const worktreePrune = Command.make(
   "prune",
   { project: projectArg },
-  ({ project }) =>
-    Effect.gen(function* () {
-      // Resolve project name to repo path
-      const projects = yield* ProjectService
-      const proj = yield* projects.get(project)
-
-      const service = yield* WorktreeService
-
-      yield* Console.log(`Pruning stale worktree references for '${project}'...`)
-      yield* service.prune(proj.gitPath)
-      yield* Console.log("Pruned successfully.")
-    })
+  pruneWorktreesHandler
 ).pipe(Command.withDescription("Clean up stale worktree references"))
 
 // Parent command with subcommands
