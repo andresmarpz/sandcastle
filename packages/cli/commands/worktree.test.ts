@@ -1,95 +1,87 @@
 import { describe, test, expect } from "bun:test"
-import { Effect } from "effect"
-import { WorktreeService, WorktreeNotFoundError } from "@sandcastle/worktree"
-import { ProjectService } from "../services/index.ts"
+import { Option } from "effect"
+import { WorktreeNotFoundError } from "@sandcastle/worktree"
 import { ProjectNotFoundError } from "../services/errors.ts"
 import {
   runTestCommand,
   runTestCommandExpectError,
   mockProject,
 } from "../testing/index.ts"
-import * as path from "node:path"
-import * as os from "node:os"
-
-const computeWorktreePath = (projectName: string, worktreeName: string): string =>
-  path.join(os.homedir(), "sandcastle", "worktrees", projectName, worktreeName)
+import {
+  computeWorktreePath,
+  createWorktreeHandler,
+  listWorktreesHandler,
+  deleteWorktreeHandler,
+  openWorktreeHandler,
+  pruneWorktreesHandler,
+} from "./worktree.ts"
 
 describe("worktree create", () => {
-  test("creates worktree with new branch", async () => {
+  test("creates worktree with explicit name", async () => {
     const project = mockProject({ name: "my-project", gitPath: "/path/to/repo" })
-    const worktreePath = computeWorktreePath("my-project", "feature-branch")
 
-    const createEffect = Effect.gen(function* () {
-      const projects = yield* ProjectService
-      const proj = yield* projects.get("my-project")
-
-      const service = yield* WorktreeService
-      yield* Effect.log(`Creating worktree 'feature-branch' for project 'my-project'`)
-      yield* Effect.log(`  Path: ${worktreePath}`)
-      yield* Effect.log(`  Based on: HEAD`)
-
-      const result = yield* service.create({
-        repoPath: proj.gitPath,
-        worktreePath,
-        branch: "feature-branch",
-        createBranch: true,
-        fromRef: "HEAD",
-      })
-
-      yield* Effect.log(`Worktree created successfully.`)
-      yield* Effect.log(`  Branch: ${result.branch}`)
-      yield* Effect.log(`  Commit: ${result.commit}`)
-    })
-
-    const logs = await runTestCommand(createEffect, {
-      project: { initialProjects: [project] },
-    })
+    const logs = await runTestCommand(
+      createWorktreeHandler({
+        project: "my-project",
+        name: Option.some("feature-branch"),
+        from: Option.none(),
+        open: false,
+        editor: Option.none(),
+      }),
+      { project: { initialProjects: [project] } }
+    )
 
     expect(logs.join("\n")).toMatchSnapshot()
   })
 
+  test("creates worktree with auto-generated name", async () => {
+    const project = mockProject({ name: "my-project", gitPath: "/path/to/repo" })
+
+    const logs = await runTestCommand(
+      createWorktreeHandler({
+        project: "my-project",
+        name: Option.none(), // Test auto-generation
+        from: Option.none(),
+        open: false,
+        editor: Option.none(),
+      }),
+      { project: { initialProjects: [project] } }
+    )
+
+    // Verify the output contains expected patterns (name will be auto-generated)
+    expect(logs.some(l => l.includes("Creating worktree"))).toBe(true)
+    expect(logs.some(l => l.includes("for project 'my-project'"))).toBe(true)
+    expect(logs.some(l => l.includes("Worktree created successfully"))).toBe(true)
+  })
+
   test("creates worktree from specific ref", async () => {
     const project = mockProject({ name: "my-project", gitPath: "/path/to/repo" })
-    const worktreePath = computeWorktreePath("my-project", "hotfix")
 
-    const createEffect = Effect.gen(function* () {
-      const projects = yield* ProjectService
-      const proj = yield* projects.get("my-project")
-
-      const service = yield* WorktreeService
-      yield* Effect.log(`Creating worktree 'hotfix' for project 'my-project'`)
-      yield* Effect.log(`  Path: ${worktreePath}`)
-      yield* Effect.log(`  Based on: v1.0.0`)
-
-      const result = yield* service.create({
-        repoPath: proj.gitPath,
-        worktreePath,
-        branch: "hotfix",
-        createBranch: true,
-        fromRef: "v1.0.0",
-      })
-
-      yield* Effect.log(`Worktree created successfully.`)
-      yield* Effect.log(`  Branch: ${result.branch}`)
-      yield* Effect.log(`  Commit: ${result.commit}`)
-    })
-
-    const logs = await runTestCommand(createEffect, {
-      project: { initialProjects: [project] },
-    })
+    const logs = await runTestCommand(
+      createWorktreeHandler({
+        project: "my-project",
+        name: Option.some("hotfix"),
+        from: Option.some("v1.0.0"),
+        open: false,
+        editor: Option.none(),
+      }),
+      { project: { initialProjects: [project] } }
+    )
 
     expect(logs.join("\n")).toMatchSnapshot()
   })
 
   test("fails for non-existent project", async () => {
-    const createEffect = Effect.gen(function* () {
-      const projects = yield* ProjectService
-      yield* projects.get("unknown-project")
-    })
-
-    const error = await runTestCommandExpectError(createEffect, {
-      project: { initialProjects: [] },
-    })
+    const error = await runTestCommandExpectError(
+      createWorktreeHandler({
+        project: "unknown-project",
+        name: Option.some("feature-branch"),
+        from: Option.none(),
+        open: false,
+        editor: Option.none(),
+      }),
+      { project: { initialProjects: [] } }
+    )
 
     expect(error).toBeInstanceOf(ProjectNotFoundError)
     expect((error as ProjectNotFoundError).name).toBe("unknown-project")
@@ -102,31 +94,18 @@ describe("worktree list", () => {
     const worktreePath1 = computeWorktreePath("my-project", "feature-a")
     const worktreePath2 = computeWorktreePath("my-project", "feature-b")
 
-    const listEffect = Effect.gen(function* () {
-      const projects = yield* ProjectService
-      const proj = yield* projects.get("my-project")
-
-      const service = yield* WorktreeService
-      yield* Effect.log(`Worktrees for 'my-project':\n`)
-      const worktrees = yield* service.list(proj.gitPath)
-
-      for (const wt of worktrees) {
-        const mainIndicator = wt.isMain ? " (main)" : ""
-        yield* Effect.log(`${wt.branch}${mainIndicator}`)
-        yield* Effect.log(`  Path: ${wt.path}`)
-        yield* Effect.log(`  Commit: ${wt.commit}`)
+    const logs = await runTestCommand(
+      listWorktreesHandler({ project: "my-project" }),
+      {
+        project: { initialProjects: [project] },
+        worktree: {
+          initialWorktrees: new Map([
+            [worktreePath1, { path: worktreePath1, branch: "feature-a", commit: "abc1234", isMain: false }],
+            [worktreePath2, { path: worktreePath2, branch: "feature-b", commit: "def5678", isMain: false }],
+          ]),
+        },
       }
-    })
-
-    const logs = await runTestCommand(listEffect, {
-      project: { initialProjects: [project] },
-      worktree: {
-        initialWorktrees: new Map([
-          [worktreePath1, { path: worktreePath1, branch: "feature-a", commit: "abc1234", isMain: false }],
-          [worktreePath2, { path: worktreePath2, branch: "feature-b", commit: "def5678", isMain: false }],
-        ]),
-      },
-    })
+    )
 
     expect(logs.join("\n")).toMatchSnapshot()
   })
@@ -134,28 +113,13 @@ describe("worktree list", () => {
   test("shows empty message when no worktrees", async () => {
     const project = mockProject({ name: "my-project", gitPath: "/path/to/repo" })
 
-    const listEffect = Effect.gen(function* () {
-      const projects = yield* ProjectService
-      const proj = yield* projects.get("my-project")
-
-      const service = yield* WorktreeService
-      yield* Effect.log(`Worktrees for 'my-project':\n`)
-      const worktrees = yield* service.list(proj.gitPath)
-
-      if (worktrees.length === 0) {
-        yield* Effect.log("No worktrees found.")
-        return
+    const logs = await runTestCommand(
+      listWorktreesHandler({ project: "my-project" }),
+      {
+        project: { initialProjects: [project] },
+        worktree: { initialWorktrees: new Map() },
       }
-
-      for (const wt of worktrees) {
-        yield* Effect.log(`${wt.branch}`)
-      }
-    })
-
-    const logs = await runTestCommand(listEffect, {
-      project: { initialProjects: [project] },
-      worktree: { initialWorktrees: new Map() },
-    })
+    )
 
     expect(logs.join("\n")).toMatchSnapshot()
   })
@@ -166,30 +130,21 @@ describe("worktree delete", () => {
     const project = mockProject({ name: "my-project", gitPath: "/path/to/repo" })
     const worktreePath = computeWorktreePath("my-project", "old-branch")
 
-    const deleteEffect = Effect.gen(function* () {
-      const projects = yield* ProjectService
-      const proj = yield* projects.get("my-project")
-
-      const service = yield* WorktreeService
-      yield* Effect.log(`Deleting worktree 'old-branch' from project 'my-project'`)
-
-      yield* service.remove({
-        repoPath: proj.gitPath,
-        worktreePath,
+    const logs = await runTestCommand(
+      deleteWorktreeHandler({
+        project: "my-project",
+        name: "old-branch",
         force: false,
-      })
-
-      yield* Effect.log("Worktree deleted successfully.")
-    })
-
-    const logs = await runTestCommand(deleteEffect, {
-      project: { initialProjects: [project] },
-      worktree: {
-        initialWorktrees: new Map([
-          [worktreePath, { path: worktreePath, branch: "old-branch", commit: "xyz9999", isMain: false }],
-        ]),
-      },
-    })
+      }),
+      {
+        project: { initialProjects: [project] },
+        worktree: {
+          initialWorktrees: new Map([
+            [worktreePath, { path: worktreePath, branch: "old-branch", commit: "xyz9999", isMain: false }],
+          ]),
+        },
+      }
+    )
 
     expect(logs.join("\n")).toMatchSnapshot()
   })
@@ -198,30 +153,21 @@ describe("worktree delete", () => {
     const project = mockProject({ name: "my-project", gitPath: "/path/to/repo" })
     const worktreePath = computeWorktreePath("my-project", "dirty-branch")
 
-    const deleteEffect = Effect.gen(function* () {
-      const projects = yield* ProjectService
-      const proj = yield* projects.get("my-project")
-
-      const service = yield* WorktreeService
-      yield* Effect.log(`Deleting worktree 'dirty-branch' from project 'my-project'`)
-
-      yield* service.remove({
-        repoPath: proj.gitPath,
-        worktreePath,
+    const logs = await runTestCommand(
+      deleteWorktreeHandler({
+        project: "my-project",
+        name: "dirty-branch",
         force: true,
-      })
-
-      yield* Effect.log("Worktree deleted successfully.")
-    })
-
-    const logs = await runTestCommand(deleteEffect, {
-      project: { initialProjects: [project] },
-      worktree: {
-        initialWorktrees: new Map([
-          [worktreePath, { path: worktreePath, branch: "dirty-branch", commit: "xyz9999", isMain: false }],
-        ]),
-      },
-    })
+      }),
+      {
+        project: { initialProjects: [project] },
+        worktree: {
+          initialWorktrees: new Map([
+            [worktreePath, { path: worktreePath, branch: "dirty-branch", commit: "xyz9999", isMain: false }],
+          ]),
+        },
+      }
+    )
 
     expect(logs.join("\n")).toMatchSnapshot()
   })
@@ -230,22 +176,17 @@ describe("worktree delete", () => {
     const project = mockProject({ name: "my-project", gitPath: "/path/to/repo" })
     const worktreePath = computeWorktreePath("my-project", "nonexistent")
 
-    const deleteEffect = Effect.gen(function* () {
-      const projects = yield* ProjectService
-      const proj = yield* projects.get("my-project")
-
-      const service = yield* WorktreeService
-      yield* service.remove({
-        repoPath: proj.gitPath,
-        worktreePath,
+    const error = await runTestCommandExpectError(
+      deleteWorktreeHandler({
+        project: "my-project",
+        name: "nonexistent",
         force: false,
-      })
-    })
-
-    const error = await runTestCommandExpectError(deleteEffect, {
-      project: { initialProjects: [project] },
-      worktree: { initialWorktrees: new Map() },
-    })
+      }),
+      {
+        project: { initialProjects: [project] },
+        worktree: { initialWorktrees: new Map() },
+      }
+    )
 
     expect(error).toBeInstanceOf(WorktreeNotFoundError)
     expect((error as WorktreeNotFoundError).path).toBe(worktreePath)
@@ -256,72 +197,50 @@ describe("worktree prune", () => {
   test("prunes stale worktrees", async () => {
     const project = mockProject({ name: "my-project", gitPath: "/path/to/repo" })
 
-    const pruneEffect = Effect.gen(function* () {
-      const projects = yield* ProjectService
-      const proj = yield* projects.get("my-project")
-
-      const service = yield* WorktreeService
-      yield* Effect.log(`Pruning stale worktree references for 'my-project'...`)
-      yield* service.prune(proj.gitPath)
-      yield* Effect.log("Pruned successfully.")
-    })
-
-    const logs = await runTestCommand(pruneEffect, {
-      project: { initialProjects: [project] },
-    })
+    const logs = await runTestCommand(
+      pruneWorktreesHandler({ project: "my-project" }),
+      { project: { initialProjects: [project] } }
+    )
 
     expect(logs.join("\n")).toMatchSnapshot()
   })
 })
 
 describe("worktree open", () => {
-  test("opens worktree in editor", async () => {
-    const project = mockProject({ name: "my-project", gitPath: "/path/to/repo" })
-    const worktreePath = computeWorktreePath("my-project", "feature-x")
+  // Note: We skip the Bun.$ execution in tests by not mocking it
+  // The test verifies the flow up to the shell command
 
-    // Note: We don't actually run Bun.$ in tests, just verify the flow works
-    const openEffect = Effect.gen(function* () {
-      const projects = yield* ProjectService
-      const proj = yield* projects.get("my-project")
-
-      const service = yield* WorktreeService
-      // Verify worktree exists
-      yield* service.get(proj.gitPath, worktreePath)
-
-      yield* Effect.log(`Opening worktree 'feature-x' at ${worktreePath}`)
-      // In a real test, we'd mock Bun.$ here
-      yield* Effect.log("Opened in editor.")
-    })
-
-    const logs = await runTestCommand(openEffect, {
-      project: { initialProjects: [project] },
-      worktree: {
-        initialWorktrees: new Map([
-          [worktreePath, { path: worktreePath, branch: "feature-x", commit: "abc1234", isMain: false }],
-        ]),
-      },
-    })
-
-    expect(logs.join("\n")).toMatchSnapshot()
-  })
-
-  test("fails for non-existent worktree", async () => {
+  test("validates worktree exists before opening", async () => {
     const project = mockProject({ name: "my-project", gitPath: "/path/to/repo" })
     const worktreePath = computeWorktreePath("my-project", "nonexistent")
 
-    const openEffect = Effect.gen(function* () {
-      const projects = yield* ProjectService
-      const proj = yield* projects.get("my-project")
-
-      const service = yield* WorktreeService
-      yield* service.get(proj.gitPath, worktreePath)
-    })
-
-    const error = await runTestCommandExpectError(openEffect, {
-      project: { initialProjects: [project] },
-      worktree: { initialWorktrees: new Map() },
-    })
+    const error = await runTestCommandExpectError(
+      openWorktreeHandler({
+        project: "my-project",
+        name: Option.some("nonexistent"),
+        editor: Option.none(),
+      }),
+      {
+        project: { initialProjects: [project] },
+        worktree: { initialWorktrees: new Map() },
+      }
+    )
 
     expect(error).toBeInstanceOf(WorktreeNotFoundError)
+  })
+
+  test("fails when name is not provided", async () => {
+    const project = mockProject({ name: "my-project", gitPath: "/path/to/repo" })
+
+    await expect(
+      runTestCommand(
+        openWorktreeHandler({
+          project: "my-project",
+          name: Option.none(), // Missing required name
+          editor: Option.none(),
+        }),
+        { project: { initialProjects: [project] } }
+      )
+    ).rejects.toThrow("Worktree name is required")
   })
 })
