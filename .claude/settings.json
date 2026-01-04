@@ -5,6 +5,7 @@
       "Bash(bun:*)",
       "Bash(find:*)",
       "Bash(cat:*)",
+      "Bash(grep:*)",
       "Bash(bunx tsc:*)",
       "Bash(bun test:*)",
       "Bash(bun install:*)",
