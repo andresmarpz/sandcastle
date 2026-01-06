@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "desktop",
+  "productName": "Sandcastle",
   "version": "0.1.0",
   "identifier": "run.sandcastle.desktop",
   "build": {
@@ -12,9 +12,9 @@
   "app": {
     "windows": [
       {
-        "title": "desktop",
-        "width": 800,
-        "height": 600
+        "title": "Sandcastle",
+        "width": 1024,
+        "height": 768
       }
     ],
     "security": {
