@@ -4,9 +4,9 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "bun run tauri dev",
     "dev:backend": "bun run --hot src-backend/index.ts",
-    "dev:all": "concurrently \"bun run dev:backend\" \"bun run dev\"",
+    "dev:ui": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
