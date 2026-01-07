@@ -4,11 +4,16 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tauri + React + Typescript</title>
+    <title>Sandcastle</title>
     <link href="/src/App.css" rel="stylesheet" />
+    <script>
+      const t = localStorage.getItem("theme") ?? "system";
+      const isDark = t === "dark" || (t === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
+      if (isDark) document.documentElement.classList.add("dark");
+    </script>
   </head>
 
-  <body>
+  <body class="antialiased">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
