@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,17 +8,17 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { useTheme } from "@/context/theme-context"
+} from "@/components/ui/dropdown-menu";
+import { useTheme } from "@/context/theme-context";
 import {
   IconSun,
   IconMoon,
   IconDeviceDesktop,
   IconPalette,
-} from "@tabler/icons-react"
+} from "@tabler/icons-react";
 
 export function AppHeader() {
-  const { theme, setTheme } = useTheme()
+  const { theme, setTheme } = useTheme();
 
   return (
     <header
@@ -27,15 +27,15 @@ export function AppHeader() {
     >
       <ThemeSwitcher theme={theme} setTheme={setTheme} />
     </header>
-  )
+  );
 }
 
 function ThemeSwitcher({
   theme,
   setTheme,
 }: {
-  theme: "light" | "dark" | "system"
-  setTheme: (theme: "light" | "dark" | "system") => void
+  theme: "light" | "dark" | "system";
+  setTheme: (theme: "light" | "dark" | "system") => void;
 }) {
   return (
     <DropdownMenu>
@@ -67,5 +67,5 @@ function ThemeSwitcher({
         </DropdownMenuRadioGroup>
       </DropdownMenuContent>
     </DropdownMenu>
-  )
+  );
 }

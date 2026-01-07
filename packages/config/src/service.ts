@@ -1,10 +1,7 @@
-import { Context, Effect } from "effect"
-import type { SandcastleConfig, InitParams } from "./types.ts"
-import type {
-  ConfigLoadError,
-  ConfigValidationError,
-  InitHookError,
-} from "./errors.ts"
+import { Context, type Effect } from "effect";
+
+import type { ConfigLoadError, ConfigValidationError, InitHookError } from "./errors.ts";
+import type { InitParams, SandcastleConfig } from "./types.ts";
 
 /**
  * Service for loading and executing Sandcastle configuration.
@@ -29,10 +26,7 @@ export class ConfigService extends Context.Tag("ConfigService")<
      */
     readonly load: (
       projectPath: string
-    ) => Effect.Effect<
-      SandcastleConfig | undefined,
-      ConfigLoadError | ConfigValidationError
-    >
+    ) => Effect.Effect<SandcastleConfig | undefined, ConfigLoadError | ConfigValidationError>;
 
     /**
      * Execute the init hook with the provided context.
@@ -44,7 +38,7 @@ export class ConfigService extends Context.Tag("ConfigService")<
     readonly runInit: (
       config: SandcastleConfig,
       params: InitParams
-    ) => Effect.Effect<void, InitHookError>
+    ) => Effect.Effect<void, InitHookError>;
 
     /**
      * Convenience method: load config and run init hook if present.
@@ -56,9 +50,6 @@ export class ConfigService extends Context.Tag("ConfigService")<
     readonly loadAndRunInit: (
       projectPath: string,
       params: InitParams
-    ) => Effect.Effect<
-      void,
-      ConfigLoadError | ConfigValidationError | InitHookError
-    >
+    ) => Effect.Effect<void, ConfigLoadError | ConfigValidationError | InitHookError>;
   }
 >() {}

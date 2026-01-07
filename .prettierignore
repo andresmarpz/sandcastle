@@ -1,0 +1,12 @@
+# Dependencies
+**/node_modules/
+
+# Build outputs
+**/dist/
+**/target/
+
+# Lock files
+bun.lock
+package-lock.json
+yarn.lock
+pnpm-lock.yaml

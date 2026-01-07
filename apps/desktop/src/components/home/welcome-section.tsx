@@ -1,5 +1,5 @@
-import { Button } from "@/components/ui/button"
-import { IconPlus, IconFolder } from "@tabler/icons-react"
+import { Button } from "@/components/ui/button";
+import { IconPlus, IconFolder } from "@tabler/icons-react";
 
 export function WelcomeSection() {
   return (
@@ -25,5 +25,5 @@ export function WelcomeSection() {
         </Button>
       </div>
     </section>
-  )
+  );
 }

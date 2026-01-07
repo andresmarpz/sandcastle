@@ -1,0 +1,8 @@
+# Tauri build output
+target/
+
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/

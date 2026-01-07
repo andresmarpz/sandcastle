@@ -13,7 +13,11 @@
     "start": "bun run src/server.ts",
     "dev": "bun --watch run src/server.ts",
     "test": "bun test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --fix",
+    "lint:check": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "effect": "^3.19.14",
@@ -23,7 +27,10 @@
     "@sandcastle/rpc": "workspace:*"
   },
   "devDependencies": {
+    "@sandcastle/tooling": "workspace:*",
     "@types/bun": "latest",
+    "eslint": "^9.39.2",
+    "prettier": "^3.4.2",
     "typescript": "^5.9.3"
   }
 }

@@ -4,14 +4,19 @@
   "scripts": {
     "build": "turbo build",
     "dev": "turbo dev",
+    "typecheck": "turbo typecheck",
     "lint": "turbo lint",
-    "clean": "turbo clean",
-    "typecheck": "turbo typecheck"
+    "lint:check": "turbo lint:check",
+    "format": "turbo format",
+    "format:check": "turbo format:check",
+    "clean": "turbo clean"
   },
   "devDependencies": {
-    "turbo": "^2.7.2",
-    "typescript": "^5.9.3",
-    "@sandcastle/config": "workspace:*"
+    "@ianvs/prettier-plugin-sort-imports": "^4.4.1",
+    "@sandcastle/config": "workspace:*",
+    "prettier": "^3.4.2",
+    "turbo": "^2.7.3",
+    "typescript": "^5.9.3"
   },
   "workspaces": [
     "apps/*",

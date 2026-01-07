@@ -1,119 +1,122 @@
-import { Effect, Layer } from "effect"
-import { WorktreeService } from "./service"
-import type { WorktreeInfo, CreateWorktreeOptions, RemoveWorktreeOptions } from "./types"
+import { Effect, Layer } from "effect";
+
 import {
+  BranchExistsError,
   GitCommandError,
   WorktreeExistsError,
-  WorktreeNotFoundError,
-  BranchExistsError,
-} from "./errors"
+  WorktreeNotFoundError
+} from "./errors";
+import { WorktreeService } from "./service";
+import type { CreateWorktreeOptions, RemoveWorktreeOptions, WorktreeInfo } from "./types";
 
 const parseWorktreeList = (output: string): WorktreeInfo[] => {
-  const worktrees: WorktreeInfo[] = []
-  const blocks = output.trim().split("\n\n")
+  const worktrees: WorktreeInfo[] = [];
+  const blocks = output.trim().split("\n\n");
 
   for (const block of blocks) {
-    if (!block.trim()) continue
+    if (!block.trim()) continue;
 
-    const lines = block.split("\n")
-    let path = ""
-    let commit = ""
-    let branch = ""
-    let isMain = false
-
+    const lines = block.split("\n");
+    let path = "";
+    let commit = "";
+    let branch = "";
     for (const line of lines) {
       if (line.startsWith("worktree ")) {
-        path = line.slice(9)
-        isMain = !lines.some((l) => l.startsWith("branch ") && l.includes("worktrees"))
+        path = line.slice(9);
       } else if (line.startsWith("HEAD ")) {
-        commit = line.slice(5)
+        commit = line.slice(5);
       } else if (line.startsWith("branch ")) {
-        branch = line.slice(7).replace("refs/heads/", "")
+        branch = line.slice(7).replace("refs/heads/", "");
       } else if (line === "bare") {
-        continue
+        continue;
       }
     }
 
     if (path) {
-      const isLinkedWorktree = path.includes("/.git/worktrees/") === false
       worktrees.push({
         path,
         branch: branch || "HEAD",
         commit,
-        isMain: worktrees.length === 0,
-      })
+        isMain: worktrees.length === 0
+      });
     }
   }
 
-  return worktrees
-}
+  return worktrees;
+};
 
-const runGitCommand = (
-  repoPath: string,
-  args: string[]
-): Effect.Effect<string, GitCommandError> =>
+const runGitCommand = (repoPath: string, args: string[]): Effect.Effect<string, GitCommandError> =>
   Effect.tryPromise({
     try: async () => {
-      const result = await Bun.$`git -C ${repoPath} ${args}`.quiet()
-      return result.text()
+      const result = await Bun.$`git -C ${repoPath} ${args}`.quiet();
+      return result.text();
     },
-    catch: (error) => {
-      const shellError = error as { exitCode?: number; stderr?: { toString(): string } }
+    catch: error => {
+      const shellError = error as {
+        exitCode?: number;
+        stderr?: { toString(): string };
+      };
       return new GitCommandError({
         command: `git -C ${repoPath} ${args.join(" ")}`,
         stderr: shellError.stderr?.toString() ?? String(error),
-        exitCode: shellError.exitCode ?? 1,
-      })
-    },
-  })
+        exitCode: shellError.exitCode ?? 1
+      });
+    }
+  });
 
 const make = WorktreeService.of({
   create: (options: CreateWorktreeOptions) =>
     Effect.gen(function* () {
-      const args: string[] = ["worktree", "add"]
+      const args: string[] = ["worktree", "add"];
 
       if (options.createBranch) {
-        args.push("-b", options.branch)
-        args.push(options.worktreePath)
+        args.push("-b", options.branch);
+        args.push(options.worktreePath);
         if (options.fromRef) {
-          args.push(options.fromRef)
+          args.push(options.fromRef);
         }
       } else {
-        args.push(options.worktreePath, options.branch)
+        args.push(options.worktreePath, options.branch);
       }
 
-      const result = yield* runGitCommand(options.repoPath, args).pipe(
-        Effect.mapError((err) => {
+      yield* runGitCommand(options.repoPath, args).pipe(
+        Effect.mapError(err => {
           if (err.stderr.includes("already exists")) {
-            return new WorktreeExistsError({ path: options.worktreePath })
+            return new WorktreeExistsError({ path: options.worktreePath });
           }
-          if (err.stderr.includes("already checked out") || err.stderr.includes("is already checked out")) {
-            return new BranchExistsError({ branch: options.branch })
+          if (
+            err.stderr.includes("already checked out") ||
+            err.stderr.includes("is already checked out")
+          ) {
+            return new BranchExistsError({ branch: options.branch });
           }
-          if (err.stderr.includes("fatal: a]branch named") && err.stderr.includes("already exists")) {
-            return new BranchExistsError({ branch: options.branch })
+          if (
+            err.stderr.includes("fatal: a]branch named") &&
+            err.stderr.includes("already exists")
+          ) {
+            return new BranchExistsError({ branch: options.branch });
           }
-          return err
+          return err;
         })
-      )
+      );
 
       const worktrees = yield* Effect.succeed(options.repoPath).pipe(
-        Effect.flatMap((path) => runGitCommand(path, ["worktree", "list", "--porcelain"])),
+        Effect.flatMap(path => runGitCommand(path, ["worktree", "list", "--porcelain"])),
         Effect.map(parseWorktreeList)
-      )
+      );
 
-      const created = worktrees.find((w) => w.path === options.worktreePath)
+      const created = worktrees.find(w => w.path === options.worktreePath);
       if (!created) {
         return yield* Effect.fail(
           new GitCommandError({
             command: "worktree list",
             stderr: "Created worktree not found in list",
-            exitCode: 1,
+            exitCode: 1
           })
-        )
+        );
       }
 
-      return created
+      return created;
     }),
 
   list: (repoPath: string) =>
@@ -123,38 +126,37 @@ const make = WorktreeService.of({
 
   remove: (options: RemoveWorktreeOptions) =>
     Effect.gen(function* () {
-      const args = ["worktree", "remove"]
+      const args = ["worktree", "remove"];
       if (options.force) {
-        args.push("--force")
+        args.push("--force");
       }
-      args.push(options.worktreePath)
+      args.push(options.worktreePath);
 
       yield* runGitCommand(options.repoPath, args).pipe(
-        Effect.mapError((err) => {
+        Effect.mapError(err => {
           if (err.stderr.includes("is not a working tree")) {
-            return new WorktreeNotFoundError({ path: options.worktreePath })
+            return new WorktreeNotFoundError({ path: options.worktreePath });
           }
-          return err
+          return err;
         })
-      )
+      );
     }),
 
   get: (repoPath: string, worktreePath: string) =>
     Effect.gen(function* () {
       const worktrees = yield* runGitCommand(repoPath, ["worktree", "list", "--porcelain"]).pipe(
         Effect.map(parseWorktreeList)
-      )
+      );
 
-      const worktree = worktrees.find((w) => w.path === worktreePath)
+      const worktree = worktrees.find(w => w.path === worktreePath);
       if (!worktree) {
-        return yield* Effect.fail(new WorktreeNotFoundError({ path: worktreePath }))
+        return yield* Effect.fail(new WorktreeNotFoundError({ path: worktreePath }));
       }
 
-      return worktree
+      return worktree;
     }),
 
-  prune: (repoPath: string) =>
-    runGitCommand(repoPath, ["worktree", "prune"]).pipe(Effect.asVoid),
-})
+  prune: (repoPath: string) => runGitCommand(repoPath, ["worktree", "prune"]).pipe(Effect.asVoid)
+});
 
-export const WorktreeServiceLive = Layer.succeed(WorktreeService, make)
+export const WorktreeServiceLive = Layer.succeed(WorktreeService, make);
