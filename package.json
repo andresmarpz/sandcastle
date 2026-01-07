@@ -15,7 +15,6 @@
   },
   "workspaces": [
     "apps/*",
-    "apps/desktop/src-backend",
     "packages/*"
   ],
   "packageManager": "bun@1.1.0"
