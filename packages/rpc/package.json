@@ -1,0 +1,29 @@
+{
+  "name": "@sandcastle/rpc",
+  "version": "0.1.0",
+  "description": "Effect-based RPC server for Sandcastle worktree management.",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "exports": {
+    ".": "./index.ts",
+    "./schema": "./src/schema.ts",
+    "./errors": "./src/errors.ts",
+    "./types": "./src/types.ts",
+    "./handlers": "./src/handlers.ts"
+  },
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "effect": "^3.19.14",
+    "@effect/rpc": "^0.73.0",
+    "@effect/platform": "^0.94.1",
+    "@sandcastle/worktree": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.9.3"
+  }
+}
