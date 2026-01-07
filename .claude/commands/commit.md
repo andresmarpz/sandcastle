@@ -1,19 +1,21 @@
+---
+allowed-tools: Bash(git add:*), Bash(git status:*), Bash(git commit:*), Bash(git diff:*)
+description: Commit changes
+---
+
 # Commit Changes
 
-Commit staged and unstaged changes following conventional commit practices.
+Commit staged and unstaged changes related to the conversation. Ignore all other files.
 
-## Step 1: Gather Git Context
+## Context
 
-Run these commands in parallel:
+- Current branch: !`git branch --show-current`
+- Git status: !`git status --short`
+- Staged changes: !`git diff --staged`
+- Unstaged changes: !`git diff`
+- Recent commits (for style reference): !`git log --oneline -5`
 
-```bash
-git status
-git diff
-git diff --staged
-git log --oneline -10
-```
-
-## Step 2: Analyze Changes
+## Step 1: Analyze Changes
 
 Review the diff output:
 
@@ -21,19 +23,16 @@ Review the diff output:
 - Group related changes together
 - Note any new features, bug fixes, refactors, tests, or documentation changes
 
-## Step 3: Commit Changes
+## Step 2: Commit Changes
 
 **Commit message rules:**
 
 - One-liner lowercase messages
-- Use conventional commit format: `type: short description`
-- Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `style`, `perf`
-- NO "authored by claude code" or similar footers
 - Keep commits focused on a single logical change
 
 **Split commits by concern:**
 
-- Logic/feature = separate commits for distinct pieces
+- Piece of logic/feature = separate commits for distinct pieces. Don't add entire features in a single commit. Make surgical commits (max 2-3 files)
 - Tests = separate commit(s)
 - Documentation = separate commit
 - Config/tooling = separate commit
