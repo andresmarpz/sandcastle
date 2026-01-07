@@ -9,7 +9,6 @@
     "./eslint": "./eslint.config.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit",
     "lint": "eslint . --fix",
     "lint:check": "eslint .",
     "format": "prettier --write .",
