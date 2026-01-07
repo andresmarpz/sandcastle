@@ -179,8 +179,8 @@ export const adjectives = [
   "wild",
   "wise",
   "witty",
-  "young",
-] as const
+  "young"
+] as const;
 
 export const nouns = [
   "ace",
@@ -407,8 +407,8 @@ export const nouns = [
   "wolf",
   "wood",
   "wren",
-  "zen",
-] as const
+  "zen"
+] as const;
 
-export type Adjective = (typeof adjectives)[number]
-export type Noun = (typeof nouns)[number]
+export type Adjective = (typeof adjectives)[number];
+export type Noun = (typeof nouns)[number];

@@ -21,19 +21,19 @@ This package provides a configuration system that allows users to define initial
 Create a `sandcastle.config.ts` file in your project root (same level as `package.json`):
 
 ```typescript
-import { defineConfig } from '@sandcastle/config'
+import { defineConfig } from "@sandcastle/config";
 
 export default defineConfig({
-  init: async (ctx) => {
+  init: async ctx => {
     // Install dependencies
-    await ctx.exec('bun install')
+    await ctx.exec("bun install");
 
     // Copy environment files from base repo
-    await ctx.copyFromBase('.env')
+    await ctx.copyFromBase(".env");
 
-    ctx.log('Worktree ready!')
+    ctx.log("Worktree ready!");
   }
-})
+});
 ```
 
 The config file is automatically detected when creating worktrees. Both `.ts` and `.js` extensions are supported (`.ts` is checked first).
@@ -46,13 +46,14 @@ Runs when a new worktree is created. The working directory is automatically set 
 
 ```typescript
 export default defineConfig({
-  init: async (ctx) => {
-    await ctx.exec('bun install')
+  init: async ctx => {
+    await ctx.exec("bun install");
   }
-})
+});
 ```
 
 **Behavior:**
+
 - Commands execute in the new worktree directory
 - Output streams in real-time to the terminal
 - If the hook throws, the worktree creation is rolled back
@@ -63,14 +64,14 @@ The `init` hook receives a `SandcastleContext` object with the following propert
 
 #### Properties
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `baseRepoPath` | `string` | Absolute path to the original repository |
+| Property       | Type     | Description                                      |
+| -------------- | -------- | ------------------------------------------------ |
+| `baseRepoPath` | `string` | Absolute path to the original repository         |
 | `worktreePath` | `string` | Absolute path to the new worktree (also the cwd) |
-| `projectName` | `string` | The registered project name |
-| `worktreeName` | `string` | The name of the new worktree |
-| `branch` | `string` | The new branch name |
-| `baseBranch` | `string` | The ref the worktree was created from |
+| `projectName`  | `string` | The registered project name                      |
+| `worktreeName` | `string` | The name of the new worktree                     |
+| `branch`       | `string` | The new branch name                              |
+| `baseBranch`   | `string` | The ref the worktree was created from            |
 
 #### Methods
 
@@ -79,11 +80,11 @@ The `init` hook receives a `SandcastleContext` object with the following propert
 Execute a shell command in the worktree directory. Output streams to the terminal in real-time. Throws on non-zero exit code.
 
 ```typescript
-await ctx.exec('bun install')
-await ctx.exec('bun run build')
+await ctx.exec("bun install");
+await ctx.exec("bun run build");
 
 // Capture output
-const { stdout } = await ctx.exec('cat package.json')
+const { stdout } = await ctx.exec("cat package.json");
 ```
 
 ##### `copyFromBase(from: string, to?: string): Promise<void>`
@@ -92,13 +93,13 @@ Copy a file from the base repository to the worktree. Paths are relative to thei
 
 ```typescript
 // Copy .env from base repo to worktree
-await ctx.copyFromBase('.env')
+await ctx.copyFromBase(".env");
 
 // Copy with different destination name
-await ctx.copyFromBase('.env', '.env.local')
+await ctx.copyFromBase(".env", ".env.local");
 
 // Copy nested files (creates directories automatically)
-await ctx.copyFromBase('config/secrets.json')
+await ctx.copyFromBase("config/secrets.json");
 ```
 
 ##### `exists(relativePath: string): Promise<boolean>`
@@ -106,8 +107,8 @@ await ctx.copyFromBase('config/secrets.json')
 Check if a file exists in the worktree.
 
 ```typescript
-if (await ctx.exists('prisma/schema.prisma')) {
-  await ctx.exec('bun run prisma generate')
+if (await ctx.exists("prisma/schema.prisma")) {
+  await ctx.exec("bun run prisma generate");
 }
 ```
 
@@ -128,46 +129,46 @@ Log an error message to the console.
 #### Basic Setup
 
 ```typescript
-import { defineConfig } from '@sandcastle/config'
+import { defineConfig } from "@sandcastle/config";
 
 export default defineConfig({
-  init: async (ctx) => {
-    await ctx.exec('bun install')
+  init: async ctx => {
+    await ctx.exec("bun install");
   }
-})
+});
 ```
 
 #### Full-Featured Setup
 
 ```typescript
-import { defineConfig } from '@sandcastle/config'
+import { defineConfig } from "@sandcastle/config";
 
 export default defineConfig({
-  init: async (ctx) => {
-    ctx.log(`Setting up worktree "${ctx.worktreeName}"...`)
-    ctx.log(`Based on: ${ctx.baseBranch}`)
+  init: async ctx => {
+    ctx.log(`Setting up worktree "${ctx.worktreeName}"...`);
+    ctx.log(`Based on: ${ctx.baseBranch}`);
 
     // Install dependencies
-    await ctx.exec('bun install')
+    await ctx.exec("bun install");
 
     // Copy environment files
-    await ctx.copyFromBase('.env')
-    await ctx.copyFromBase('.env.local')
+    await ctx.copyFromBase(".env");
+    await ctx.copyFromBase(".env.local");
 
     // Conditional setup based on project structure
-    if (await ctx.exists('prisma/schema.prisma')) {
-      ctx.log('Generating Prisma client...')
-      await ctx.exec('bun run prisma generate')
+    if (await ctx.exists("prisma/schema.prisma")) {
+      ctx.log("Generating Prisma client...");
+      await ctx.exec("bun run prisma generate");
     }
 
-    if (await ctx.exists('drizzle.config.ts')) {
-      ctx.log('Running Drizzle migrations...')
-      await ctx.exec('bun run drizzle-kit generate')
+    if (await ctx.exists("drizzle.config.ts")) {
+      ctx.log("Running Drizzle migrations...");
+      await ctx.exec("bun run drizzle-kit generate");
     }
 
-    ctx.log('Worktree ready!')
+    ctx.log("Worktree ready!");
   }
-})
+});
 ```
 
 ### Error Handling
@@ -207,38 +208,34 @@ packages/config/
 The package exposes an Effect-based service for use by the CLI:
 
 ```typescript
-import { ConfigService } from '@sandcastle/config/service'
+import { ConfigService } from "@sandcastle/config/service";
 
-class ConfigService extends Context.Tag("ConfigService")<ConfigService, {
-  /**
-   * Load config file from a project root path.
-   * Returns undefined if no config file exists.
-   */
-  load: (projectPath: string) => Effect.Effect<
-    SandcastleConfig | undefined,
-    ConfigLoadError | ConfigValidationError
-  >
+class ConfigService extends Context.Tag("ConfigService")<
+  ConfigService,
+  {
+    /**
+     * Load config file from a project root path.
+     * Returns undefined if no config file exists.
+     */
+    load: (
+      projectPath: string
+    ) => Effect.Effect<SandcastleConfig | undefined, ConfigLoadError | ConfigValidationError>;
 
-  /**
-   * Execute the init hook with the provided context.
-   * No-op if config has no init hook.
-   */
-  runInit: (
-    config: SandcastleConfig,
-    params: InitParams
-  ) => Effect.Effect<void, InitHookError>
+    /**
+     * Execute the init hook with the provided context.
+     * No-op if config has no init hook.
+     */
+    runInit: (config: SandcastleConfig, params: InitParams) => Effect.Effect<void, InitHookError>;
 
-  /**
-   * Convenience method: load config and run init if present.
-   */
-  loadAndRunInit: (
-    projectPath: string,
-    params: InitParams
-  ) => Effect.Effect<
-    void,
-    ConfigLoadError | ConfigValidationError | InitHookError
-  >
-}>() {}
+    /**
+     * Convenience method: load config and run init if present.
+     */
+    loadAndRunInit: (
+      projectPath: string,
+      params: InitParams
+    ) => Effect.Effect<void, ConfigLoadError | ConfigValidationError | InitHookError>;
+  }
+>() {}
 ```
 
 ### Types
@@ -246,17 +243,17 @@ class ConfigService extends Context.Tag("ConfigService")<ConfigService, {
 ```typescript
 // Parameters passed from CLI to build the context
 interface InitParams {
-  baseRepoPath: string   // Path to original repository
-  worktreePath: string   // Path to new worktree
-  projectName: string    // Registered project name
-  worktreeName: string   // Worktree name
-  branch: string         // New branch name
-  baseBranch: string     // Base ref (e.g., "main")
+  baseRepoPath: string; // Path to original repository
+  worktreePath: string; // Path to new worktree
+  projectName: string; // Registered project name
+  worktreeName: string; // Worktree name
+  branch: string; // New branch name
+  baseBranch: string; // Base ref (e.g., "main")
 }
 
 // User-facing config shape
 interface SandcastleConfig {
-  init?: (ctx: SandcastleContext) => Promise<void>
+  init?: (ctx: SandcastleContext) => Promise<void>;
 }
 ```
 
@@ -306,22 +303,21 @@ To integrate with `@sandcastle/cli`, add the config service to the layer composi
 ```typescript
 // In @sandcastle/cli
 
-import { ConfigService, ConfigServiceLive } from '@sandcastle/config'
-import type { InitParams } from '@sandcastle/config'
+import { ConfigService, ConfigServiceLive, type InitParams } from "@sandcastle/config";
 
 // 1. Add to layer composition
 const MainLayer = Layer.mergeAll(
   NodeContext.layer,
   WorktreeServiceLive,
   ProjectServiceLive,
-  ConfigServiceLive  // Add this
-)
+  ConfigServiceLive // Add this
+);
 
 // 2. In worktree create command, after worktree is created:
 const worktreeCreate = Effect.gen(function* () {
-  const worktreeService = yield* WorktreeService
-  const configService = yield* ConfigService
-  const projects = yield* ProjectService
+  const worktreeService = yield* WorktreeService;
+  const configService = yield* ConfigService;
+  const projects = yield* ProjectService;
 
   // ... get project, create worktree ...
 
@@ -330,8 +326,8 @@ const worktreeCreate = Effect.gen(function* () {
     worktreePath,
     branch: name,
     createBranch: true,
-    fromRef,
-  })
+    fromRef
+  });
 
   // Run init hook after worktree creation
   const initParams: InitParams = {
@@ -340,32 +336,32 @@ const worktreeCreate = Effect.gen(function* () {
     projectName: project.name,
     worktreeName: name,
     branch: name,
-    baseBranch: fromRef,
-  }
+    baseBranch: fromRef
+  };
 
   yield* configService.loadAndRunInit(project.gitPath, initParams).pipe(
-    Effect.catchTag("InitHookError", (err) =>
+    Effect.catchTag("InitHookError", err =>
       Effect.gen(function* () {
         // Log error details
-        yield* Console.error(`Init hook failed: ${err.message}`)
+        yield* Console.error(`Init hook failed: ${err.message}`);
         for (const log of err.logs) {
-          yield* Console.log(log)
+          yield* Console.log(log);
         }
 
         // Rollback worktree
         yield* worktreeService.remove({
           repoPath: project.gitPath,
           worktreePath,
-          force: true,
-        })
+          force: true
+        });
 
-        return yield* Effect.fail(err)
+        return yield* Effect.fail(err);
       })
     )
-  )
+  );
 
-  return result
-})
+  return result;
+});
 ```
 
 ### Config Loading Process

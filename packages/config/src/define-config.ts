@@ -1,4 +1,4 @@
-import type { SandcastleConfig } from "./types.ts"
+import type { SandcastleConfig } from "./types.ts";
 
 /**
  * Helper for type-safe config definition.
@@ -17,5 +17,4 @@ import type { SandcastleConfig } from "./types.ts"
  * })
  * ```
  */
-export const defineConfig = (config: SandcastleConfig): SandcastleConfig =>
-  config
+export const defineConfig = (config: SandcastleConfig): SandcastleConfig => config;

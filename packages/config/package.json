@@ -14,13 +14,20 @@
   },
   "scripts": {
     "test": "bun test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --fix",
+    "lint:check": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "effect": "^3.19.14"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@sandcastle/tooling": "workspace:*",
+    "@types/bun": "latest",
+    "eslint": "^9.39.2",
+    "prettier": "^3.4.2"
   },
   "peerDependencies": {
     "typescript": "^5"

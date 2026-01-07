@@ -13,14 +13,15 @@ bun add @sandcastle/worktree
 ## Usage
 
 ```typescript
-import { Effect } from "effect"
-import { WorktreeService, WorktreeServiceLive } from "@sandcastle/worktree"
+import { Effect } from "effect";
+
+import { WorktreeService, WorktreeServiceLive } from "@sandcastle/worktree";
 
 const program = Effect.gen(function* () {
-  const worktree = yield* WorktreeService
+  const worktree = yield* WorktreeService;
 
   // List all worktrees
-  const worktrees = yield* worktree.list("/path/to/repo")
+  const worktrees = yield* worktree.list("/path/to/repo");
 
   // Create a new worktree with a new branch
   const created = yield* worktree.create({
@@ -28,24 +29,22 @@ const program = Effect.gen(function* () {
     worktreePath: "/path/to/repo-feature",
     branch: "feature/new-feature",
     createBranch: true,
-    fromRef: "main",
-  })
+    fromRef: "main"
+  });
 
   // Get info about a specific worktree
-  const info = yield* worktree.get("/path/to/repo", "/path/to/repo-feature")
+  const info = yield* worktree.get("/path/to/repo", "/path/to/repo-feature");
 
   // Remove a worktree
   yield* worktree.remove({
     repoPath: "/path/to/repo",
-    worktreePath: "/path/to/repo-feature",
-  })
+    worktreePath: "/path/to/repo-feature"
+  });
 
-  return worktrees
-})
+  return worktrees;
+});
 
-const result = await Effect.runPromise(
-  program.pipe(Effect.provide(WorktreeServiceLive))
-)
+const result = await Effect.runPromise(program.pipe(Effect.provide(WorktreeServiceLive)));
 ```
 
 ## API Reference
@@ -59,7 +58,7 @@ Effect service providing worktree operations.
 List all worktrees for a repository.
 
 ```typescript
-const worktrees = yield* worktree.list("/path/to/repo")
+const worktrees = yield * worktree.list("/path/to/repo");
 // [{ path: "/path/to/repo", branch: "main", commit: "abc123", isMain: true }, ...]
 ```
 
@@ -68,6 +67,7 @@ const worktrees = yield* worktree.list("/path/to/repo")
 Create a new worktree.
 
 **Options:**
+
 - `repoPath` - Path to the main repository
 - `worktreePath` - Path where the new worktree will be created
 - `branch` - Branch name to checkout or create
@@ -75,13 +75,15 @@ Create a new worktree.
 - `fromRef` (optional) - Starting point for the new branch
 
 ```typescript
-const info = yield* worktree.create({
-  repoPath: "/path/to/repo",
-  worktreePath: "/path/to/repo-feature",
-  branch: "feature/new-feature",
-  createBranch: true,
-  fromRef: "main",
-})
+const info =
+  yield *
+  worktree.create({
+    repoPath: "/path/to/repo",
+    worktreePath: "/path/to/repo-feature",
+    branch: "feature/new-feature",
+    createBranch: true,
+    fromRef: "main"
+  });
 ```
 
 #### `get(repoPath: string, worktreePath: string): Effect<WorktreeInfo, GitCommandError | WorktreeNotFoundError>`
@@ -89,7 +91,7 @@ const info = yield* worktree.create({
 Get information about a specific worktree.
 
 ```typescript
-const info = yield* worktree.get("/path/to/repo", "/path/to/repo-feature")
+const info = yield * worktree.get("/path/to/repo", "/path/to/repo-feature");
 // { path: "/path/to/repo-feature", branch: "feature/new-feature", commit: "def456", isMain: false }
 ```
 
@@ -98,16 +100,18 @@ const info = yield* worktree.get("/path/to/repo", "/path/to/repo-feature")
 Remove a worktree.
 
 **Options:**
+
 - `repoPath` - Path to the main repository
 - `worktreePath` - Path to the worktree to remove
 - `force` (optional) - Force removal even with uncommitted changes
 
 ```typescript
-yield* worktree.remove({
-  repoPath: "/path/to/repo",
-  worktreePath: "/path/to/repo-feature",
-  force: true,
-})
+yield *
+  worktree.remove({
+    repoPath: "/path/to/repo",
+    worktreePath: "/path/to/repo-feature",
+    force: true
+  });
 ```
 
 #### `prune(repoPath: string): Effect<void, GitCommandError>`
@@ -115,7 +119,7 @@ yield* worktree.remove({
 Clean up stale worktree references.
 
 ```typescript
-yield* worktree.prune("/path/to/repo")
+yield * worktree.prune("/path/to/repo");
 ```
 
 ## Types
@@ -124,10 +128,10 @@ yield* worktree.prune("/path/to/repo")
 
 ```typescript
 interface WorktreeInfo {
-  path: string      // Absolute path to the worktree
-  branch: string    // Branch name (or "HEAD" if detached)
-  commit: string    // Current commit SHA
-  isMain: boolean   // True if this is the main worktree
+  path: string; // Absolute path to the worktree
+  branch: string; // Branch name (or "HEAD" if detached)
+  commit: string; // Current commit SHA
+  isMain: boolean; // True if this is the main worktree
 }
 ```
 
@@ -135,11 +139,11 @@ interface WorktreeInfo {
 
 ```typescript
 interface CreateWorktreeOptions {
-  repoPath: string       // Path to main repository
-  worktreePath: string   // Path for new worktree
-  branch: string         // Branch name
-  createBranch: boolean  // Create new branch if true
-  fromRef?: string       // Starting point for new branch
+  repoPath: string; // Path to main repository
+  worktreePath: string; // Path for new worktree
+  branch: string; // Branch name
+  createBranch: boolean; // Create new branch if true
+  fromRef?: string; // Starting point for new branch
 }
 ```
 
@@ -147,9 +151,9 @@ interface CreateWorktreeOptions {
 
 ```typescript
 interface RemoveWorktreeOptions {
-  repoPath: string      // Path to main repository
-  worktreePath: string  // Path to worktree to remove
-  force?: boolean       // Force removal
+  repoPath: string; // Path to main repository
+  worktreePath: string; // Path to worktree to remove
+  force?: boolean; // Force removal
 }
 ```
 
@@ -157,24 +161,26 @@ interface RemoveWorktreeOptions {
 
 All errors extend Effect's `Data.TaggedError` for pattern matching:
 
-| Error | Description |
-|-------|-------------|
-| `GitCommandError` | Generic git command failure |
-| `WorktreeExistsError` | Worktree already exists at path |
-| `WorktreeNotFoundError` | Worktree not found at path |
-| `BranchExistsError` | Branch already exists |
-| `InvalidRepoError` | Path is not a valid git repository |
-| `GitNotFoundError` | Git executable not found |
+| Error                   | Description                        |
+| ----------------------- | ---------------------------------- |
+| `GitCommandError`       | Generic git command failure        |
+| `WorktreeExistsError`   | Worktree already exists at path    |
+| `WorktreeNotFoundError` | Worktree not found at path         |
+| `BranchExistsError`     | Branch already exists              |
+| `InvalidRepoError`      | Path is not a valid git repository |
+| `GitNotFoundError`      | Git executable not found           |
 
 ```typescript
-import { WorktreeExistsError, BranchExistsError } from "@sandcastle/worktree"
+import { BranchExistsError, WorktreeExistsError } from "@sandcastle/worktree";
 
-const result = yield* worktree.create(options).pipe(
-  Effect.catchTags({
-    WorktreeExistsError: (e) => Effect.succeed(`Worktree exists: ${e.path}`),
-    BranchExistsError: (e) => Effect.succeed(`Branch exists: ${e.branch}`),
-  })
-)
+const result =
+  yield *
+  worktree.create(options).pipe(
+    Effect.catchTags({
+      WorktreeExistsError: e => Effect.succeed(`Worktree exists: ${e.path}`),
+      BranchExistsError: e => Effect.succeed(`Branch exists: ${e.branch}`)
+    })
+  );
 ```
 
 ## Development

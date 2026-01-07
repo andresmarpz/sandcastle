@@ -5,23 +5,23 @@
 export interface SandcastleContext {
   // ─── Paths ─────────────────────────────────────────────
   /** Absolute path to the original repository */
-  readonly baseRepoPath: string
+  readonly baseRepoPath: string;
 
   /** Absolute path to the new worktree (also the cwd) */
-  readonly worktreePath: string
+  readonly worktreePath: string;
 
   // ─── Identifiers ───────────────────────────────────────
   /** The registered project name */
-  readonly projectName: string
+  readonly projectName: string;
 
   /** The name of the new worktree */
-  readonly worktreeName: string
+  readonly worktreeName: string;
 
   /** The new branch name */
-  readonly branch: string
+  readonly branch: string;
 
   /** The ref the worktree was created from */
-  readonly baseBranch: string
+  readonly baseBranch: string;
 
   // ─── File Helpers ──────────────────────────────────────
   /**
@@ -35,14 +35,14 @@ export interface SandcastleContext {
    * await ctx.copyFromBase('.env')
    * await ctx.copyFromBase('.env', '.env.local')
    */
-  readonly copyFromBase: (from: string, to?: string) => Promise<void>
+  readonly copyFromBase: (from: string, to?: string) => Promise<void>;
 
   /**
    * Check if a file exists in the worktree.
    *
    * @param relativePath - Relative path in the worktree
    */
-  readonly exists: (relativePath: string) => Promise<boolean>
+  readonly exists: (relativePath: string) => Promise<boolean>;
 
   // ─── Execution ─────────────────────────────────────────
   /**
@@ -57,17 +57,17 @@ export interface SandcastleContext {
    * await ctx.exec('bun install')
    * const { stdout } = await ctx.exec('cat package.json')
    */
-  readonly exec: (command: string) => Promise<{ stdout: string; stderr: string }>
+  readonly exec: (command: string) => Promise<{ stdout: string; stderr: string }>;
 
   // ─── Logging ───────────────────────────────────────────
   /** Log an informational message */
-  readonly log: (message: string) => void
+  readonly log: (message: string) => void;
 
   /** Log a warning message */
-  readonly warn: (message: string) => void
+  readonly warn: (message: string) => void;
 
   /** Log an error message */
-  readonly error: (message: string) => void
+  readonly error: (message: string) => void;
 }
 
 /**
@@ -75,12 +75,12 @@ export interface SandcastleContext {
  * Passed from the CLI when creating a worktree.
  */
 export interface InitParams {
-  readonly baseRepoPath: string
-  readonly worktreePath: string
-  readonly projectName: string
-  readonly worktreeName: string
-  readonly branch: string
-  readonly baseBranch: string
+  readonly baseRepoPath: string;
+  readonly worktreePath: string;
+  readonly projectName: string;
+  readonly worktreeName: string;
+  readonly branch: string;
+  readonly baseBranch: string;
 }
 
 /**
@@ -92,14 +92,14 @@ export interface SandcastleConfig {
    * Called when a new worktree is created.
    * Use this to install dependencies, copy files, etc.
    */
-  readonly init?: (ctx: SandcastleContext) => Promise<void>
+  readonly init?: (ctx: SandcastleContext) => Promise<void>;
 }
 
 /**
  * Internal logger interface for output.
  */
 export interface Logger {
-  log: (message: string) => void
-  warn: (message: string) => void
-  error: (message: string) => void
+  log: (message: string) => void;
+  warn: (message: string) => void;
+  error: (message: string) => void;
 }

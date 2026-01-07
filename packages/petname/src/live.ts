@@ -1,26 +1,27 @@
-import { Effect, Layer } from "effect"
-import { PetnameService } from "./service.ts"
-import { InvalidWordCountError } from "./errors.ts"
-import { adjectives, nouns } from "./words.ts"
-import type { GenerateOptions, Petname } from "./types.ts"
+import { Effect, Layer } from "effect";
 
-const DEFAULT_WORD_COUNT = 2
-const DEFAULT_SEPARATOR = "-"
+import { InvalidWordCountError } from "./errors.ts";
+import { PetnameService } from "./service.ts";
+import type { GenerateOptions, Petname } from "./types.ts";
+import { adjectives, nouns } from "./words.ts";
+
+const DEFAULT_WORD_COUNT = 2;
+const DEFAULT_SEPARATOR = "-";
 
 /**
  * Get a cryptographically random integer in range [0, max)
  */
 function randomInt(max: number): number {
-  const array = new Uint32Array(1)
-  crypto.getRandomValues(array)
-  return array[0]! % max
+  const array = new Uint32Array(1);
+  crypto.getRandomValues(array);
+  return array[0]! % max;
 }
 
 /**
  * Pick a random element from an array
  */
 function randomElement<T>(arr: readonly T[]): T {
-  return arr[randomInt(arr.length)]!
+  return arr[randomInt(arr.length)]!;
 }
 
 /**
@@ -33,43 +34,43 @@ function randomElement<T>(arr: readonly T[]): T {
  */
 function generateWords(count: number): string[] {
   if (count === 1) {
-    return [randomElement(nouns)]
+    return [randomElement(nouns)];
   }
 
-  const words: string[] = []
+  const words: string[] = [];
   for (let i = 0; i < count - 1; i++) {
-    words.push(randomElement(adjectives))
+    words.push(randomElement(adjectives));
   }
-  words.push(randomElement(nouns))
-  return words
+  words.push(randomElement(nouns));
+  return words;
 }
 
 const make = PetnameService.of({
   generate: (options?: GenerateOptions) =>
     Effect.gen(function* () {
-      const wordCount = options?.wordCount ?? DEFAULT_WORD_COUNT
-      const separator = options?.separator ?? DEFAULT_SEPARATOR
+      const wordCount = options?.wordCount ?? DEFAULT_WORD_COUNT;
+      const separator = options?.separator ?? DEFAULT_SEPARATOR;
 
       if (wordCount < 1) {
         return yield* Effect.fail(
           new InvalidWordCountError({
             wordCount,
-            message: `Word count must be at least 1, got ${wordCount}`,
+            message: `Word count must be at least 1, got ${wordCount}`
           })
-        )
+        );
       }
 
-      const words = generateWords(wordCount)
-      const name = words.join(separator)
+      const words = generateWords(wordCount);
+      const name = words.join(separator);
 
-      return { name, words } satisfies Petname
-    }),
-})
+      return { name, words } satisfies Petname;
+    })
+});
 
 /**
  * Live implementation of PetnameService
  */
-export const PetnameServiceLive = Layer.succeed(PetnameService, make)
+export const PetnameServiceLive = Layer.succeed(PetnameService, make);
 
 /**
  * Generate a petname without Effect.
@@ -88,17 +89,17 @@ export const PetnameServiceLive = Layer.succeed(PetnameService, make)
  * ```
  */
 export function generate(options?: GenerateOptions): Petname {
-  const wordCount = options?.wordCount ?? DEFAULT_WORD_COUNT
-  const separator = options?.separator ?? DEFAULT_SEPARATOR
+  const wordCount = options?.wordCount ?? DEFAULT_WORD_COUNT;
+  const separator = options?.separator ?? DEFAULT_SEPARATOR;
 
   if (wordCount < 1) {
-    throw new Error(`Word count must be at least 1, got ${wordCount}`)
+    throw new Error(`Word count must be at least 1, got ${wordCount}`);
   }
 
-  const words = generateWords(wordCount)
-  const name = words.join(separator)
+  const words = generateWords(wordCount);
+  const name = words.join(separator);
 
-  return { name, words }
+  return { name, words };
 }
 
 /**
@@ -116,5 +117,5 @@ export function generate(options?: GenerateOptions): Petname {
  * ```
  */
 export function petname(options?: GenerateOptions): string {
-  return generate(options).name
+  return generate(options).name;
 }

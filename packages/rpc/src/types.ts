@@ -1,10 +1,10 @@
-import { Schema } from "effect"
+import { Schema } from "effect";
 
 export class WorktreeInfo extends Schema.Class<WorktreeInfo>("WorktreeInfo")({
   path: Schema.String,
   branch: Schema.String,
   commit: Schema.String,
-  isMain: Schema.Boolean,
+  isMain: Schema.Boolean
 }) {}
 
 export class CreateWorktreeOptions extends Schema.Class<CreateWorktreeOptions>(
@@ -14,7 +14,7 @@ export class CreateWorktreeOptions extends Schema.Class<CreateWorktreeOptions>(
   worktreePath: Schema.String,
   branch: Schema.String,
   createBranch: Schema.Boolean,
-  fromRef: Schema.optional(Schema.String),
+  fromRef: Schema.optional(Schema.String)
 }) {}
 
 export class RemoveWorktreeOptions extends Schema.Class<RemoveWorktreeOptions>(
@@ -22,5 +22,5 @@ export class RemoveWorktreeOptions extends Schema.Class<RemoveWorktreeOptions>(
 )({
   repoPath: Schema.String,
   worktreePath: Schema.String,
-  force: Schema.optional(Schema.Boolean),
+  force: Schema.optional(Schema.Boolean)
 }) {}

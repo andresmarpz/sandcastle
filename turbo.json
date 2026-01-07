@@ -9,12 +9,11 @@
       "cache": false,
       "persistent": true
     },
-    "lint": {
-      "dependsOn": ["^lint"]
-    },
-    "typecheck": {
-      "dependsOn": ["^typecheck"]
-    },
+    "typecheck": {},
+    "lint": {},
+    "lint:check": {},
+    "format": {},
+    "format:check": {},
     "clean": {
       "cache": false
     }

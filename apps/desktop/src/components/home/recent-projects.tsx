@@ -1,18 +1,18 @@
-import * as React from "react"
-import { Card, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
-import { IconFolder, IconClock, IconDotsVertical } from "@tabler/icons-react"
+import * as React from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { IconFolder, IconClock, IconDotsVertical } from "@tabler/icons-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import type { Project } from "@/types/project"
+} from "@/components/ui/dropdown-menu";
+import type { Project } from "@/types/project";
 
 interface RecentProjectsProps {
-  projects: Project[]
+  projects: Project[];
 }
 
 export function RecentProjects({ projects }: RecentProjectsProps) {
@@ -28,7 +28,7 @@ export function RecentProjects({ projects }: RecentProjectsProps) {
           </CardContent>
         </Card>
       </section>
-    )
+    );
   }
 
   return (
@@ -45,14 +45,14 @@ export function RecentProjects({ projects }: RecentProjectsProps) {
         </CardContent>
       </Card>
     </section>
-  )
+  );
 }
 
 function ProjectItem({ project }: { project: Project }) {
   const formattedDate = new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
-  }).format(project.lastOpened)
+  }).format(project.lastOpened);
 
   return (
     <div className="hover:bg-muted/50 group flex items-center gap-4 px-6 py-4 transition-colors">
@@ -96,5 +96,5 @@ function ProjectItem({ project }: { project: Project }) {
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
-  )
+  );
 }

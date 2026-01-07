@@ -15,44 +15,41 @@ bun add @sandcastle/rpc
 ### Server-Side (with @sandcastle/http)
 
 ```typescript
-import { RpcServer } from "@effect/rpc"
-import { WorktreeRpc, WorktreeRpcHandlersLive } from "@sandcastle/rpc"
+import { RpcServer } from "@effect/rpc";
+
+import { WorktreeRpc, WorktreeRpcHandlersLive } from "@sandcastle/rpc";
 
 // Create HTTP app with handlers
-const app = RpcServer.toHttpApp(WorktreeRpc).pipe(
-  Effect.provide(WorktreeRpcHandlersLive)
-)
+const app = RpcServer.toHttpApp(WorktreeRpc).pipe(Effect.provide(WorktreeRpcHandlersLive));
 ```
 
 ### Client-Side
 
 ```typescript
-import { RpcClient, RpcSerialization } from "@effect/rpc"
-import { FetchHttpClient } from "@effect/platform"
-import { Effect, Layer } from "effect"
-import { WorktreeRpc } from "@sandcastle/rpc"
+import { FetchHttpClient } from "@effect/platform";
+import { RpcClient, RpcSerialization } from "@effect/rpc";
+import { Effect, Layer } from "effect";
+
+import { WorktreeRpc } from "@sandcastle/rpc";
 
 // Create protocol layer
 const RpcProtocol = RpcClient.layerProtocolHttp({
   url: "http://localhost:3000/rpc"
-}).pipe(
-  Layer.provide(FetchHttpClient.layer),
-  Layer.provide(RpcSerialization.layerNdjson)
-)
+}).pipe(Layer.provide(FetchHttpClient.layer), Layer.provide(RpcSerialization.layerNdjson));
 
 // Use the client
 const program = Effect.gen(function* () {
-  const client = yield* RpcClient.make(WorktreeRpc)
+  const client = yield* RpcClient.make(WorktreeRpc);
 
   // List worktrees
   const worktrees = yield* client["worktree.list"]({
     repoPath: "/path/to/repo"
-  })
+  });
 
-  return worktrees
-}).pipe(Effect.provide(RpcProtocol))
+  return worktrees;
+}).pipe(Effect.provide(RpcProtocol));
 
-Effect.runPromise(program).then(console.log)
+Effect.runPromise(program).then(console.log);
 ```
 
 ## API Reference
@@ -64,7 +61,7 @@ Effect.runPromise(program).then(console.log)
 List all worktrees for a repository.
 
 ```typescript
-client["worktree.list"]({ repoPath: "/path/to/repo" })
+client["worktree.list"]({ repoPath: "/path/to/repo" });
 // Returns: WorktreeInfo[]
 ```
 
@@ -76,7 +73,7 @@ Get information about a specific worktree.
 client["worktree.get"]({
   repoPath: "/path/to/repo",
   worktreePath: "/path/to/worktree"
-})
+});
 // Returns: WorktreeInfo
 ```
 
@@ -90,8 +87,8 @@ client["worktree.create"]({
   worktreePath: "/path/to/new-worktree",
   branch: "feature/my-feature",
   createBranch: true,
-  fromRef: "main",  // optional
-})
+  fromRef: "main" // optional
+});
 // Returns: WorktreeInfo
 ```
 
@@ -103,8 +100,8 @@ Remove a worktree.
 client["worktree.remove"]({
   repoPath: "/path/to/repo",
   worktreePath: "/path/to/worktree",
-  force: false,  // optional
-})
+  force: false // optional
+});
 // Returns: void
 ```
 
@@ -113,7 +110,7 @@ client["worktree.remove"]({
 Clean up stale worktree references.
 
 ```typescript
-client["worktree.prune"]({ repoPath: "/path/to/repo" })
+client["worktree.prune"]({ repoPath: "/path/to/repo" });
 // Returns: void
 ```
 
@@ -123,10 +120,10 @@ client["worktree.prune"]({ repoPath: "/path/to/repo" })
 
 ```typescript
 class WorktreeInfo {
-  path: string      // Absolute path to the worktree
-  branch: string    // Branch name (or "HEAD" if detached)
-  commit: string    // Current commit SHA
-  isMain: boolean   // True if this is the main worktree
+  path: string; // Absolute path to the worktree
+  branch: string; // Branch name (or "HEAD" if detached)
+  commit: string; // Current commit SHA
+  isMain: boolean; // True if this is the main worktree
 }
 ```
 
@@ -134,11 +131,11 @@ class WorktreeInfo {
 
 ```typescript
 class CreateWorktreeOptions {
-  repoPath: string       // Path to main repository
-  worktreePath: string   // Path for new worktree
-  branch: string         // Branch name
-  createBranch: boolean  // Create new branch if true
-  fromRef?: string       // Starting point for new branch
+  repoPath: string; // Path to main repository
+  worktreePath: string; // Path for new worktree
+  branch: string; // Branch name
+  createBranch: boolean; // Create new branch if true
+  fromRef?: string; // Starting point for new branch
 }
 ```
 
@@ -146,9 +143,9 @@ class CreateWorktreeOptions {
 
 ```typescript
 class RemoveWorktreeOptions {
-  repoPath: string      // Path to main repository
-  worktreePath: string  // Path to worktree to remove
-  force?: boolean       // Force removal
+  repoPath: string; // Path to main repository
+  worktreePath: string; // Path to worktree to remove
+  force?: boolean; // Force removal
 }
 ```
 
@@ -156,73 +153,63 @@ class RemoveWorktreeOptions {
 
 All errors extend `Schema.TaggedError` for type-safe error handling:
 
-| Error | Description | Fields |
-|-------|-------------|--------|
-| `GitCommandRpcError` | Git command failure | `command`, `stderr`, `exitCode` |
-| `GitNotFoundRpcError` | Git not installed | `message` |
-| `WorktreeExistsRpcError` | Worktree already exists | `path` |
-| `WorktreeNotFoundRpcError` | Worktree not found | `path` |
-| `BranchExistsRpcError` | Branch already exists | `branch` |
-| `InvalidRepoRpcError` | Invalid git repository | `path`, `message` |
+| Error                      | Description             | Fields                          |
+| -------------------------- | ----------------------- | ------------------------------- |
+| `GitCommandRpcError`       | Git command failure     | `command`, `stderr`, `exitCode` |
+| `GitNotFoundRpcError`      | Git not installed       | `message`                       |
+| `WorktreeExistsRpcError`   | Worktree already exists | `path`                          |
+| `WorktreeNotFoundRpcError` | Worktree not found      | `path`                          |
+| `BranchExistsRpcError`     | Branch already exists   | `branch`                        |
+| `InvalidRepoRpcError`      | Invalid git repository  | `path`, `message`               |
 
 ### Error Handling Example
 
 ```typescript
-import { Effect } from "effect"
-import {
-  GitCommandRpcError,
-  WorktreeNotFoundRpcError
-} from "@sandcastle/rpc"
+import { Effect } from "effect";
+
+import { GitCommandRpcError, WorktreeNotFoundRpcError } from "@sandcastle/rpc";
 
 const program = Effect.gen(function* () {
-  const client = yield* RpcClient.make(WorktreeRpc)
+  const client = yield* RpcClient.make(WorktreeRpc);
   return yield* client["worktree.get"]({
     repoPath: "/path/to/repo",
     worktreePath: "/path/to/worktree"
-  })
+  });
 }).pipe(
   Effect.catchTags({
-    GitCommandRpcError: (e) =>
-      Effect.fail(`Git error: ${e.stderr}`),
-    WorktreeNotFoundRpcError: (e) =>
-      Effect.fail(`Worktree not found: ${e.path}`),
+    GitCommandRpcError: e => Effect.fail(`Git error: ${e.stderr}`),
+    WorktreeNotFoundRpcError: e => Effect.fail(`Worktree not found: ${e.path}`)
   })
-)
+);
 ```
 
 ## Exports
 
 ```typescript
 // Main exports
-import {
-  WorktreeRpc,              // RpcGroup definition
-  WorktreeRpcHandlers,      // Handler layer (requires WorktreeService)
-  WorktreeRpcHandlersLive,  // Handler layer with WorktreeServiceLive
-} from "@sandcastle/rpc"
-
 // Types
-import {
-  WorktreeInfo,
-  CreateWorktreeOptions,
-  RemoveWorktreeOptions
-} from "@sandcastle/rpc"
 
 // Errors
 import {
+  BranchExistsRpcError,
+  CreateWorktreeOptions,
   GitCommandRpcError,
   GitNotFoundRpcError,
-  WorktreeExistsRpcError,
-  WorktreeNotFoundRpcError,
-  BranchExistsRpcError,
   InvalidRepoRpcError,
-  WorktreeRpcError,  // Union of all errors
-} from "@sandcastle/rpc"
-
+  RemoveWorktreeOptions,
+  WorktreeExistsRpcError,
+  WorktreeInfo,
+  WorktreeNotFoundRpcError,
+  WorktreeRpc, // RpcGroup definition
+  WorktreeRpcError, // Union of all errors
+  WorktreeRpcHandlers, // Handler layer (requires WorktreeService)
+  WorktreeRpcHandlersLive // Handler layer with WorktreeServiceLive
+} from "@sandcastle/rpc";
+import { GitCommandRpcError } from "@sandcastle/rpc/errors";
+import { WorktreeRpcHandlersLive } from "@sandcastle/rpc/handlers";
 // Granular imports
-import { WorktreeRpc } from "@sandcastle/rpc/schema"
-import { WorktreeInfo } from "@sandcastle/rpc/types"
-import { GitCommandRpcError } from "@sandcastle/rpc/errors"
-import { WorktreeRpcHandlersLive } from "@sandcastle/rpc/handlers"
+import { WorktreeRpc } from "@sandcastle/rpc/schema";
+import { WorktreeInfo } from "@sandcastle/rpc/types";
 ```
 
 ## Dependencies

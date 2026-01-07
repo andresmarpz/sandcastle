@@ -1,6 +1,6 @@
-import { WelcomeSection } from "@/components/home/welcome-section"
-import { RecentProjects } from "@/components/home/recent-projects"
-import type { Project } from "@/types/project"
+import { WelcomeSection } from "@/components/home/welcome-section";
+import { RecentProjects } from "@/components/home/recent-projects";
+import type { Project } from "@/types/project";
 
 const MOCK_PROJECTS: Project[] = [
   {
@@ -24,7 +24,7 @@ const MOCK_PROJECTS: Project[] = [
     lastOpened: new Date("2026-01-03"),
     description: "REST API service",
   },
-]
+];
 
 export function HomePage() {
   return (
@@ -32,5 +32,5 @@ export function HomePage() {
       <WelcomeSection />
       <RecentProjects projects={MOCK_PROJECTS} />
     </div>
-  )
+  );
 }

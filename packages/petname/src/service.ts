@@ -1,6 +1,7 @@
-import { Context, Effect } from "effect"
-import type { GenerateOptions, Petname } from "./types.ts"
-import type { InvalidWordCountError } from "./errors.ts"
+import { Context, type Effect } from "effect";
+
+import type { InvalidWordCountError } from "./errors.ts";
+import type { GenerateOptions, Petname } from "./types.ts";
 
 /**
  * Service for generating random petnames.
@@ -19,8 +20,6 @@ export class PetnameService extends Context.Tag("PetnameService")<
      * @param options - Configuration for the generated name
      * @returns Effect that produces a Petname or fails with InvalidWordCountError
      */
-    readonly generate: (
-      options?: GenerateOptions
-    ) => Effect.Effect<Petname, InvalidWordCountError>
+    readonly generate: (options?: GenerateOptions) => Effect.Effect<Petname, InvalidWordCountError>;
   }
 >() {}
