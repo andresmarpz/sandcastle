@@ -17,8 +17,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --fix",
     "lint:check": "eslint .",
-    "format": "bun prettier --write .",
-    "format:check": "bun prettier --check ."
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "effect": "^3.19.14"
