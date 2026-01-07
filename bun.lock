@@ -50,23 +50,7 @@
         "vite": "^7.0.4",
       },
     },
-    "packages/config": {
-      "name": "@sandcastle/config",
-      "version": "0.1.0",
-      "dependencies": {
-        "effect": "^3.19.14",
-      },
-      "devDependencies": {
-        "@sandcastle/tooling": "workspace:*",
-        "@types/bun": "latest",
-        "eslint": "^9.39.2",
-        "prettier": "^3.4.2",
-      },
-      "peerDependencies": {
-        "typescript": "^5",
-      },
-    },
-    "packages/http": {
+    "apps/http": {
       "name": "@sandcastle/http",
       "version": "0.1.0",
       "dependencies": {
@@ -82,6 +66,22 @@
         "eslint": "^9.39.2",
         "prettier": "^3.4.2",
         "typescript": "^5.9.3",
+      },
+    },
+    "packages/config": {
+      "name": "@sandcastle/config",
+      "version": "0.1.0",
+      "dependencies": {
+        "effect": "^3.19.14",
+      },
+      "devDependencies": {
+        "@sandcastle/tooling": "workspace:*",
+        "@types/bun": "latest",
+        "eslint": "^9.39.2",
+        "prettier": "^3.4.2",
+      },
+      "peerDependencies": {
+        "typescript": "^5",
       },
     },
     "packages/petname": {
@@ -472,7 +472,7 @@
 
     "@sandcastle/config": ["@sandcastle/config@workspace:packages/config"],
 
-    "@sandcastle/http": ["@sandcastle/http@workspace:packages/http"],
+    "@sandcastle/http": ["@sandcastle/http@workspace:apps/http"],
 
     "@sandcastle/petname": ["@sandcastle/petname@workspace:packages/petname"],
 
