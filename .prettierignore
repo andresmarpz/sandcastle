@@ -5,6 +5,9 @@
 **/dist/
 **/target/
 
+# Turbo cache
+**/.turbo/
+
 # Lock files
 bun.lock
 package-lock.json
