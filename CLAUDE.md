@@ -110,7 +110,7 @@ bun --hot ./index.ts
 
 For more information, read the Bun API docs in `node_modules/bun-types/docs/**.mdx`.
 
-## Effect Best Practices
+## Effect.ts Library Best Practices
 
 **Before implementing Effect features**, run `bunx effect-solutions list` and read the relevant guide.
 

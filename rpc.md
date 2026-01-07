@@ -9,6 +9,7 @@ This document summarizes the RPC infrastructure implemented and provides instruc
 A schema-first RPC package using `@effect/rpc` that defines worktree operations.
 
 **Key Files:**
+
 - `src/types.ts` - Schema classes: `WorktreeInfo`, `CreateWorktreeOptions`, `RemoveWorktreeOptions`
 - `src/errors.ts` - RPC error types: `GitCommandRpcError`, `WorktreeExistsRpcError`, `WorktreeNotFoundRpcError`, `BranchExistsRpcError`, etc.
 - `src/schema.ts` - `WorktreeRpc` RpcGroup with all operations
@@ -16,28 +17,32 @@ A schema-first RPC package using `@effect/rpc` that defines worktree operations.
 - `index.ts` - Public exports
 
 **Available RPC Operations:**
-| Tag | Payload | Success | Errors |
-|-----|---------|---------|--------|
-| `worktree.list` | `{ repoPath: string }` | `WorktreeInfo[]` | `GitCommandRpcError` |
-| `worktree.get` | `{ repoPath, worktreePath }` | `WorktreeInfo` | `GitCommandRpcError`, `WorktreeNotFoundRpcError` |
-| `worktree.create` | `CreateWorktreeOptions` | `WorktreeInfo` | `GitCommandRpcError`, `WorktreeExistsRpcError`, `BranchExistsRpcError` |
-| `worktree.remove` | `RemoveWorktreeOptions` | `void` | `GitCommandRpcError`, `WorktreeNotFoundRpcError` |
-| `worktree.prune` | `{ repoPath: string }` | `void` | `GitCommandRpcError` |
+
+| Tag               | Payload                      | Success          | Errors                                                                 |
+| ----------------- | ---------------------------- | ---------------- | ---------------------------------------------------------------------- |
+| `worktree.list`   | `{ repoPath: string }`       | `WorktreeInfo[]` | `GitCommandRpcError`                                                   |
+| `worktree.get`    | `{ repoPath, worktreePath }` | `WorktreeInfo`   | `GitCommandRpcError`, `WorktreeNotFoundRpcError`                       |
+| `worktree.create` | `CreateWorktreeOptions`      | `WorktreeInfo`   | `GitCommandRpcError`, `WorktreeExistsRpcError`, `BranchExistsRpcError` |
+| `worktree.remove` | `RemoveWorktreeOptions`      | `void`           | `GitCommandRpcError`, `WorktreeNotFoundRpcError`                       |
+| `worktree.prune`  | `{ repoPath: string }`       | `void`           | `GitCommandRpcError`                                                   |
 
 ### 2. `@sandcastle/http` Package (`packages/http/`)
 
 HTTP server exposing the RPC endpoints using `@effect/platform-bun`.
 
 **Key Files:**
+
 - `src/server.ts` - Bun HTTP server with RPC on `/rpc` endpoint
 - `index.ts` - Exports `makeServerLayer`, `ServerLive`
 
 **Configuration:**
+
 - Port: `PORT` env var or default `3000`
 - Endpoint: `/rpc`
 - Serialization: NDJSON
 
 **Run the server:**
+
 ```bash
 cd packages/http
 bun run start
@@ -62,7 +67,7 @@ bun add @effect/platform-browser
 The frontend needs access to `WorktreeRpc` from `@sandcastle/rpc`. In a monorepo:
 
 ```typescript
-import { WorktreeRpc } from "@sandcastle/rpc"
+import { WorktreeRpc } from "@sandcastle/rpc";
 ```
 
 Or copy the schema file to share types.
@@ -71,23 +76,23 @@ Or copy the schema file to share types.
 
 ```typescript
 // client.ts
-import { RpcClient, RpcSerialization } from "@effect/rpc"
-import { FetchHttpClient } from "@effect/platform"
-import { Effect, Layer } from "effect"
-import { WorktreeRpc } from "@sandcastle/rpc"
+import { RpcClient, RpcSerialization } from "@effect/rpc";
+import { FetchHttpClient } from "@effect/platform";
+import { Effect, Layer } from "effect";
+import { WorktreeRpc } from "@sandcastle/rpc";
 
 // HTTP protocol connecting to the server
 const RpcProtocol = RpcClient.layerProtocolHttp({
-  url: "http://localhost:3000/rpc"
+  url: "http://localhost:3000/rpc",
 }).pipe(
   Layer.provide(FetchHttpClient.layer),
   Layer.provide(RpcSerialization.layerNdjson)
-)
+);
 
 // Create the typed client
 export const WorktreeClient = RpcClient.make(WorktreeRpc).pipe(
   Effect.provide(RpcProtocol)
-)
+);
 
 // Or as a service for dependency injection
 export class WorktreeRpcClient extends Effect.Service<WorktreeRpcClient>()(
@@ -102,91 +107,93 @@ export class WorktreeRpcClient extends Effect.Service<WorktreeRpcClient>()(
 ### 4. Use the Client
 
 ```typescript
-import { Effect } from "effect"
-import { WorktreeClient } from "./client"
+import { Effect } from "effect";
+import { WorktreeClient } from "./client";
 
 // List worktrees
 const listWorktrees = Effect.gen(function* () {
-  const client = yield* WorktreeClient
-  const worktrees = yield* client["worktree.list"]({ repoPath: "/path/to/repo" })
-  return worktrees
-})
+  const client = yield* WorktreeClient;
+  const worktrees = yield* client["worktree.list"]({
+    repoPath: "/path/to/repo",
+  });
+  return worktrees;
+});
 
 // Create a worktree
 const createWorktree = Effect.gen(function* () {
-  const client = yield* WorktreeClient
+  const client = yield* WorktreeClient;
   const info = yield* client["worktree.create"]({
     repoPath: "/path/to/repo",
     worktreePath: "/path/to/repo-feature",
     branch: "feature/new-feature",
     createBranch: true,
     fromRef: "main",
-  })
-  return info
-})
+  });
+  return info;
+});
 
 // Run the effect
-Effect.runPromise(listWorktrees).then(console.log)
+Effect.runPromise(listWorktrees).then(console.log);
 ```
 
 ### 5. Error Handling
 
 ```typescript
-import { Effect } from "effect"
-import { GitCommandRpcError, WorktreeNotFoundRpcError } from "@sandcastle/rpc"
+import { Effect } from "effect";
+import { GitCommandRpcError, WorktreeNotFoundRpcError } from "@sandcastle/rpc";
 
 const getWorktree = Effect.gen(function* () {
-  const client = yield* WorktreeClient
+  const client = yield* WorktreeClient;
   return yield* client["worktree.get"]({
     repoPath: "/path/to/repo",
-    worktreePath: "/path/to/worktree"
-  })
+    worktreePath: "/path/to/worktree",
+  });
 }).pipe(
   Effect.catchTags({
     GitCommandRpcError: (e) => Effect.succeed(`Git error: ${e.stderr}`),
     WorktreeNotFoundRpcError: (e) => Effect.succeed(`Not found: ${e.path}`),
   })
-)
+);
 ```
 
 ### 6. React Integration Example
 
 ```typescript
 // hooks/useWorktrees.ts
-import { useEffect, useState } from "react"
-import { Effect } from "effect"
-import { WorktreeClient } from "../client"
-import type { WorktreeInfo } from "@sandcastle/rpc"
+import { useEffect, useState } from "react";
+import { Effect } from "effect";
+import { WorktreeClient } from "../client";
+import type { WorktreeInfo } from "@sandcastle/rpc";
 
 export function useWorktrees(repoPath: string) {
-  const [worktrees, setWorktrees] = useState<WorktreeInfo[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [worktrees, setWorktrees] = useState<WorktreeInfo[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const program = Effect.gen(function* () {
-      const client = yield* WorktreeClient
-      return yield* client["worktree.list"]({ repoPath })
-    })
+      const client = yield* WorktreeClient;
+      return yield* client["worktree.list"]({ repoPath });
+    });
 
     Effect.runPromise(program)
       .then(setWorktrees)
       .catch((e) => setError(String(e)))
-      .finally(() => setLoading(false))
-  }, [repoPath])
+      .finally(() => setLoading(false));
+  }, [repoPath]);
 
-  return { worktrees, loading, error }
+  return { worktrees, loading, error };
 }
 ```
 
 ## Key Dependencies
 
-| Package | Version | Purpose |
-|---------|---------|---------|
-| `effect` | ^3.19.14 | Core Effect library |
-| `@effect/rpc` | ^0.73.0 | RPC client/server |
-| `@effect/platform` | ^0.94.1 | HTTP abstractions |
-| `@effect/platform-bun` | ^0.87.0 | Bun HTTP server |
+| Package                    | Version  | Purpose              |
+| -------------------------- | -------- | -------------------- |
+| `effect`                   | ^3.19.14 | Core Effect library  |
+| `@effect/rpc`              | ^0.73.0  | RPC client/server    |
+| `@effect/platform`         | ^0.94.1  | HTTP abstractions    |
+| `@effect/platform-bun`     | ^0.87.0  | Bun HTTP server      |
 | `@effect/platform-browser` | (latest) | Browser fetch client |
 
 ## Architecture
@@ -236,6 +243,7 @@ export function useWorktrees(repoPath: string) {
 ## Files Modified/Created
 
 ### New: `packages/rpc/`
+
 - `package.json`
 - `index.ts`
 - `src/types.ts`
@@ -244,10 +252,12 @@ export function useWorktrees(repoPath: string) {
 - `src/handlers.ts`
 
 ### New: `packages/http/`
+
 - `package.json`
 - `index.ts`
 - `src/server.ts`
 - `README.md`
 
-### Modified:
+### Modified
+
 - Root `package.json` - Fixed workspaces config (removed non-existent `apps/desktop/src-backend`)
