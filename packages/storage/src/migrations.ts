@@ -60,6 +60,11 @@ const migrations: Migration[] = [
         exit_code INTEGER
       );
     `
+  },
+  {
+    version: 2,
+    description: "Add pinned field to repositories",
+    up: `ALTER TABLE repositories ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0;`
   }
 ];
 
