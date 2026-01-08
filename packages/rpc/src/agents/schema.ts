@@ -1,6 +1,8 @@
 import { Rpc, RpcGroup } from "@effect/rpc";
 import { Schema } from "effect";
+
 import { Agent, CreateAgentInput, UpdateAgentInput } from "@sandcastle/storage/entities";
+
 import { DatabaseRpcError, ForeignKeyViolationRpcError } from "../common/errors";
 import { AgentNotFoundRpcError } from "./errors";
 

@@ -1,6 +1,8 @@
 import { Rpc, RpcGroup } from "@effect/rpc";
 import { Schema } from "effect";
-import { Session, CreateSessionInput, UpdateSessionInput } from "@sandcastle/storage/entities";
+
+import { CreateSessionInput, Session, UpdateSessionInput } from "@sandcastle/storage/entities";
+
 import { DatabaseRpcError, ForeignKeyViolationRpcError } from "../common/errors";
 import { SessionNotFoundRpcError } from "./errors";
 
