@@ -1,9 +1,26 @@
-import { HttpRouter, HttpServerResponse } from "@effect/platform";
+import { HttpMiddleware, HttpRouter, HttpServerResponse } from "@effect/platform";
 import { BunHttpServer, BunRuntime } from "@effect/platform-bun";
 import { RpcSerialization, RpcServer } from "@effect/rpc";
 import { Effect, Layer } from "effect";
 
 import { WorktreeRpc, WorktreeRpcHandlersLive } from "@sandcastle/rpc";
+
+const CorsMiddleware = HttpMiddleware.cors({
+  allowedOrigins: ["*"], // In production, specify exact origins like ["https://your-app.com"]
+  allowedMethods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    "X-Requested-With",
+    // Tracing headers (B3/OpenTelemetry)
+    "b3",
+    "traceparent",
+    "tracestate"
+  ],
+  exposedHeaders: ["Content-Length", "X-Request-Id"],
+  maxAge: 86400, // 24 hours - browsers cache preflight responses
+  credentials: false // Set to true if you need cookies/auth headers
+});
 
 const RpcLayer = RpcServer.layer(WorktreeRpc).pipe(Layer.provide(WorktreeRpcHandlersLive));
 
@@ -20,7 +37,7 @@ const CustomRoutes = HttpRouter.Default.use(router =>
 const port = Number(process.env.PORT) || 3000;
 
 export const makeServerLayer = (options?: { port?: number }) =>
-  HttpRouter.Default.serve().pipe(
+  HttpRouter.Default.serve(CorsMiddleware).pipe(
     Layer.provide(CustomRoutes),
     Layer.provide(RpcLayer),
     Layer.provide(HttpProtocol),
