@@ -1,0 +1,33 @@
+{
+  "name": "@sandcastle/storage",
+  "version": "0.1.0",
+  "description": "Effect-based SQLite storage for Sandcastle entities.",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "exports": {
+    ".": "./index.ts",
+    "./entities": "./src/entities.ts",
+    "./errors": "./src/errors.ts",
+    "./service": "./src/service.ts",
+    "./live": "./src/live.ts"
+  },
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --fix",
+    "lint:check": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "dependencies": {
+    "effect": "^3.19.14"
+  },
+  "devDependencies": {
+    "@sandcastle/tooling": "workspace:*",
+    "@types/bun": "latest",
+    "eslint": "^9.39.2",
+    "prettier": "^3.4.2",
+    "typescript": "^5.9.3"
+  }
+}
