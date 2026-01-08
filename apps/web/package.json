@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@sandcastle/ui": "workspace:*",
     "@base-ui/react": "^1.0.0",
     "@tabler/icons-react": "^3.36.1",
     "class-variance-authority": "^0.7.1",
