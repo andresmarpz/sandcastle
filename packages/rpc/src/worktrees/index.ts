@@ -1,2 +1,3 @@
 export * from "./errors";
-export { WorktreeRpc } from "./schema";
+export { CreateWorktreeRequestSchema, WorktreeRpc } from "./schema";
+export type { CreateWorktreeRequest } from "./schema";

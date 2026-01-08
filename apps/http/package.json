@@ -24,6 +24,7 @@
     "@effect/rpc": "^0.73.0",
     "@effect/platform": "^0.94.1",
     "@effect/platform-bun": "^0.87.0",
+    "@sandcastle/petname": "workspace:*",
     "@sandcastle/rpc": "workspace:*",
     "@sandcastle/storage": "workspace:*",
     "@sandcastle/worktree": "workspace:*"

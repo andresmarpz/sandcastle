@@ -1,12 +1,12 @@
 import type {
-  CreateWorktreeInput,
+  CreateWorktreeRequest,
   UpdateWorktreeInput,
   Worktree,
 } from "@sandcastle/rpc";
 import { WorktreeClient, WORKTREE_LIST_KEY } from "./worktree-client";
 
 // Re-export types for consumers
-export type { CreateWorktreeInput, UpdateWorktreeInput, Worktree };
+export type { CreateWorktreeRequest, UpdateWorktreeInput, Worktree };
 
 // Re-export the client and key for direct use
 export { WorktreeClient, WORKTREE_LIST_KEY };

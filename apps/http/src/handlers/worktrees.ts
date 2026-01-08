@@ -1,5 +1,9 @@
-import { Effect, Layer } from "effect";
+import { mkdir } from "node:fs/promises";
+import path from "node:path";
 
+import { Data, Effect, Layer } from "effect";
+
+import { petname } from "@sandcastle/petname";
 import {
   DatabaseRpcError,
   ForeignKeyViolationRpcError,
@@ -26,6 +30,10 @@ import {
   type WorktreeNotFoundError as GitWorktreeNotFoundError,
   type WorktreeExistsError
 } from "@sandcastle/worktree";
+
+class FileSystemError extends Data.TaggedError("FileSystemError")<{
+  message: string;
+}> {}
 
 // ─── Error Mapping ───────────────────────────────────────────
 
@@ -58,6 +66,7 @@ type CreateErrors =
   | WorktreePathExistsError
   | ForeignKeyViolationError
   | DatabaseError
+  | FileSystemError
   | GitCommandError
   | WorktreeExistsError
   | BranchExistsError;
@@ -96,6 +105,11 @@ const mapWorktreeCreateError = (
       });
     case "DatabaseError":
       return mapDatabaseError(error);
+    case "FileSystemError":
+      return new GitOperationRpcError({
+        operation: "filesystem",
+        message: error.message
+      });
   }
 };
 
@@ -209,23 +223,40 @@ export const WorktreeRpcHandlers = WorktreeRpc.toLayer(
           // 1. Get repository to find the git repo path
           const repository = yield* storage.repositories.get(params.repositoryId);
 
+          const name = petname();
+          const branch = name;
+          const baseBranch = repository.defaultBranch;
+          const worktreePath = path.join(
+            repository.directoryPath,
+            ".sandcastle",
+            "worktrees",
+            name
+          );
+
+          yield* Effect.tryPromise({
+            try: () => mkdir(path.dirname(worktreePath), { recursive: true }),
+            catch: error => {
+              const message = error instanceof Error ? error.message : String(error);
+              return new FileSystemError({ message });
+            }
+          });
+
           // 2. Create git worktree
           yield* gitWorktree.create({
             repoPath: repository.directoryPath,
-            worktreePath: params.path,
-            branch: params.branch,
+            worktreePath,
+            branch,
             createBranch: true,
-            fromRef: params.baseBranch
+            fromRef: baseBranch
           });
 
           // 3. Create storage record
           const worktree = yield* storage.worktrees.create({
             repositoryId: params.repositoryId,
-            path: params.path,
-            branch: params.branch,
-            name: params.name,
-            baseBranch: params.baseBranch,
-            status: params.status
+            path: worktreePath,
+            branch,
+            name,
+            baseBranch
           });
 
           return toWorktree(worktree);
