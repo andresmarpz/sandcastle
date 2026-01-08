@@ -18,6 +18,7 @@ export class Repository extends Schema.Class<Repository>("Repository")({
   label: Schema.String,
   directoryPath: Schema.String,
   defaultBranch: Schema.String,
+  pinned: Schema.Boolean,
   /** ISO 8601 timestamp */
   createdAt: Schema.String,
   /** ISO 8601 timestamp */
@@ -36,7 +37,8 @@ export class UpdateRepositoryInput extends Schema.Class<UpdateRepositoryInput>(
   "UpdateRepositoryInput"
 )({
   label: Schema.optional(Schema.String),
-  defaultBranch: Schema.optional(Schema.String)
+  defaultBranch: Schema.optional(Schema.String),
+  pinned: Schema.optional(Schema.Boolean)
 }) {}
 
 // ─── Worktree ─────────────────────────────────────────────────

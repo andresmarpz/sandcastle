@@ -45,6 +45,7 @@ const rowToRepository = (row: Record<string, unknown>): Repository =>
     label: row["label"] as string,
     directoryPath: row["directory_path"] as string,
     defaultBranch: row["default_branch"] as string,
+    pinned: Boolean(row["pinned"]),
     createdAt: row["created_at"] as string,
     updatedAt: row["updated_at"] as string
   });
@@ -143,7 +144,10 @@ export const makeStorageService = (
         list: () =>
           tryDb("repositories.list", () =>
             db
-              .query<Record<string, unknown>, []>("SELECT * FROM repositories ORDER BY label")
+              .query<
+                Record<string, unknown>,
+                []
+              >("SELECT * FROM repositories ORDER BY pinned DESC, created_at DESC")
               .all()
               .map(rowToRepository)
           ),
@@ -201,9 +205,9 @@ export const makeStorageService = (
 
             yield* tryDb("repositories.create", () =>
               db.run(
-                `INSERT INTO repositories (id, label, directory_path, default_branch, created_at, updated_at)
-                 VALUES (?, ?, ?, ?, ?, ?)`,
-                [id, input.label, input.directoryPath, defaultBranch, now, now]
+                `INSERT INTO repositories (id, label, directory_path, default_branch, pinned, created_at, updated_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                [id, input.label, input.directoryPath, defaultBranch, 0, now, now]
               )
             );
 
@@ -212,6 +216,7 @@ export const makeStorageService = (
               label: input.label,
               directoryPath: input.directoryPath,
               defaultBranch,
+              pinned: false,
               createdAt: now,
               updatedAt: now
             });
@@ -233,6 +238,10 @@ export const makeStorageService = (
               updates.push("default_branch = ?");
               values.push(input.defaultBranch);
             }
+            if (input.pinned !== undefined) {
+              updates.push("pinned = ?");
+              values.push(input.pinned ? 1 : 0);
+            }
 
             values.push(id);
 
@@ -244,6 +253,7 @@ export const makeStorageService = (
               ...existing,
               label: input.label ?? existing.label,
               defaultBranch: input.defaultBranch ?? existing.defaultBranch,
+              pinned: input.pinned ?? existing.pinned,
               updatedAt: now
             });
           }),
