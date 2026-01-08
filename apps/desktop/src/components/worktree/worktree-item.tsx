@@ -20,10 +20,9 @@ import { WorktreeRemoveDialog } from "./worktree-remove-dialog";
 
 interface WorktreeItemProps {
   worktree: WorktreeInfo;
-  onRemoved: () => void;
 }
 
-export function WorktreeItem({ worktree, onRemoved }: WorktreeItemProps) {
+export function WorktreeItem({ worktree }: WorktreeItemProps) {
   const [removeDialogOpen, setRemoveDialogOpen] = React.useState(false);
 
   const handleCopyPath = () => {
@@ -91,7 +90,6 @@ export function WorktreeItem({ worktree, onRemoved }: WorktreeItemProps) {
         worktree={worktree}
         open={removeDialogOpen}
         onOpenChange={setRemoveDialogOpen}
-        onRemoved={onRemoved}
       />
     </div>
   );
