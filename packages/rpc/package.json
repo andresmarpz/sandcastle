@@ -1,15 +1,17 @@
 {
   "name": "@sandcastle/rpc",
   "version": "0.1.0",
-  "description": "Effect-based RPC server for Sandcastle worktree management.",
+  "description": "Effect-based RPC schemas for Sandcastle entities.",
   "module": "index.ts",
   "type": "module",
   "private": true,
   "exports": {
     ".": "./index.ts",
-    "./schema": "./src/schema.ts",
-    "./errors": "./src/errors.ts",
-    "./types": "./src/types.ts"
+    "./common": "./src/common/index.ts",
+    "./repositories": "./src/repositories/index.ts",
+    "./worktrees": "./src/worktrees/index.ts",
+    "./sessions": "./src/sessions/index.ts",
+    "./agents": "./src/agents/index.ts"
   },
   "scripts": {
     "test": "bun test",
@@ -21,7 +23,8 @@
   },
   "dependencies": {
     "effect": "^3.19.14",
-    "@effect/rpc": "^0.73.0"
+    "@effect/rpc": "^0.73.0",
+    "@sandcastle/storage": "workspace:*"
   },
   "devDependencies": {
     "@sandcastle/tooling": "workspace:*",
