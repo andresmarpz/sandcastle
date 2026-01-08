@@ -71,10 +71,7 @@ export function WorktreeList() {
   return Result.match(worktreesResult, {
     onInitial: () => <WorktreeLoading />,
     onFailure: (failure) => (
-      <WorktreeError
-        error={failure.cause}
-        onRetry={handleRefresh}
-      />
+      <WorktreeError error={failure.cause} onRetry={handleRefresh} />
     ),
     onSuccess: (success) => {
       const worktrees = success.value;

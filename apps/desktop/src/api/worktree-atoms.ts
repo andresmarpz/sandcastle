@@ -40,13 +40,15 @@ export const worktreeQuery = (repoPath: string, worktreePath: string) =>
  * Mutation atom for creating a new worktree.
  * Call with payload and reactivityKeys to invalidate the list after creation.
  */
-export const createWorktreeMutation = WorktreeClient.mutation("worktree.create");
+export const createWorktreeMutation =
+  WorktreeClient.mutation("worktree.create");
 
 /**
  * Mutation atom for removing a worktree.
  * Call with payload and reactivityKeys to invalidate the list after removal.
  */
-export const removeWorktreeMutation = WorktreeClient.mutation("worktree.remove");
+export const removeWorktreeMutation =
+  WorktreeClient.mutation("worktree.remove");
 
 /**
  * Mutation atom for pruning stale worktrees.
