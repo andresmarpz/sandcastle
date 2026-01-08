@@ -1,14 +1,14 @@
 import * as React from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
+import { Card, CardContent } from "@sandcastle/ui/components/card";
+import { Button } from "@sandcastle/ui/components/button";
+import { Separator } from "@sandcastle/ui/components/separator";
 import { IconFolder, IconClock, IconDotsVertical } from "@tabler/icons-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@sandcastle/ui/components/dropdown-menu";
 import type { Project } from "@/types/project";
 
 interface RecentProjectsProps {

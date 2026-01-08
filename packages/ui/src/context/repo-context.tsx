@@ -1,5 +1,4 @@
 import * as React from "react";
-import { open } from "@tauri-apps/plugin-dialog";
 
 interface RepoContextValue {
   repoPath: string | null;
@@ -9,7 +8,7 @@ interface RepoContextValue {
 }
 
 const RepoContext = React.createContext<RepoContextValue | undefined>(
-  undefined,
+  undefined
 );
 
 const STORAGE_KEY = "sandcastle:repoPath";
@@ -31,20 +30,19 @@ export function RepoProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const selectRepoWithDialog = React.useCallback(async () => {
-    const selected = await open({
-      directory: true,
-      multiple: false,
-      title: "Select Git Repository",
-    });
-
-    if (selected && typeof selected === "string") {
-      setRepoPath(selected);
-    }
+    // const selected = await open({
+    //   directory: true,
+    //   multiple: false,
+    //   title: "Select Git Repository",
+    // });
+    // if (selected && typeof selected === "string") {
+    //   setRepoPath(selected);
+    // }
   }, [setRepoPath]);
 
   const value = React.useMemo(
     () => ({ repoPath, setRepoPath, clearRepoPath, selectRepoWithDialog }),
-    [repoPath, setRepoPath, clearRepoPath, selectRepoWithDialog],
+    [repoPath, setRepoPath, clearRepoPath, selectRepoWithDialog]
   );
 
   return <RepoContext.Provider value={value}>{children}</RepoContext.Provider>;

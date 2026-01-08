@@ -7,16 +7,16 @@ import {
   useAtomRefresh,
 } from "@effect-atom/atom-react";
 import type { WorktreeInfo } from "@sandcastle/rpc";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
+import { Card, CardContent } from "@/components/card";
+import { Button } from "@/components/button";
+import { Separator } from "@/components/separator";
 import { IconPlus, IconRefresh, IconBrush } from "@tabler/icons-react";
 import { useRepo } from "@/context/repo-context";
 import {
   worktreeListQuery,
   pruneWorktreesMutation,
   WORKTREE_LIST_KEY,
-} from "@sandcastle/ui/api/worktree-atoms";
+} from "@/api/worktree-atoms";
 import { WorktreeItem } from "./worktree-item";
 import { WorktreeCreateDialog } from "./worktree-create-dialog";
 import { WorktreeEmptyState } from "./worktree-empty-state";
@@ -25,7 +25,7 @@ import { WorktreeError } from "./worktree-error";
 
 // Empty result atom for when no repo is selected
 const emptyWorktreesAtom = Atom.make(
-  Result.success<readonly WorktreeInfo[], never>([]),
+  Result.success<readonly WorktreeInfo[], never>([])
 );
 
 export function WorktreeList() {
@@ -35,7 +35,7 @@ export function WorktreeList() {
   // Create the query atom only if we have a repoPath
   const worktreesAtom = React.useMemo(
     () => (repoPath ? worktreeListQuery(repoPath) : emptyWorktreesAtom),
-    [repoPath],
+    [repoPath]
   );
 
   // Read the worktrees result (returns Result type)

@@ -5,12 +5,7 @@
   "type": "module",
   "exports": {
     "./globals.css": "./src/styles/globals.css",
-    "./postcss.config": "./postcss.config.mjs",
-    "./lib/*": "./src/lib/*.ts",
-    "./components/*": "./src/components/*.tsx",
-    "./hooks/*": "./src/hooks/*.ts",
-    "./api/worktree-atoms": "./src/api/worktree-atoms.ts",
-    "./api/worktree-client": "./src/api/worktree-client.ts"
+    "./*": "./src/*"
   },
   "scripts": {
     "dev": "bun --hot src/index.ts",
@@ -18,16 +13,19 @@
     "build": "bun run build.ts"
   },
   "dependencies": {
+    "@base-ui/react": "^1.0.0",
     "@effect-atom/atom": "^0.4.11",
     "@effect-atom/atom-react": "^0.4.4",
     "@effect/platform": "^0.94.1",
     "@effect/rpc": "^0.73.0",
     "@sandcastle/rpc": "workspace:*",
+    "@tabler/icons-react": "^3.36.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "effect": "^3.19.14",
     "react": "^19",
     "react-dom": "^19",
+    "shadcn": "^3.6.3",
     "tailwind-merge": "^3.3.1"
   },
   "devDependencies": {

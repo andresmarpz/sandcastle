@@ -1,0 +1,16 @@
+/* Disable transitions during theme switch */
+.no-transitions,
+.no-transitions * {
+  transition: none !important;
+}
+
+/* Titlebar drag region */
+[data-tauri-drag-region] {
+  -webkit-app-region: drag;
+}
+
+[data-tauri-drag-region] button,
+[data-tauri-drag-region] [role="combobox"],
+[data-tauri-drag-region] [data-slot="dropdown-menu-trigger"] {
+  -webkit-app-region: no-drag;
+}

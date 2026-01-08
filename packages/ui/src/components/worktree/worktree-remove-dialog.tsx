@@ -11,13 +11,13 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
   AlertDialogMedia,
-} from "@/components/ui/alert-dialog";
+} from "@/components/alert-dialog";
 import { IconAlertTriangle } from "@tabler/icons-react";
 import type { WorktreeInfo } from "@sandcastle/rpc";
 import {
   removeWorktreeMutation,
   WORKTREE_LIST_KEY,
-} from "@sandcastle/ui/api/worktree-atoms";
+} from "@/api/worktree-atoms";
 import { useRepo } from "@/context/repo-context";
 
 interface WorktreeRemoveDialogProps {

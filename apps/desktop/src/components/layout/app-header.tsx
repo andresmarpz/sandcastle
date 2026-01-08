@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { Button } from "@sandcastle/ui/components/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,8 +8,8 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { useTheme } from "@/context/theme-context";
+} from "@sandcastle/ui/components/dropdown-menu";
+import { useTheme } from "@sandcastle/ui/context/theme-context";
 import {
   IconSun,
   IconMoon,

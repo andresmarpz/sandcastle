@@ -21,7 +21,8 @@
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@sandcastle/ui/*": ["../../packages/ui/src/*"]
     }
   },
   "include": ["src"],
