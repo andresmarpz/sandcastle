@@ -2,18 +2,18 @@ import { AtomRpc } from "@effect-atom/atom-react";
 import { FetchHttpClient } from "@effect/platform";
 import { RpcClient, RpcSerialization } from "@effect/rpc";
 import { Layer } from "effect";
-import { WorktreeRpc } from "@sandcastle/rpc";
+import { RepositoryRpc } from "@sandcastle/rpc";
 
 const RPC_URL = "http://localhost:3000/api/rpc";
 
 /**
- * AtomRpc client for WorktreeRpc operations.
- * Provides query and mutation atoms for worktree management.
+ * AtomRpc client for RepositoryRpc operations.
+ * Provides query and mutation atoms for repository management.
  */
-export class WorktreeClient extends AtomRpc.Tag<WorktreeClient>()(
-  "WorktreeClient",
+export class RepositoryClient extends AtomRpc.Tag<RepositoryClient>()(
+  "RepositoryClient",
   {
-    group: WorktreeRpc,
+    group: RepositoryRpc,
     protocol: RpcClient.layerProtocolHttp({ url: RPC_URL }).pipe(
       Layer.provide(RpcSerialization.layerJson),
       Layer.provide(FetchHttpClient.layer),
@@ -21,5 +21,5 @@ export class WorktreeClient extends AtomRpc.Tag<WorktreeClient>()(
   },
 ) {}
 
-/** Reactivity key for the worktree list - used for cache invalidation */
-export const WORKTREE_LIST_KEY = "worktrees" as const;
+/** Reactivity key for the repository list - used for cache invalidation */
+export const REPOSITORY_LIST_KEY = "repositories" as const;
