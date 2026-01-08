@@ -9,6 +9,7 @@
     "lint:check": "turbo lint:check",
     "format": "turbo format",
     "format:check": "turbo format:check",
+    "check": "turbo format lint typecheck",
     "clean": "turbo clean"
   },
   "devDependencies": {
