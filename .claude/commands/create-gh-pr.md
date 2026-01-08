@@ -1,47 +1,34 @@
+---
+allowed-tools: Bash(git *), Bash(gh pr *), Bash(bun run *), Bash(sed *), Bash(echo *)
+description: Create GitHub PR
+---
+
 # Create GitHub PR
 
 Create a GitHub Pull Request following best practices for commit hygiene and PR descriptions.
 
-## Step 1: Gather Git Context
+## Context
 
-Start by running these commands in parallel to understand the current state:
+- Current branch: !`git branch --show-current`
+- Main branch: !`git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main"`
+- Git status: !`git status --short`
+- Staged changes: !`git diff --staged`
+- Unstaged changes: !`git diff`
+- Commits ahead of main: !`git log origin/main..HEAD --oneline 2>/dev/null || echo "No commits ahead of main"`
+- Recent commits (for style reference): !`git log --oneline -5`
 
-```bash
-git status
-git diff
-git diff --staged
-git log --oneline -20
-git branch --show-current
-git log origin/main..HEAD --oneline 2>/dev/null || echo "No commits ahead of main"
-```
+## Step 1: Analyze Changes
 
-If the user provides specific instructions, follow those instead.
-
-## Step 2: Analyze Code Changes
-
-Review the diff output carefully:
+Review the context above:
 
 - Identify what files changed and why
 - Group related changes together
 - Note any new features, bug fixes, refactors, tests, or documentation changes
 - Look for any issues that should be fixed before committing
 
-## Step 3: Run Quality Checks
+## Step 2: Run Quality Checks
 
-Find and read the most relevant `package.json` file to identify available scripts:
-
-```bash
-cat package.json 2>/dev/null || cat packages/*/package.json 2>/dev/null | head -100
-```
-
-Run the appropriate quality scripts. Common ones to look for:
-
-- `lint` or `eslint` - code style checks
-- `typecheck` or `tsc` - TypeScript type checking
-- `test` - run tests
-- `build` - ensure code builds
-
-Example:
+Run appropriate quality scripts before committing:
 
 ```bash
 bun run lint
@@ -51,84 +38,49 @@ bun test
 
 If checks fail, fix the issues before proceeding.
 
-## Step 4: Commit Changes
+## Step 3: Commit Changes
 
-**CRITICAL RULES for commits:**
+**Commit message rules:**
 
 - One-liner lowercase messages
-- Use conventional commit format: `type: short description`
-- Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `style`, `perf`
-- NO "authored by claude code" or similar footers
-- Keep commits short and focused on a single logical change
-- Separate commits for different concerns:
-  - Logic/feature implementation = split into multiple commits if there are distinct logical pieces
-  - Tests = separate commit(s)
-  - Documentation = separate commit
-  - Config/tooling changes = separate commit
+- Keep commits focused on a single logical change
 
-**Commit workflow:**
+**Split commits by concern:**
+
+- Piece of logic/feature = separate commits for distinct pieces. Don't add entire features in a single commit. Make surgical commits (max 2-3 files)
+- Tests = separate commit(s)
+- Documentation = separate commit
+- Config/tooling = separate commit
+
+**Example workflow:**
 
 ```bash
-# Stage related files only
 git add path/to/related/files
+git commit -m "feat: add user authentication"
 
-# Commit with conventional message
-git commit -m "feat: add user authentication endpoint"
-
-# Repeat for each logical group of changes
 git add tests/
-git commit -m "test: add auth endpoint tests"
+git commit -m "test: add auth tests"
 
 git add README.md
-git commit -m "docs: document auth api usage"
+git commit -m "docs: document auth usage"
 ```
 
-## Step 5: Create GitHub PR
+## Step 4: Create GitHub PR
 
 Push the branch and create the PR:
 
 ```bash
-# Push with upstream tracking
 git push -u origin $(git branch --show-current)
 
-# Create PR with detailed description
 gh pr create --title "feat: short descriptive title" --body "$(cat <<'EOF'
-## Summary
-
-Brief description of what this PR does and why.
-
-## Changes
-
-- List of specific changes made
-- Another change
-- And another
-
-## Usage Example
-
-If adding new API/feature, show a brief example:
-
-```ts
-// Example code showing how to use the new feature
-const result = await newFeature();
-```
-
-## Testing
-
-- [ ] Tests added/updated
-- [ ] Manual testing done
-
-## Notes
-
-Any additional context, breaking changes, or things reviewers should know.
-EOF
+<include useful context about the PR here>, don't add too many headings, keep it simple, understandable and easy to read>
 )"
-
 ```
 
 **PR Description Guidelines:**
+
 - Start with a clear summary of what and why
 - List specific changes made
 - Include usage examples for new APIs/features
-- Add testing checklist
 - Note any breaking changes or special considerations
 - Keep it concise but informative
