@@ -1,3 +1,4 @@
+import { RegistryProvider } from "@effect-atom/atom-react";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route } from "react-router";
@@ -11,16 +12,18 @@ import "./App.css";
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
     <ThemeProvider>
-      <RepoProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route element={<RootLayout />}>
-              <Route index element={<HomePage />} />
-              <Route path="worktrees" element={<WorktreesPage />} />
-            </Route>
-          </Routes>
-        </BrowserRouter>
-      </RepoProvider>
+      <RegistryProvider>
+        <RepoProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route element={<RootLayout />}>
+                <Route index element={<HomePage />} />
+                <Route path="worktrees" element={<WorktreesPage />} />
+              </Route>
+            </Routes>
+          </BrowserRouter>
+        </RepoProvider>
+      </RegistryProvider>
     </ThemeProvider>
   </React.StrictMode>,
 );
