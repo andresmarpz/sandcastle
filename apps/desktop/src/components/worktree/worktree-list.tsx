@@ -16,7 +16,7 @@ import {
   worktreeListQuery,
   pruneWorktreesMutation,
   WORKTREE_LIST_KEY,
-} from "@/api/worktree-atoms";
+} from "@sandcastle/ui/api/worktree-atoms";
 import { WorktreeItem } from "./worktree-item";
 import { WorktreeCreateDialog } from "./worktree-create-dialog";
 import { WorktreeEmptyState } from "./worktree-empty-state";

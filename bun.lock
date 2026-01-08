@@ -24,6 +24,7 @@
         "@effect/rpc": "^0.73.0",
         "@fontsource-variable/inter": "^5.2.8",
         "@sandcastle/rpc": "workspace:*",
+        "@sandcastle/ui": "workspace:*",
         "@tabler/icons-react": "^3.36.1",
         "@tailwindcss/vite": "^4.1.18",
         "@tauri-apps/api": "^2",
@@ -62,6 +63,7 @@
         "@effect/platform-bun": "^0.87.0",
         "@effect/rpc": "^0.73.0",
         "@sandcastle/rpc": "workspace:*",
+        "@sandcastle/worktree": "workspace:*",
         "effect": "^3.19.14",
       },
       "devDependencies": {
@@ -135,9 +137,7 @@
       "name": "@sandcastle/rpc",
       "version": "0.1.0",
       "dependencies": {
-        "@effect/platform": "^0.94.1",
         "@effect/rpc": "^0.73.0",
-        "@sandcastle/worktree": "workspace:*",
         "effect": "^3.19.14",
       },
       "devDependencies": {
@@ -169,8 +169,14 @@
       "name": "@sandcastle/ui",
       "version": "0.1.0",
       "dependencies": {
+        "@effect-atom/atom": "^0.4.11",
+        "@effect-atom/atom-react": "^0.4.4",
+        "@effect/platform": "^0.94.1",
+        "@effect/rpc": "^0.73.0",
+        "@sandcastle/rpc": "workspace:*",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
+        "effect": "^3.19.14",
         "react": "^19",
         "react-dom": "^19",
         "tailwind-merge": "^3.3.1",
