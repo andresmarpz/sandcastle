@@ -10,10 +10,10 @@ export const ProtocolLive = RpcClient.layerProtocolHttp({
   url: RPC_URL,
 }).pipe(
   Layer.provide(RpcSerialization.layerNdjson),
-  Layer.provide(FetchHttpClient.layer)
+  Layer.provide(FetchHttpClient.layer),
 );
 
 // Helper to create a client effect
 export const makeWorktreeClient = Effect.scoped(
-  RpcClient.make(WorktreeRpc)
+  RpcClient.make(WorktreeRpc),
 ).pipe(Effect.provide(ProtocolLive));
