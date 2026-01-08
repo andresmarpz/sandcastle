@@ -2,6 +2,7 @@ import { HttpRouter, HttpServerResponse } from "@effect/platform";
 import { BunHttpServer, BunRuntime } from "@effect/platform-bun";
 import { RpcSerialization, RpcServer } from "@effect/rpc";
 import { Effect, Layer } from "effect";
+
 import { WorktreeRpc, WorktreeRpcHandlersLive } from "@sandcastle/rpc";
 
 const RpcLayer = RpcServer.layer(WorktreeRpc).pipe(Layer.provide(WorktreeRpcHandlersLive));
