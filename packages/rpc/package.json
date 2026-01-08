@@ -9,8 +9,7 @@
     ".": "./index.ts",
     "./schema": "./src/schema.ts",
     "./errors": "./src/errors.ts",
-    "./types": "./src/types.ts",
-    "./handlers": "./src/handlers.ts"
+    "./types": "./src/types.ts"
   },
   "scripts": {
     "test": "bun test",
@@ -22,9 +21,7 @@
   },
   "dependencies": {
     "effect": "^3.19.14",
-    "@effect/rpc": "^0.73.0",
-    "@effect/platform": "^0.94.1",
-    "@sandcastle/worktree": "workspace:*"
+    "@effect/rpc": "^0.73.0"
   },
   "devDependencies": {
     "@sandcastle/tooling": "workspace:*",
