@@ -1,5 +1,5 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/card";
+import { Button } from "@/components/button";
 import { IconAlertCircle, IconRefresh } from "@tabler/icons-react";
 
 interface WorktreeErrorProps {

@@ -1,7 +1,7 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { IconFolder, IconX, IconFolderOpen } from "@tabler/icons-react";
 import { useRepo } from "@/context/repo-context";
+import { Card, CardContent } from "@/components/card";
+import { Button } from "@/components/button";
 
 export function RepoSelector() {
   const { repoPath, clearRepoPath, selectRepoWithDialog } = useRepo();

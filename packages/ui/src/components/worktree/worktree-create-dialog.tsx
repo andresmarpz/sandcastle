@@ -10,25 +10,20 @@ import {
   AlertDialogFooter,
   AlertDialogCancel,
   AlertDialogAction,
-} from "@/components/ui/alert-dialog";
-import { Input } from "@/components/ui/input";
-import {
-  Field,
-  FieldLabel,
-  FieldError,
-  FieldGroup,
-} from "@/components/ui/field";
+} from "@/components/alert-dialog";
+import { Input } from "@/components/input";
+import { Field, FieldLabel, FieldError, FieldGroup } from "@/components/field";
 import {
   Select,
   SelectTrigger,
   SelectValue,
   SelectContent,
   SelectItem,
-} from "@/components/ui/select";
+} from "@/components/select";
 import {
   createWorktreeMutation,
   WORKTREE_LIST_KEY,
-} from "@sandcastle/ui/api/worktree-atoms";
+} from "@/api/worktree-atoms";
 import { useRepo } from "@/context/repo-context";
 
 interface WorktreeCreateDialogProps {

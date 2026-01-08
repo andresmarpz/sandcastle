@@ -2,12 +2,14 @@ import { RegistryProvider } from "@effect-atom/atom-react";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route } from "react-router";
-import { ThemeProvider } from "@/context/theme-context";
-import { RepoProvider } from "@/context/repo-context";
+import { ThemeProvider } from "@sandcastle/ui/context/theme-context";
+import { RepoProvider } from "@sandcastle/ui/context/repo-context";
 import { RootLayout } from "@/components/layout/root-layout";
 import { HomePage } from "@/pages/home";
 import { WorktreesPage } from "@/pages/worktrees";
-import "./App.css";
+import "@sandcastle/ui/globals.css";
+import "@fontsource-variable/inter";
+import "./tauri.css";
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>

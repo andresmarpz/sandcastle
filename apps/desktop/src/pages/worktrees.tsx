@@ -1,6 +1,6 @@
-import { RepoSelector } from "@/components/worktree/repo-selector";
-import { WorktreeList } from "@/components/worktree/worktree-list";
-import { useRepo } from "@/context/repo-context";
+import { RepoSelector } from "@sandcastle/ui/components/worktree/repo-selector.tsx";
+import { WorktreeList } from "@sandcastle/ui/components/worktree/worktree-list.tsx";
+import { useRepo } from "@sandcastle/ui/context/repo-context.tsx";
 
 export function WorktreesPage() {
   const { repoPath } = useRepo();

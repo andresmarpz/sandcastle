@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { Button } from "@sandcastle/ui/components/button";
 import { IconPlus, IconFolder } from "@tabler/icons-react";
 
 export function WelcomeSection() {

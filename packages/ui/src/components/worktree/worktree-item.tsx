@@ -1,13 +1,13 @@
 import * as React from "react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/badge";
+import { Button } from "@/components/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/components/dropdown-menu";
 import {
   IconGitBranch,
   IconDotsVertical,
