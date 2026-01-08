@@ -1,4 +1,6 @@
 import * as React from "react";
+import { useAtom } from "@effect-atom/atom-react";
+import { Cause, Exit } from "effect";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -12,41 +14,55 @@ import {
 } from "@/components/ui/alert-dialog";
 import { IconAlertTriangle } from "@tabler/icons-react";
 import type { WorktreeInfo } from "@sandcastle/rpc";
-import { useRemoveWorktree } from "@/api/worktree";
+import {
+  removeWorktreeMutation,
+  WORKTREE_LIST_KEY,
+} from "@/api/worktree-atoms";
 import { useRepo } from "@/context/repo-context";
 
 interface WorktreeRemoveDialogProps {
   worktree: WorktreeInfo;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onRemoved: () => void;
 }
 
 export function WorktreeRemoveDialog({
   worktree,
   open,
   onOpenChange,
-  onRemoved,
 }: WorktreeRemoveDialogProps) {
   const { repoPath } = useRepo();
-  const removeWorktree = useRemoveWorktree();
+  const [removeResult, removeWorktree] = useAtom(removeWorktreeMutation, {
+    mode: "promiseExit",
+  });
+  const isLoading = removeResult.waiting;
   const [error, setError] = React.useState<string | null>(null);
 
-  const handleRemove = async () => {
+  const handleRemove = async (force = false) => {
     if (!repoPath) return;
 
-    try {
-      await removeWorktree.mutate({
+    const exit = await removeWorktree({
+      payload: {
         repoPath,
         worktreePath: worktree.path,
-        force: false,
-      });
-      onRemoved();
+        force,
+      },
+      // Reactivity keys for automatic cache invalidation
+      reactivityKeys: [WORKTREE_LIST_KEY, `worktrees:${repoPath}`],
+    });
+
+    if (Exit.isSuccess(exit)) {
       onOpenChange(false);
       setError(null);
-    } catch (err) {
-      if (err && typeof err === "object" && "_tag" in err) {
-        const tagged = err as { _tag: string; stderr?: string; path?: string };
+    } else {
+      // Extract error from Cause
+      const err = Cause.failureOption(exit.cause);
+      if (err._tag === "Some") {
+        const tagged = err.value as {
+          _tag: string;
+          stderr?: string;
+          path?: string;
+        };
         switch (tagged._tag) {
           case "WorktreeNotFoundRpcError":
             setError("Worktree not found");
@@ -63,22 +79,7 @@ export function WorktreeRemoveDialog({
     }
   };
 
-  const handleForceRemove = async () => {
-    if (!repoPath) return;
-
-    try {
-      await removeWorktree.mutate({
-        repoPath,
-        worktreePath: worktree.path,
-        force: true,
-      });
-      onRemoved();
-      onOpenChange(false);
-      setError(null);
-    } catch (_err) {
-      setError("Failed to force remove worktree");
-    }
-  };
+  const handleForceRemove = () => handleRemove(true);
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -118,10 +119,10 @@ export function WorktreeRemoveDialog({
           </AlertDialogCancel>
           <AlertDialogAction
             variant="destructive"
-            onClick={handleRemove}
-            disabled={removeWorktree.isLoading}
+            onClick={() => handleRemove(false)}
+            disabled={isLoading}
           >
-            {removeWorktree.isLoading ? "Removing..." : "Remove"}
+            {isLoading ? "Removing..." : "Remove"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
