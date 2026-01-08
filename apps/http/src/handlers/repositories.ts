@@ -77,16 +77,14 @@ export const RepositoryRpcHandlers = RepositoryRpc.toLayer(
         ),
 
       "repository.get": params =>
-        storage.repositories.get(params.id).pipe(
-          Effect.map(toRepository),
-          Effect.mapError(mapNotFoundError)
-        ),
+        storage.repositories
+          .get(params.id)
+          .pipe(Effect.map(toRepository), Effect.mapError(mapNotFoundError)),
 
       "repository.getByPath": params =>
-        storage.repositories.getByPath(params.directoryPath).pipe(
-          Effect.map(toRepository),
-          Effect.mapError(mapNotFoundError)
-        ),
+        storage.repositories
+          .getByPath(params.directoryPath)
+          .pipe(Effect.map(toRepository), Effect.mapError(mapNotFoundError)),
 
       "repository.create": params =>
         storage.repositories

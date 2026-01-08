@@ -23,8 +23,8 @@ import {
   WorktreeServiceLive,
   type BranchExistsError,
   type GitCommandError,
-  type WorktreeExistsError,
-  type WorktreeNotFoundError as GitWorktreeNotFoundError
+  type WorktreeNotFoundError as GitWorktreeNotFoundError,
+  type WorktreeExistsError
 } from "@sandcastle/worktree";
 
 // ─── Error Mapping ───────────────────────────────────────────
@@ -182,16 +182,14 @@ export const WorktreeRpcHandlers = WorktreeRpc.toLayer(
         ),
 
       "worktree.get": params =>
-        storage.worktrees.get(params.id).pipe(
-          Effect.map(toWorktree),
-          Effect.mapError(mapNotFoundError)
-        ),
+        storage.worktrees
+          .get(params.id)
+          .pipe(Effect.map(toWorktree), Effect.mapError(mapNotFoundError)),
 
       "worktree.getByPath": params =>
-        storage.worktrees.getByPath(params.path).pipe(
-          Effect.map(toWorktree),
-          Effect.mapError(mapNotFoundError)
-        ),
+        storage.worktrees
+          .getByPath(params.path)
+          .pipe(Effect.map(toWorktree), Effect.mapError(mapNotFoundError)),
 
       "worktree.update": params =>
         storage.worktrees

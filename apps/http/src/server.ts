@@ -30,9 +30,7 @@ const RepositoryRpcLayer = RpcServer.layer(RepositoryRpc).pipe(
   Layer.provide(RepositoryRpcHandlersLive)
 );
 
-const WorktreeRpcLayer = RpcServer.layer(WorktreeRpc).pipe(
-  Layer.provide(WorktreeRpcHandlersLive)
-);
+const WorktreeRpcLayer = RpcServer.layer(WorktreeRpc).pipe(Layer.provide(WorktreeRpcHandlersLive));
 
 const HttpProtocol = RpcServer.layerProtocolHttp({
   path: "/api/rpc"

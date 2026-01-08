@@ -1,8 +1,14 @@
 import { Rpc, RpcGroup } from "@effect/rpc";
 import { Schema } from "effect";
-import { Worktree, CreateWorktreeInput, UpdateWorktreeInput } from "@sandcastle/storage/entities";
+
+import { CreateWorktreeInput, UpdateWorktreeInput, Worktree } from "@sandcastle/storage/entities";
+
 import { DatabaseRpcError, ForeignKeyViolationRpcError } from "../common/errors";
-import { WorktreeNotFoundRpcError, WorktreePathExistsRpcError, GitOperationRpcError } from "./errors";
+import {
+  GitOperationRpcError,
+  WorktreeNotFoundRpcError,
+  WorktreePathExistsRpcError
+} from "./errors";
 
 export class WorktreeRpc extends RpcGroup.make(
   Rpc.make("worktree.list", {
