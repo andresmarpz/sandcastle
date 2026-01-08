@@ -3,9 +3,9 @@ import { BunHttpServer, BunRuntime } from "@effect/platform-bun";
 import { RpcSerialization, RpcServer } from "@effect/rpc";
 import { Effect, Layer } from "effect";
 
-import { WorktreeRpc } from "@sandcastle/rpc";
+import { RepositoryRpc, WorktreeRpc } from "@sandcastle/rpc";
 
-import { WorktreeRpcHandlersLive } from "./handlers";
+import { RepositoryRpcHandlersLive, WorktreeRpcHandlersLive } from "./handlers";
 
 const CorsMiddleware = HttpMiddleware.cors({
   allowedOrigins: ["*"], // In production, specify exact origins like ["https://your-app.com"]
@@ -24,11 +24,21 @@ const CorsMiddleware = HttpMiddleware.cors({
   credentials: false // Set to true if you need cookies/auth headers
 });
 
-const RpcLayer = RpcServer.layer(WorktreeRpc).pipe(Layer.provide(WorktreeRpcHandlersLive));
+// ─── RPC Layers ──────────────────────────────────────────────
+
+const RepositoryRpcLayer = RpcServer.layer(RepositoryRpc).pipe(
+  Layer.provide(RepositoryRpcHandlersLive)
+);
+
+const WorktreeRpcLayer = RpcServer.layer(WorktreeRpc).pipe(
+  Layer.provide(WorktreeRpcHandlersLive)
+);
 
 const HttpProtocol = RpcServer.layerProtocolHttp({
   path: "/api/rpc"
 }).pipe(Layer.provide(RpcSerialization.layerNdjson));
+
+// ─── Custom Routes ───────────────────────────────────────────
 
 const CustomRoutes = HttpRouter.Default.use(router =>
   Effect.gen(function* () {
@@ -36,12 +46,15 @@ const CustomRoutes = HttpRouter.Default.use(router =>
   })
 );
 
+// ─── Server ──────────────────────────────────────────────────
+
 const port = Number(process.env.PORT) || 3000;
 
 export const makeServerLayer = (options?: { port?: number }) =>
   HttpRouter.Default.serve(CorsMiddleware).pipe(
     Layer.provide(CustomRoutes),
-    Layer.provide(RpcLayer),
+    Layer.provide(RepositoryRpcLayer),
+    Layer.provide(WorktreeRpcLayer),
     Layer.provide(HttpProtocol),
     Layer.provide(BunHttpServer.layer({ port: options?.port ?? port }))
   );
