@@ -3,7 +3,9 @@ import { BunHttpServer, BunRuntime } from "@effect/platform-bun";
 import { RpcSerialization, RpcServer } from "@effect/rpc";
 import { Effect, Layer } from "effect";
 
-import { WorktreeRpc, WorktreeRpcHandlersLive } from "@sandcastle/rpc";
+import { WorktreeRpc } from "@sandcastle/rpc";
+
+import { WorktreeRpcHandlersLive } from "./handlers";
 
 const CorsMiddleware = HttpMiddleware.cors({
   allowedOrigins: ["*"], // In production, specify exact origins like ["https://your-app.com"]

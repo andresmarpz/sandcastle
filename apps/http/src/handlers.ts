@@ -1,6 +1,14 @@
 import { Effect, Layer } from "effect";
 
 import {
+  BranchExistsRpcError,
+  GitCommandRpcError,
+  WorktreeExistsRpcError,
+  WorktreeInfo,
+  WorktreeNotFoundRpcError,
+  WorktreeRpc
+} from "@sandcastle/rpc";
+import {
   WorktreeService,
   WorktreeServiceLive,
   type BranchExistsError,
@@ -8,15 +16,6 @@ import {
   type WorktreeExistsError,
   type WorktreeNotFoundError
 } from "@sandcastle/worktree";
-
-import {
-  BranchExistsRpcError,
-  GitCommandRpcError,
-  WorktreeExistsRpcError,
-  WorktreeNotFoundRpcError
-} from "./errors";
-import { WorktreeRpc } from "./schema";
-import { WorktreeInfo } from "./types";
 
 const mapGitError = (error: GitCommandError): GitCommandRpcError =>
   new GitCommandRpcError({
