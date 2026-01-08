@@ -44,6 +44,7 @@ If checks fail, fix the issues before proceeding.
 
 - One-liner lowercase messages
 - Keep commits focused on a single logical change
+- You can add attribution
 
 **Split commits by concern:**
 
