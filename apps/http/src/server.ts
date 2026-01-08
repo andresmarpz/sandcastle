@@ -26,15 +26,15 @@ const CorsMiddleware = HttpMiddleware.cors({
 
 // ─── RPC Layers ──────────────────────────────────────────────
 
-const RepositoryRpcLayer = RpcServer.layer(RepositoryRpc).pipe(
-  Layer.provide(RepositoryRpcHandlersLive)
-);
+const SandcastleRpc = RepositoryRpc.merge(WorktreeRpc);
 
-const WorktreeRpcLayer = RpcServer.layer(WorktreeRpc).pipe(Layer.provide(WorktreeRpcHandlersLive));
+const RpcHandlersLive = Layer.mergeAll(RepositoryRpcHandlersLive, WorktreeRpcHandlersLive);
+
+const RpcLayer = RpcServer.layer(SandcastleRpc).pipe(Layer.provide(RpcHandlersLive));
 
 const HttpProtocol = RpcServer.layerProtocolHttp({
   path: "/api/rpc"
-}).pipe(Layer.provide(RpcSerialization.layerNdjson));
+}).pipe(Layer.provide(RpcSerialization.layerJson));
 
 // ─── Custom Routes ───────────────────────────────────────────
 
@@ -51,8 +51,7 @@ const port = Number(process.env.PORT) || 3000;
 export const makeServerLayer = (options?: { port?: number }) =>
   HttpRouter.Default.serve(CorsMiddleware).pipe(
     Layer.provide(CustomRoutes),
-    Layer.provide(RepositoryRpcLayer),
-    Layer.provide(WorktreeRpcLayer),
+    Layer.provide(RpcLayer),
     Layer.provide(HttpProtocol),
     Layer.provide(BunHttpServer.layer({ port: options?.port ?? port }))
   );

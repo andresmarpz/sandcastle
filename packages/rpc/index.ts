@@ -3,13 +3,13 @@ export * from "./src/repositories";
 export * from "./src/worktrees";
 export * from "./src/sessions";
 export * from "./src/agents";
+export type { CreateWorktreeRequest } from "./src/worktrees";
 
 export {
   Repository,
   CreateRepositoryInput,
   UpdateRepositoryInput,
   Worktree,
-  CreateWorktreeInput,
   UpdateWorktreeInput,
   WorktreeStatus,
   Session,

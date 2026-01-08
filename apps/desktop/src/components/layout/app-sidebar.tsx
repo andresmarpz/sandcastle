@@ -3,18 +3,41 @@
 import * as React from "react";
 import { Result, useAtomValue, useAtom } from "@effect-atom/atom-react";
 import { Sidebar } from "@sandcastle/ui/components/sidebar";
+import { NewProjectDialog } from "@sandcastle/ui/components/new-project-dialog";
 import {
   repositoryListQuery,
   updateRepositoryMutation,
+  deleteRepositoryMutation,
   REPOSITORY_LIST_KEY,
 } from "@sandcastle/ui/api/repository-atoms";
-import { worktreeListQuery } from "@sandcastle/ui/api/worktree-atoms";
-import type { Worktree } from "@sandcastle/rpc";
+import {
+  createWorktreeMutation,
+  deleteWorktreeMutation,
+  worktreeListQuery,
+  WORKTREE_LIST_KEY,
+} from "@sandcastle/ui/api/worktree-atoms";
+import type { Repository, Worktree } from "@sandcastle/rpc";
 
 export function AppSidebar() {
+  const [isNewProjectOpen, setIsNewProjectOpen] = React.useState(false);
+  const [creatingWorktreeId, setCreatingWorktreeId] = React.useState<
+    string | null
+  >(null);
+  const [deletingWorktreeId, setDeletingWorktreeId] = React.useState<
+    string | null
+  >(null);
   const repositoriesResult = useAtomValue(repositoryListQuery());
   const worktreesResult = useAtomValue(worktreeListQuery());
   const [, updateRepository] = useAtom(updateRepositoryMutation, {
+    mode: "promiseExit",
+  });
+  const [, deleteRepository] = useAtom(deleteRepositoryMutation, {
+    mode: "promiseExit",
+  });
+  const [, createWorktree] = useAtom(createWorktreeMutation, {
+    mode: "promiseExit",
+  });
+  const [, deleteWorktree] = useAtom(deleteWorktreeMutation, {
     mode: "promiseExit",
   });
 
@@ -38,8 +61,7 @@ export function AppSidebar() {
   }, [worktreesResult]);
 
   const handleOpenProject = () => {
-    // TODO: Open file picker dialog (Tauri integration)
-    console.log("Open project");
+    setIsNewProjectOpen(true);
   };
 
   const handleCloneFromGit = () => {
@@ -54,26 +76,73 @@ export function AppSidebar() {
     });
   };
 
+  const handleRepositoryDelete = async (id: string) => {
+    await deleteRepository({
+      payload: { id },
+      reactivityKeys: [REPOSITORY_LIST_KEY, `repository:${id}`],
+    });
+  };
+
   const handleWorktreeSelect = (worktree: Worktree) => {
     // TODO: Navigate to worktree view
     console.log("Selected worktree:", worktree);
   };
 
-  return Result.match(repositoriesResult, {
-    onInitial: () => <SidebarSkeleton />,
-    onFailure: () => <SidebarError />,
-    onSuccess: (success) => (
-      <Sidebar
-        repositories={[...success.value]}
-        worktreesByRepo={worktreesByRepo}
-        onOpenProject={handleOpenProject}
-        onCloneFromGit={handleCloneFromGit}
-        onRepositoryPin={handleRepositoryPin}
-        onWorktreeSelect={handleWorktreeSelect}
-        contentClassName="pt-7"
+  const handleWorktreeDelete = async (worktree: Worktree) => {
+    setDeletingWorktreeId(worktree.id);
+    try {
+      await deleteWorktree({
+        payload: { id: worktree.id },
+        reactivityKeys: [
+          WORKTREE_LIST_KEY,
+          `worktrees:repo:${worktree.repositoryId}`,
+        ],
+      });
+    } finally {
+      setDeletingWorktreeId(null);
+    }
+  };
+
+  const handleCreateWorktree = async (repository: Repository) => {
+    setCreatingWorktreeId(repository.id);
+    try {
+      await createWorktree({
+        payload: { repositoryId: repository.id },
+        reactivityKeys: [WORKTREE_LIST_KEY, `worktrees:repo:${repository.id}`],
+      });
+    } finally {
+      setCreatingWorktreeId(null);
+    }
+  };
+
+  return (
+    <>
+      <NewProjectDialog
+        open={isNewProjectOpen}
+        onOpenChange={setIsNewProjectOpen}
       />
-    ),
-  });
+      {Result.match(repositoriesResult, {
+        onInitial: () => <SidebarSkeleton />,
+        onFailure: () => <SidebarError />,
+        onSuccess: (success) => (
+          <Sidebar
+            repositories={[...success.value]}
+            worktreesByRepo={worktreesByRepo}
+            onOpenProject={handleOpenProject}
+            onCloneFromGit={handleCloneFromGit}
+            onRepositoryPin={handleRepositoryPin}
+            onRepositoryDelete={handleRepositoryDelete}
+            onCreateWorktree={handleCreateWorktree}
+            creatingWorktreeId={creatingWorktreeId}
+            onWorktreeSelect={handleWorktreeSelect}
+            onWorktreeDelete={handleWorktreeDelete}
+            deletingWorktreeId={deletingWorktreeId}
+            contentClassName="pt-7"
+          />
+        ),
+      })}
+    </>
+  );
 }
 
 function SidebarSkeleton() {

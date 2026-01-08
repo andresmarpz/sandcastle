@@ -1,7 +1,7 @@
 import { Rpc, RpcGroup } from "@effect/rpc";
 import { Schema } from "effect";
 
-import { CreateWorktreeInput, UpdateWorktreeInput, Worktree } from "@sandcastle/storage/entities";
+import { UpdateWorktreeInput, Worktree } from "@sandcastle/storage/entities";
 
 import { DatabaseRpcError, ForeignKeyViolationRpcError } from "../common/errors";
 import {
@@ -9,6 +9,14 @@ import {
   WorktreeNotFoundRpcError,
   WorktreePathExistsRpcError
 } from "./errors";
+
+export interface CreateWorktreeRequest {
+  repositoryId: string;
+}
+
+export const CreateWorktreeRequestSchema = Schema.Struct({
+  repositoryId: Schema.String
+});
 
 export class WorktreeRpc extends RpcGroup.make(
   Rpc.make("worktree.list", {
@@ -36,7 +44,7 @@ export class WorktreeRpc extends RpcGroup.make(
   }),
 
   Rpc.make("worktree.create", {
-    payload: CreateWorktreeInput,
+    payload: CreateWorktreeRequestSchema,
     success: Worktree,
     error: Schema.Union(
       WorktreePathExistsRpcError,
