@@ -1,4 +1,6 @@
 import * as React from "react";
+import { useAtom } from "@effect-atom/atom-react";
+import { Cause, Exit } from "effect";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -23,22 +25,26 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
-import { useCreateWorktree } from "@/api/worktree";
+import {
+  createWorktreeMutation,
+  WORKTREE_LIST_KEY,
+} from "@/api/worktree-atoms";
 import { useRepo } from "@/context/repo-context";
 
 interface WorktreeCreateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreated: () => void;
 }
 
 export function WorktreeCreateDialog({
   open,
   onOpenChange,
-  onCreated,
 }: WorktreeCreateDialogProps) {
   const { repoPath } = useRepo();
-  const createWorktree = useCreateWorktree();
+  const [createResult, createWorktree] = useAtom(createWorktreeMutation, {
+    mode: "promiseExit",
+  });
+  const isLoading = createResult.waiting;
 
   const [branch, setBranch] = React.useState("");
   const [worktreePath, setWorktreePath] = React.useState("");
@@ -65,20 +71,26 @@ export function WorktreeCreateDialog({
       return;
     }
 
-    try {
-      await createWorktree.mutate({
+    const exit = await createWorktree({
+      payload: {
         repoPath,
         worktreePath: worktreePath.trim(),
         branch: branch.trim(),
         createBranch,
         fromRef: fromRef.trim() || undefined,
-      });
-      onCreated();
+      },
+      // Reactivity keys for automatic cache invalidation
+      reactivityKeys: [WORKTREE_LIST_KEY, `worktrees:${repoPath}`],
+    });
+
+    if (Exit.isSuccess(exit)) {
       onOpenChange(false);
       resetForm();
-    } catch (err) {
-      if (err && typeof err === "object" && "_tag" in err) {
-        const tagged = err as {
+    } else {
+      // Extract error from Cause
+      const err = Cause.failureOption(exit.cause);
+      if (err._tag === "Some") {
+        const tagged = err.value as {
           _tag: string;
           path?: string;
           branch?: string;
@@ -185,11 +197,8 @@ export function WorktreeCreateDialog({
 
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              type="submit"
-              disabled={createWorktree.isLoading}
-            >
-              {createWorktree.isLoading ? "Creating..." : "Create"}
+            <AlertDialogAction type="submit" disabled={isLoading}>
+              {isLoading ? "Creating..." : "Create"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </form>
