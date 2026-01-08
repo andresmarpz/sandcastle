@@ -17,7 +17,7 @@ import type { WorktreeInfo } from "@sandcastle/rpc";
 import {
   removeWorktreeMutation,
   WORKTREE_LIST_KEY,
-} from "@/api/worktree-atoms";
+} from "@sandcastle/ui/api/worktree-atoms";
 import { useRepo } from "@/context/repo-context";
 
 interface WorktreeRemoveDialogProps {
