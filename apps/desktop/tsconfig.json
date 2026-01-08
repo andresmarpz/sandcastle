@@ -21,10 +21,10 @@
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
+      "@/*": ["./src/*", "../../packages/ui/src/*"],
       "@sandcastle/ui/*": ["../../packages/ui/src/*"]
     }
   },
-  "include": ["src"],
+  "include": ["src", "../../packages/ui/src"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
