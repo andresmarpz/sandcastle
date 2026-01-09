@@ -73,5 +73,11 @@ export class WorktreeRpc extends RpcGroup.make(
     payload: { id: Schema.String },
     success: Schema.Void,
     error: Schema.Union(WorktreeNotFoundRpcError, DatabaseRpcError)
+  }),
+
+  Rpc.make("worktree.sync", {
+    payload: {},
+    success: Schema.Struct({ removedIds: Schema.Array(Schema.String) }),
+    error: Schema.Union(GitOperationRpcError, DatabaseRpcError)
   })
 ) {}
