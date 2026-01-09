@@ -6,6 +6,7 @@ import { Effect, Layer } from "effect";
 import { RepositoryRpc, WorktreeRpc } from "@sandcastle/rpc";
 
 import { RepositoryRpcHandlersLive, WorktreeRpcHandlersLive } from "./handlers";
+import { StartupTasksLive } from "./startup";
 
 const CorsMiddleware = HttpMiddleware.cors({
   allowedOrigins: ["*"], // In production, specify exact origins like ["https://your-app.com"]
@@ -56,6 +57,6 @@ export const makeServerLayer = (options?: { port?: number }) =>
     Layer.provide(BunHttpServer.layer({ port: options?.port ?? port }))
   );
 
-export const ServerLive = makeServerLayer();
+export const ServerLive = Layer.mergeAll(makeServerLayer(), StartupTasksLive);
 
 BunRuntime.runMain(Layer.launch(ServerLive));
