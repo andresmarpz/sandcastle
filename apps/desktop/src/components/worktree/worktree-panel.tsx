@@ -149,11 +149,7 @@ export function WorktreePanel({ worktreeId }: WorktreePanelProps) {
     onWaiting: (result) => {
       const cached = Option.getOrNull(Result.value(result));
       if (!cached) {
-        return (
-          <div className="text-muted-foreground text-sm">
-            Loading worktree...
-          </div>
-        );
+        return <div className="text-muted-foreground text-sm"></div>;
       }
       return <WorktreeContent worktree={cached} isRefreshing />;
     },
