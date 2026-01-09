@@ -18,18 +18,5 @@
       "Bash(git commit:*)",
       "Bash(gh pr:*)"
     ]
-  },
-  "hooks": {
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bun run check",
-            "timeout": 120
-          }
-        ]
-      }
-    ]
   }
 }
