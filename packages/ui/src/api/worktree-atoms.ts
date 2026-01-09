@@ -21,6 +21,7 @@ export const worktreeListQuery = () =>
     {},
     {
       reactivityKeys: [WORKTREE_LIST_KEY],
+      timeToLive: 300000,
     },
   );
 
@@ -33,6 +34,7 @@ export const worktreeListByRepositoryQuery = (repositoryId: string) =>
     { repositoryId },
     {
       reactivityKeys: [WORKTREE_LIST_KEY, `worktrees:repo:${repositoryId}`],
+      timeToLive: 300000,
     },
   );
 
@@ -45,6 +47,7 @@ export const worktreeQuery = (id: string) =>
     { id },
     {
       reactivityKeys: [`worktree:${id}`],
+      timeToLive: 300000,
     },
   );
 
@@ -57,6 +60,7 @@ export const worktreeQueryByPath = (path: string) =>
     { path },
     {
       reactivityKeys: [`worktree:path:${path}`],
+      timeToLive: 300000,
     },
   );
 

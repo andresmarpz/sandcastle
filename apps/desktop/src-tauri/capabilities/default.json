@@ -9,9 +9,7 @@
     "shell:allow-open",
     {
       "identifier": "shell:allow-execute",
-      "allow": [
-        { "name": "open", "cmd": "open", "args": true }
-      ]
+      "allow": [{ "name": "open", "cmd": "open", "args": true }]
     },
     "core:window:allow-start-dragging"
   ]
