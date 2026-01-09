@@ -21,6 +21,7 @@ export const repositoryListQuery = () =>
     {},
     {
       reactivityKeys: [REPOSITORY_LIST_KEY],
+      timeToLive: 300000,
     },
   );
 
@@ -33,6 +34,7 @@ export const repositoryQuery = (id: string) =>
     { id },
     {
       reactivityKeys: [`repository:${id}`],
+      timeToLive: 300000,
     },
   );
 
@@ -45,6 +47,7 @@ export const repositoryQueryByPath = (directoryPath: string) =>
     { directoryPath },
     {
       reactivityKeys: [`repository:path:${directoryPath}`],
+      timeToLive: 300000,
     },
   );
 

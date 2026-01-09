@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Result, useAtomValue, useAtom } from "@effect-atom/atom-react";
+import * as Option from "effect/Option";
 import { Sidebar } from "@sandcastle/ui/components/sidebar";
 import { NewProjectDialog } from "@sandcastle/ui/components/new-project-dialog";
 import {
@@ -18,7 +19,11 @@ import {
 } from "@sandcastle/ui/api/worktree-atoms";
 import type { Repository, Worktree } from "@sandcastle/rpc";
 
-export function AppSidebar() {
+interface AppSidebarProps {
+  onWorktreeSelect: (worktree: Worktree) => void;
+}
+
+export function AppSidebar({ onWorktreeSelect }: AppSidebarProps) {
   const [isNewProjectOpen, setIsNewProjectOpen] = React.useState(false);
   const [creatingWorktreeId, setCreatingWorktreeId] = React.useState<
     string | null
@@ -41,14 +46,19 @@ export function AppSidebar() {
     mode: "promiseExit",
   });
 
+  const repositories = React.useMemo(
+    () => Option.getOrElse(Result.value(repositoriesResult), () => []),
+    [repositoriesResult],
+  );
+
+  const worktrees = React.useMemo(
+    () => Option.getOrElse(Result.value(worktreesResult), () => []),
+    [worktreesResult],
+  );
+
   // Group worktrees by repository ID
   const worktreesByRepo = React.useMemo(() => {
     const map = new Map<string, Worktree[]>();
-
-    // Get worktrees from result (default to empty array if not loaded)
-    const worktrees = Result.isSuccess(worktreesResult)
-      ? worktreesResult.value
-      : [];
 
     // Group by repositoryId
     for (const worktree of worktrees) {
@@ -58,7 +68,7 @@ export function AppSidebar() {
     }
 
     return map;
-  }, [worktreesResult]);
+  }, [worktrees]);
 
   const handleOpenProject = () => {
     setIsNewProjectOpen(true);
@@ -84,8 +94,7 @@ export function AppSidebar() {
   };
 
   const handleWorktreeSelect = (worktree: Worktree) => {
-    // TODO: Navigate to worktree view
-    console.log("Selected worktree:", worktree);
+    onWorktreeSelect(worktree);
   };
 
   const handleWorktreeDelete = async (worktree: Worktree) => {
@@ -115,18 +124,75 @@ export function AppSidebar() {
     }
   };
 
+  const hasRepositoryCache = Option.isSome(Result.value(repositoriesResult));
+
   return (
     <>
       <NewProjectDialog
         open={isNewProjectOpen}
         onOpenChange={setIsNewProjectOpen}
       />
-      {Result.match(repositoriesResult, {
-        onInitial: () => <SidebarSkeleton />,
-        onFailure: () => <SidebarError />,
-        onSuccess: (success) => (
+      {Result.matchWithWaiting(repositoriesResult, {
+        onWaiting: () =>
+          hasRepositoryCache ? (
+            <Sidebar
+              repositories={[...repositories]}
+              worktreesByRepo={worktreesByRepo}
+              onOpenProject={handleOpenProject}
+              onCloneFromGit={handleCloneFromGit}
+              onRepositoryPin={handleRepositoryPin}
+              onRepositoryDelete={handleRepositoryDelete}
+              onCreateWorktree={handleCreateWorktree}
+              creatingWorktreeId={creatingWorktreeId}
+              onWorktreeSelect={handleWorktreeSelect}
+              onWorktreeDelete={handleWorktreeDelete}
+              deletingWorktreeId={deletingWorktreeId}
+              contentClassName="pt-7"
+            />
+          ) : (
+            <SidebarSkeleton />
+          ),
+        onError: () =>
+          hasRepositoryCache ? (
+            <Sidebar
+              repositories={[...repositories]}
+              worktreesByRepo={worktreesByRepo}
+              onOpenProject={handleOpenProject}
+              onCloneFromGit={handleCloneFromGit}
+              onRepositoryPin={handleRepositoryPin}
+              onRepositoryDelete={handleRepositoryDelete}
+              onCreateWorktree={handleCreateWorktree}
+              creatingWorktreeId={creatingWorktreeId}
+              onWorktreeSelect={handleWorktreeSelect}
+              onWorktreeDelete={handleWorktreeDelete}
+              deletingWorktreeId={deletingWorktreeId}
+              contentClassName="pt-7"
+            />
+          ) : (
+            <SidebarError />
+          ),
+        onDefect: () =>
+          hasRepositoryCache ? (
+            <Sidebar
+              repositories={[...repositories]}
+              worktreesByRepo={worktreesByRepo}
+              onOpenProject={handleOpenProject}
+              onCloneFromGit={handleCloneFromGit}
+              onRepositoryPin={handleRepositoryPin}
+              onRepositoryDelete={handleRepositoryDelete}
+              onCreateWorktree={handleCreateWorktree}
+              creatingWorktreeId={creatingWorktreeId}
+              onWorktreeSelect={handleWorktreeSelect}
+              onWorktreeDelete={handleWorktreeDelete}
+              deletingWorktreeId={deletingWorktreeId}
+              contentClassName="pt-7"
+            />
+          ) : (
+            <SidebarError />
+          ),
+        onSuccess: () => (
           <Sidebar
-            repositories={[...success.value]}
+            repositories={[...repositories]}
             worktreesByRepo={worktreesByRepo}
             onOpenProject={handleOpenProject}
             onCloneFromGit={handleCloneFromGit}
