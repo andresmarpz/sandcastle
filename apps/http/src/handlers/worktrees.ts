@@ -149,6 +149,63 @@ const mapWorktreeDeleteError = (
   }
 };
 
+// For worktree.sync - handles git list + storage delete errors
+// Note: StorageWorktreeNotFoundError can occur from delete, though unlikely since we just queried the records
+type SyncErrors = DatabaseError | GitCommandError | StorageWorktreeNotFoundError;
+
+const mapWorktreeSyncError = (error: SyncErrors): GitOperationRpcError | DatabaseRpcError => {
+  switch (error._tag) {
+    case "GitCommandError":
+      return mapGitError(error);
+    case "DatabaseError":
+      return mapDatabaseError(error);
+    case "WorktreeNotFoundError":
+      // Shouldn't happen since we just queried the records, but handle it
+      return new DatabaseRpcError({
+        operation: "worktree.sync",
+        message: `Worktree not found during sync: ${error.id}`
+      });
+  }
+};
+
+// ─── Sync Logic ─────────────────────────────────────────────
+
+/**
+ * Syncs database worktree records with actual git worktrees.
+ * Removes orphaned DB records where the git worktree no longer exists.
+ * Returns the IDs of removed records.
+ */
+export const syncWorktrees = Effect.gen(function* () {
+  const storage = yield* StorageService;
+  const gitWorktree = yield* WorktreeService;
+
+  const repositories = yield* storage.repositories.list();
+  const removedIds: string[] = [];
+
+  for (const repo of repositories) {
+    // Get git worktrees for this repository
+    const gitWorktrees = yield* gitWorktree.list(repo.directoryPath);
+    const gitPaths = new Set(gitWorktrees.map(w => w.path));
+
+    // Get DB worktrees for this repository
+    const dbWorktrees = yield* storage.worktrees.listByRepository(repo.id);
+
+    // Find orphaned DB records (no matching git worktree)
+    const orphans = dbWorktrees.filter(wt => !gitPaths.has(wt.path));
+
+    // Delete orphaned records
+    for (const orphan of orphans) {
+      yield* storage.worktrees.delete(orphan.id);
+      removedIds.push(orphan.id);
+    }
+
+    // Prune git's internal worktree state
+    yield* gitWorktree.prune(repo.directoryPath);
+  }
+
+  return { removedIds };
+});
+
 // ─── Response Mapping ────────────────────────────────────────
 
 const toWorktree = (wt: {
@@ -282,7 +339,9 @@ export const WorktreeRpcHandlers = WorktreeRpc.toLayer(
 
           // 4. Delete storage record
           yield* storage.worktrees.delete(params.id);
-        }).pipe(Effect.mapError(mapWorktreeDeleteError))
+        }).pipe(Effect.mapError(mapWorktreeDeleteError)),
+
+      "worktree.sync": () => syncWorktrees.pipe(Effect.mapError(mapWorktreeSyncError))
     });
   })
 );

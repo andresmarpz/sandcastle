@@ -90,3 +90,10 @@ export const deleteWorktreeMutation =
  * Call with payload and reactivityKeys to invalidate the worktree after touch.
  */
 export const touchWorktreeMutation = WorktreeClient.mutation("worktree.touch");
+
+/**
+ * Mutation atom for syncing worktrees with the filesystem.
+ * Removes orphaned DB records where the git worktree no longer exists.
+ * Returns the IDs of removed worktrees.
+ */
+export const syncWorktreesMutation = WorktreeClient.mutation("worktree.sync");
