@@ -14,16 +14,23 @@ import {
 import {
   createWorktreeMutation,
   deleteWorktreeMutation,
+  syncWorktreesMutation,
   worktreeListQuery,
   WORKTREE_LIST_KEY,
 } from "@sandcastle/ui/api/worktree-atoms";
 import type { Repository, Worktree } from "@sandcastle/rpc";
 
 interface AppSidebarProps {
+  selectedWorktree: Worktree | null;
   onWorktreeSelect: (worktree: Worktree) => void;
+  onWorktreeDeselect: () => void;
 }
 
-export function AppSidebar({ onWorktreeSelect }: AppSidebarProps) {
+export function AppSidebar({
+  selectedWorktree,
+  onWorktreeSelect,
+  onWorktreeDeselect,
+}: AppSidebarProps) {
   const [isNewProjectOpen, setIsNewProjectOpen] = React.useState(false);
   const [creatingWorktreeId, setCreatingWorktreeId] = React.useState<
     string | null
@@ -45,6 +52,34 @@ export function AppSidebar({ onWorktreeSelect }: AppSidebarProps) {
   const [, deleteWorktree] = useAtom(deleteWorktreeMutation, {
     mode: "promiseExit",
   });
+  const [, syncWorktrees] = useAtom(syncWorktreesMutation, {
+    mode: "promiseExit",
+  });
+
+  // Sync worktrees on mount to clean up orphaned DB records
+  React.useEffect(() => {
+    const runSync = async () => {
+      try {
+        const result = await syncWorktrees({
+          payload: {},
+          reactivityKeys: [WORKTREE_LIST_KEY],
+        });
+        // If the selected worktree was removed, deselect it
+        if (
+          selectedWorktree &&
+          result._tag === "Success" &&
+          result.value.removedIds.includes(selectedWorktree.id)
+        ) {
+          onWorktreeDeselect();
+        }
+      } catch {
+        // Sync failures are non-critical, just log
+        console.warn("Worktree sync failed");
+      }
+    };
+    runSync();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount
 
   const repositories = React.useMemo(
     () => Option.getOrElse(Result.value(repositoriesResult), () => []),
@@ -107,6 +142,10 @@ export function AppSidebar({ onWorktreeSelect }: AppSidebarProps) {
           `worktrees:repo:${worktree.repositoryId}`,
         ],
       });
+      // Deselect if the deleted worktree was selected
+      if (selectedWorktree?.id === worktree.id) {
+        onWorktreeDeselect();
+      }
     } finally {
       setDeletingWorktreeId(null);
     }
