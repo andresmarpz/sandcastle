@@ -1,4 +1,5 @@
 import { mkdir } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 
 import { Data, Effect, Layer } from "effect";
@@ -226,10 +227,12 @@ export const WorktreeRpcHandlers = WorktreeRpc.toLayer(
           const name = petname();
           const branch = name;
           const baseBranch = repository.defaultBranch;
+          const repoFolderName = path.basename(repository.directoryPath);
           const worktreePath = path.join(
-            repository.directoryPath,
+            os.homedir(),
             ".sandcastle",
             "worktrees",
+            repoFolderName,
             name
           );
 
