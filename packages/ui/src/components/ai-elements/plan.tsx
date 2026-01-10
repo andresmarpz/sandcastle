@@ -12,7 +12,7 @@ import {
 } from "@/components/card";
 import {
   Collapsible,
-  CollapsibleContent,
+  CollapsiblePanel,
   CollapsibleTrigger,
 } from "@/components/collapsible";
 import { cn } from "@/lib/utils";
@@ -117,9 +117,9 @@ export const PlanAction = (props: PlanActionProps) => (
 export type PlanContentProps = ComponentProps<typeof CardContent>;
 
 export const PlanContent = (props: PlanContentProps) => (
-  <CollapsibleContent
+  <CollapsiblePanel
     render={<CardContent data-slot="plan-content" {...props} />}
-  ></CollapsibleContent>
+  ></CollapsiblePanel>
 );
 
 export type PlanFooterProps = ComponentProps<"div">;
@@ -133,6 +133,7 @@ export type PlanTriggerProps = ComponentProps<typeof CollapsibleTrigger>;
 export const PlanTrigger = ({ className, ...props }: PlanTriggerProps) => (
   <CollapsibleTrigger
     render={
+      // @ts-ignore
       <Button
         className={cn("size-8", className)}
         data-slot="plan-trigger"

@@ -89,6 +89,7 @@ export const ConversationScrollButton = ({
         )}
         onClick={handleScrollToBottom}
         size="icon"
+        // @ts-ignore
         type="button"
         variant="outline"
         {...props}

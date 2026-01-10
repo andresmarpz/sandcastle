@@ -2,7 +2,7 @@
 
 import {
   Collapsible,
-  CollapsibleContent,
+  CollapsiblePanel,
   CollapsibleTrigger,
 } from "@/components/collapsible";
 import { cn } from "@/lib/utils";
@@ -66,14 +66,14 @@ export const TaskTrigger = ({
   </CollapsibleTrigger>
 );
 
-export type TaskContentProps = ComponentProps<typeof CollapsibleContent>;
+export type TaskContentProps = ComponentProps<typeof CollapsiblePanel>;
 
 export const TaskContent = ({
   children,
   className,
   ...props
 }: TaskContentProps) => (
-  <CollapsibleContent
+  <CollapsiblePanel
     className={cn(
       "data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2 text-popover-foreground outline-none data-[state=closed]:animate-out data-[state=open]:animate-in",
       className
@@ -83,5 +83,5 @@ export const TaskContent = ({
     <div className="mt-4 space-y-2 border-muted border-l-2 pl-4">
       {children}
     </div>
-  </CollapsibleContent>
+  </CollapsiblePanel>
 );

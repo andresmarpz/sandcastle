@@ -3,7 +3,7 @@
 import { Button } from "@/components/button";
 import {
   Collapsible,
-  CollapsibleContent,
+  CollapsiblePanel,
   CollapsibleTrigger,
 } from "@/components/collapsible";
 import { ScrollArea } from "@/components/scroll-area";
@@ -252,15 +252,13 @@ export const QueueSectionLabel = ({
 );
 
 // QueueSectionContent - collapsible content area
-export type QueueSectionContentProps = ComponentProps<
-  typeof CollapsibleContent
->;
+export type QueueSectionContentProps = ComponentProps<typeof CollapsiblePanel>;
 
 export const QueueSectionContent = ({
   className,
   ...props
 }: QueueSectionContentProps) => (
-  <CollapsibleContent className={cn(className)} {...props} />
+  <CollapsiblePanel className={cn(className)} {...props} />
 );
 
 export type QueueProps = ComponentProps<"div">;
