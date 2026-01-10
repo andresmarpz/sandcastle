@@ -176,7 +176,11 @@ export function ChatSession({ sessionId, worktreeId }: ChatSessionProps) {
         </div>
       )}
 
-      <MessageList messages={messages} isStreaming={isStreaming} sessionId={sessionId} />
+      <MessageList
+        messages={messages}
+        isStreaming={isStreaming}
+        sessionId={sessionId}
+      />
 
       {/* Session stats bar */}
       {(costUsd > 0 || inputTokens > 0 || outputTokens > 0) && (
