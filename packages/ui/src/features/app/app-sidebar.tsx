@@ -122,7 +122,6 @@ export function AppSidebar() {
 
 	const handleCloneFromGit = () => {
 		// TODO: Open clone dialog
-		console.log("Clone from Git");
 	};
 
 	const handleRepositoryPin = async (id: string, pinned: boolean) => {

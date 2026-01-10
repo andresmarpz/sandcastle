@@ -2,7 +2,7 @@
 
 import { Result, useAtom, useAtomValue } from "@effect-atom/atom-react";
 import type { ChatStreamEvent } from "@sandcastle/rpc";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	activeSessionsAtom,
 	addMessage,
@@ -56,7 +56,10 @@ export function ChatSession({ sessionId, worktreeId }: ChatSessionProps) {
 		onSuccess: (success) => success.value,
 	});
 
-	const messages = sessionState?.messages ?? [];
+	const messages = useMemo(
+		() => sessionState?.messages ?? [],
+		[sessionState?.messages],
+	);
 	const isStreaming = sessionState?.isStreaming ?? false;
 	const pendingQuestion = sessionState?.pendingQuestion ?? null;
 	const error = sessionState?.error ?? null;

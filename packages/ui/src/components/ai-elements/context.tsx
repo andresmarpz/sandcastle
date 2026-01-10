@@ -114,7 +114,7 @@ export const ContextTrigger = ({ children, ...props }: ContextTriggerProps) => {
 	return (
 		<HoverCardTrigger>
 			{children ?? (
-				// @ts-ignore
+				// @ts-expect-error - type prop conflicts with Button's type
 				<Button type="button" variant="ghost" {...props}>
 					<span className="font-medium text-muted-foreground">
 						{renderedPercent}
