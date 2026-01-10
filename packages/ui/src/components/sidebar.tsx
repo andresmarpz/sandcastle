@@ -28,7 +28,7 @@ const SIDEBAR_WIDTH_ICON = "3rem";
 const SIDEBAR_KEYBOARD_SHORTCUT = "b";
 const SIDEBAR_MIN_WIDTH = 200;
 const SIDEBAR_MAX_WIDTH = 480;
-const SIDEBAR_DEFAULT_WIDTH = 256;
+const SIDEBAR_DEFAULT_WIDTH = 265;
 const SIDEBAR_COLLAPSE_THRESHOLD = 150;
 
 type SidebarContextProps = {
@@ -357,8 +357,12 @@ function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
   );
 
   const handleDoubleClick = React.useCallback(() => {
+    if (!open) {
+      // When expanding from collapsed, set to default width
+      setWidth(SIDEBAR_DEFAULT_WIDTH);
+    }
     toggleSidebar();
-  }, [toggleSidebar]);
+  }, [open, setWidth, toggleSidebar]);
 
   return (
     <button
