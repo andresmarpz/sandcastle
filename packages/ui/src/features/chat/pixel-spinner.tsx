@@ -1,111 +1,74 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { cn } from "../../lib/utils";
+import "./pixel-spinner.css";
 
 /**
  * A 3x3 pixel grid spinner with rotating animation.
  * 3-4 squares are active at a time, rotating around the outer ring
  * with a gradient trail (head at 100%, fading to 0%).
+ *
+ * Outer ring positions (clockwise from top-left):
+ * [0][1][2]
+ * [7]   [3]
+ * [6][5][4]
  */
 
+const RING_SIZE = 8;
+const TAIL_LENGTH = 4;
+const INTERVAL_MS = 80;
+const NON_ACTIVE_OPACITY = 5;
+
+/** Maps render index (0-8 grid order) to animation index (clockwise ring order) */
 const renderToAnimation = [0, 1, 2, 7, undefined, 3, 6, 5, 4] as const;
 
-function calculatePixelDistance(
-  headIdx: number,
-  pixelIdx: number,
-  size: number = 8
-) {
-  return (headIdx - pixelIdx + size) % size;
+function calculatePixelDistance(headIdx: number, pixelIdx: number): number {
+  return (headIdx - pixelIdx + RING_SIZE) % RING_SIZE;
 }
 
-function isPixelActive(
-  headIdx: number,
-  pixelIdx: number | undefined,
-  size: number = 8,
-  tailLength: number = 4
-) {
+function isPixelActive(headIdx: number, pixelIdx: number | undefined): boolean {
   if (pixelIdx === undefined) return false;
-  const distance = calculatePixelDistance(headIdx, pixelIdx, size);
-
-  return distance < tailLength;
+  return calculatePixelDistance(headIdx, pixelIdx) < TAIL_LENGTH;
 }
 
-function calculatePixelOpacity(
-  headIdx: number,
-  pixelIdx: number | undefined,
-  size: number = 8,
-  tailLength: number = 4
-) {
-  const nonActiveOpacity = 5;
-  if (pixelIdx === undefined) return nonActiveOpacity;
+function calculatePixelOpacity(headIdx: number, pixelIdx: number | undefined): number {
+  if (pixelIdx === undefined) return NON_ACTIVE_OPACITY;
 
-  const distance = calculatePixelDistance(headIdx, pixelIdx, size);
-  const step = 100 / tailLength;
-  return distance < tailLength ? 100 - distance * step : nonActiveOpacity;
+  const distance = calculatePixelDistance(headIdx, pixelIdx);
+  const step = 100 / TAIL_LENGTH;
+  return distance < TAIL_LENGTH ? 100 - distance * step : NON_ACTIVE_OPACITY;
 }
 
 export function PixelSpinner({ className }: { className?: string }) {
-  const pixels = 8;
   const [headIndex, setHeadIndex] = useState(0);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const pixelIndices = useMemo(() => Array.from({ length: 9 }, (_, i) => i), []);
 
   useEffect(() => {
-    intervalRef.current = setInterval(() => {
-      setHeadIndex((prev) => {
-        let n = ++prev;
-        if (n >= pixels) n = 0;
+    const intervalId = setInterval(() => {
+      setHeadIndex((prev) => (prev + 1) % RING_SIZE);
+    }, INTERVAL_MS);
 
-        return n;
-      });
-    }, 80);
-
-    return () => clearInterval(intervalRef.current!);
+    return () => clearInterval(intervalId);
   }, []);
 
-  // Outer ring positions (clockwise from top-left):
-  // [0][1][2]
-  // [7]   [3]
-  // [6][5][4]
-
   return (
-    <div className="pixel-spinner">
+    <div className={cn("pixel-spinner", className)}>
       <div className="grid grid-cols-3 gap-px">
-        {Array.from({ length: 9 }, (_val, idx) => (
-          <span
-            key={`pixel_${idx}`}
-            className={cn(idx === 4 ? "pixel-center" : "pixel")}
-            style={{
-              opacity:
-                calculatePixelOpacity(headIndex, renderToAnimation[idx]) / 100,
-              backgroundColor: isPixelActive(headIndex, renderToAnimation[idx])
-                ? "var(--active-color)"
-                : "var(--inactive-color)",
-            }}
-          ></span>
-        ))}
+        {pixelIndices.map((idx) => {
+          const animIdx = renderToAnimation[idx];
+          return (
+            <span
+              key={idx}
+              className={idx === 4 ? "pixel-center" : "pixel"}
+              style={{
+                opacity: calculatePixelOpacity(headIndex, animIdx) / 100,
+                backgroundColor: isPixelActive(headIndex, animIdx)
+                  ? "var(--active-color)"
+                  : "var(--inactive-color)",
+              }}
+            />
+          );
+        })}
       </div>
-
-      <style>{`
-        .pixel-spinner {
-          --pixel-size: 4px;
-          --active-color: var(--color-primary);
-          --inactive-color: var(--color-foreground);
-          --animation-duration: 0.8s;
-          aspect-ratio: 1/1;
-          width: calc(var(--pixel-size) * 3 + 3px);
-        }
-
-        .pixel-spinner .pixel,
-        .pixel-spinner .pixel-center {
-          width: var(--pixel-size);
-          height: var(--pixel-size);
-          border-radius: 0.5px;
-          background-color: var(--inactive-color);
-        }
-
-        .pixel-spinner .pixel-center {
-          background-color: transparent;
-        }
-      `}</style>
     </div>
   );
 }
