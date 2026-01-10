@@ -274,7 +274,7 @@ export function AppSidebar() {
 
 function SidebarSkeleton() {
   return (
-    <aside className="bg-background border-border flex h-full w-64 flex-col border-r">
+    <aside className="bg-sidebar text-sidebar-foreground flex h-full w-(--sidebar-width) flex-col border-r">
       <div className="flex flex-1 flex-col overflow-hidden">
         <div className="border-border flex shrink-0 items-center border-b p-3">
           <div className="bg-muted h-5 w-20 animate-pulse rounded" />
@@ -291,7 +291,7 @@ function SidebarSkeleton() {
 
 function SidebarError() {
   return (
-    <aside className="bg-background border-border flex h-full w-64 flex-col border-r">
+    <aside className="bg-sidebar text-sidebar-foreground flex h-full w-(--sidebar-width) flex-col border-r">
       <div className="flex flex-1 flex-col overflow-hidden">
         <div className="border-border flex shrink-0 items-center border-b p-3">
           <span className="text-foreground text-sm font-medium">Projects</span>

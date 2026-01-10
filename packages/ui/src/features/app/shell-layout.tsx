@@ -2,17 +2,27 @@
 
 import { Outlet } from "react-router";
 
+import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/sidebar";
 import { AppSidebar } from "./app-sidebar";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export function ShellLayout() {
+  const isMobile = useIsMobile();
+
   return (
-    <div className="bg-background flex h-screen flex-col">
-      <div className="flex flex-1 overflow-hidden">
-        <AppSidebar />
-        <main className="flex-1 overflow-hidden">
+    <SidebarProvider>
+      <AppSidebar />
+      <SidebarInset className="flex flex-col">
+        {isMobile && (
+          <header className="border-border bg-background sticky top-0 z-10 flex h-12 items-center gap-2 border-b px-4">
+            <SidebarTrigger />
+            <span className="text-sm font-medium">Sandcastle</span>
+          </header>
+        )}
+        <div className="flex-1 overflow-hidden">
           <Outlet />
-        </main>
-      </div>
-    </div>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
