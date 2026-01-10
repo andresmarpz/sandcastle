@@ -1,12 +1,15 @@
 import { RegistryProvider } from "@effect-atom/atom-react";
+import { open } from "@tauri-apps/plugin-dialog";
+import { Command } from "@tauri-apps/plugin-shell";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router";
-import { ThemeProvider } from "@sandcastle/ui/context/theme-context";
+
 import { PlatformProvider } from "@sandcastle/ui/context/platform-context";
-import { open } from "@tauri-apps/plugin-dialog";
-import { Command } from "@tauri-apps/plugin-shell";
-import { RootLayout } from "@/components/layout/root-layout";
+import { ThemeProvider } from "@sandcastle/ui/context/theme-context";
+
+import { RootLayout } from "@sandcastle/ui/features/app";
+
 import "@sandcastle/ui/globals.css";
 import "@fontsource-variable/inter";
 import "./tauri.css";
@@ -49,5 +52,5 @@ ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
         </PlatformProvider>
       </ThemeProvider>
     </BrowserRouter>
-  </React.StrictMode>,
+  </React.StrictMode>
 );

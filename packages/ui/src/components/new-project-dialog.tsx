@@ -4,7 +4,11 @@ import * as React from "react";
 import { IconFolderOpen } from "@tabler/icons-react";
 import { useAtom, useAtomRefresh } from "@effect-atom/atom-react";
 
-import { createRepositoryMutation, repositoryListAtom, REPOSITORY_LIST_KEY } from "@/api/repository-atoms";
+import {
+  createRepositoryMutation,
+  repositoryListAtom,
+  REPOSITORY_LIST_KEY,
+} from "@/api/repository-atoms";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,7 +19,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/alert-dialog";
-import { Field, FieldContent, FieldDescription, FieldLabel } from "@/components/field";
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldLabel,
+} from "@/components/field";
 import {
   InputGroup,
   InputGroupAddon,
@@ -36,7 +45,10 @@ function getDirectoryLabel(path: string) {
   return parts[parts.length - 1] || trimmed;
 }
 
-export function NewProjectDialog({ open, onOpenChange }: NewProjectDialogProps) {
+export function NewProjectDialog({
+  open,
+  onOpenChange,
+}: NewProjectDialogProps) {
   const { openDirectory } = usePlatform();
   const [, createRepository] = useAtom(createRepositoryMutation, {
     mode: "promiseExit",
@@ -70,9 +82,7 @@ export function NewProjectDialog({ open, onOpenChange }: NewProjectDialogProps) 
     setError(null);
     const selection = await openDirectory();
     if (!selection) return;
-    const selectedPath = Array.isArray(selection)
-      ? selection[0]
-      : selection;
+    const selectedPath = Array.isArray(selection) ? selection[0] : selection;
     if (!selectedPath) return;
     setDirectoryPath(selectedPath);
     if (!labelTouched) {
@@ -199,16 +209,17 @@ export function NewProjectDialog({ open, onOpenChange }: NewProjectDialogProps) 
               </FieldContent>
             </Field>
 
-            {error ? (
-              <p className="text-destructive text-sm">{error}</p>
-            ) : null}
+            {error ? <p className="text-destructive text-sm">{error}</p> : null}
           </div>
 
           <AlertDialogFooter className="mt-6">
             <AlertDialogCancel disabled={isSubmitting}>
               Cancel
             </AlertDialogCancel>
-            <AlertDialogAction type="submit" disabled={!canSubmit || isSubmitting}>
+            <AlertDialogAction
+              type="submit"
+              disabled={!canSubmit || isSubmitting}
+            >
               {isSubmitting ? "Adding..." : "Add project"}
             </AlertDialogAction>
           </AlertDialogFooter>

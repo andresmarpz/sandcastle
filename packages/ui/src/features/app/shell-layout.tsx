@@ -1,6 +1,7 @@
 "use client";
 
 import { Outlet } from "react-router";
+
 import { AppSidebar } from "./app-sidebar";
 
 export function ShellLayout() {
