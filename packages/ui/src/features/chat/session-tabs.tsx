@@ -14,10 +14,10 @@ import {
   sessionListByWorktreeAtomFamily,
   createSessionMutation,
   SESSION_LIST_KEY,
-} from "@sandcastle/ui/api/session-atoms";
-import { isSessionStreamingFamily } from "@sandcastle/ui/api/chat-atoms";
-import { Button } from "@sandcastle/ui/components/button";
-import { cn } from "@sandcastle/ui/lib/utils";
+} from "@/api/session-atoms";
+import { isSessionStreamingFamily } from "@/api/chat-atoms";
+import { Button } from "@/components/button";
+import { cn } from "@/lib/utils";
 
 interface SessionTabsProps {
   worktreeId: string;
@@ -66,7 +66,7 @@ function SessionTab({ session, isActive, onClick }: SessionTabProps) {
         "hover:bg-muted/50",
         isActive
           ? "bg-muted text-foreground"
-          : "text-muted-foreground hover:text-foreground",
+          : "text-muted-foreground hover:text-foreground"
       )}
     >
       {isStreaming && <StreamingIndicator />}
@@ -85,7 +85,7 @@ export function SessionTabs({
   // Use stable atom from family for proper caching and refresh
   const sessionsAtom = useMemo(
     () => sessionListByWorktreeAtomFamily(worktreeId),
-    [worktreeId],
+    [worktreeId]
   );
   const sessionsResult = useAtomValue(sessionsAtom);
   const refreshSessions = useAtomRefresh(sessionsAtom);

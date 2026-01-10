@@ -1,7 +1,7 @@
 import * as React from "react";
 import { AppHeader } from "./app-header";
 import { AppSidebar } from "./app-sidebar";
-import { WorktreePanel } from "@/components/worktree/worktree-panel";
+import { WorktreePanel } from "@sandcastle/ui/features/worktrees";
 import type { Worktree } from "@sandcastle/rpc";
 
 export function RootLayout() {
