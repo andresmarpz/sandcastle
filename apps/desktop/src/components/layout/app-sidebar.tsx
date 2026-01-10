@@ -143,6 +143,8 @@ export function AppSidebar() {
   };
 
   const handleWorktreeSelect = (worktree: Worktree) => {
+    // Skip navigation if already viewing this worktree
+    if (selectedWorktreeId === worktree.id) return;
     navigate(`/worktrees/${worktree.id}`);
   };
 
