@@ -76,7 +76,9 @@ export const makeServerLayer = (options?: { port?: number }) =>
 		Layer.provide(CustomRoutes),
 		Layer.provide(RpcLayer),
 		Layer.provide(HttpProtocol),
-		Layer.provide(BunHttpServer.layer({ port: options?.port ?? port })),
+		Layer.provide(
+			BunHttpServer.layer({ port: options?.port ?? port, idleTimeout: 30 }),
+		),
 	);
 
 export const ServerLive = Layer.mergeAll(makeServerLayer(), StartupTasksLive);
