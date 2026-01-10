@@ -1,6 +1,7 @@
 import { RegistryProvider } from "@effect-atom/atom-react";
 import React from "react";
 import ReactDOM from "react-dom/client";
+import { BrowserRouter } from "react-router";
 import { ThemeProvider } from "@sandcastle/ui/context/theme-context";
 import { PlatformProvider } from "@sandcastle/ui/context/platform-context";
 import { open } from "@tauri-apps/plugin-dialog";
@@ -34,17 +35,19 @@ const copyToClipboard = async (text: string) => {
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
-    <ThemeProvider>
-      <PlatformProvider
+    <BrowserRouter>
+      <ThemeProvider>
+        <PlatformProvider
           openDirectory={openDirectory}
           openInFileManager={openInFileManager}
           openInEditor={openInEditor}
           copyToClipboard={copyToClipboard}
         >
-        <RegistryProvider>
-          <RootLayout />
-        </RegistryProvider>
-      </PlatformProvider>
-    </ThemeProvider>
+          <RegistryProvider>
+            <RootLayout />
+          </RegistryProvider>
+        </PlatformProvider>
+      </ThemeProvider>
+    </BrowserRouter>
   </React.StrictMode>,
 );

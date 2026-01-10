@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useNavigate, useParams } from "react-router";
 import {
   Result,
   useAtomValue,
@@ -25,17 +26,12 @@ import {
 import type { Repository, Worktree } from "@sandcastle/rpc";
 import { WORKTREE_LIST_KEY } from "@/api/worktree-client";
 
-interface AppSidebarProps {
-  selectedWorktree: Worktree | null;
-  onWorktreeSelect: (worktree: Worktree) => void;
-  onWorktreeDeselect: () => void;
-}
+export function AppSidebar() {
+  const navigate = useNavigate();
+  const { worktreeId: selectedWorktreeId } = useParams<{
+    worktreeId?: string;
+  }>();
 
-export function AppSidebar({
-  selectedWorktree,
-  onWorktreeSelect,
-  onWorktreeDeselect,
-}: AppSidebarProps) {
   const [isNewProjectOpen, setIsNewProjectOpen] = React.useState(false);
   const [creatingWorktreeId, setCreatingWorktreeId] = React.useState<
     string | null
@@ -78,13 +74,13 @@ export function AppSidebar({
           reactivityKeys: [WORKTREE_LIST_KEY],
         });
         refreshWorktrees();
-        // If the selected worktree was removed, deselect it
+        // If the selected worktree was removed, navigate home
         if (
-          selectedWorktree &&
+          selectedWorktreeId &&
           result._tag === "Success" &&
-          result.value.removedIds.includes(selectedWorktree.id)
+          result.value.removedIds.includes(selectedWorktreeId)
         ) {
-          onWorktreeDeselect();
+          navigate("/");
         }
       } catch {
         // Sync failures are non-critical, just log
@@ -147,7 +143,7 @@ export function AppSidebar({
   };
 
   const handleWorktreeSelect = (worktree: Worktree) => {
-    onWorktreeSelect(worktree);
+    navigate(`/worktrees/${worktree.id}`);
   };
 
   const handleWorktreeDelete = async (worktree: Worktree) => {
@@ -161,9 +157,9 @@ export function AppSidebar({
         ],
       });
       refreshWorktrees();
-      // Deselect if the deleted worktree was selected
-      if (selectedWorktree?.id === worktree.id) {
-        onWorktreeDeselect();
+      // Navigate home if the deleted worktree was selected
+      if (selectedWorktreeId === worktree.id) {
+        navigate("/");
       }
     } finally {
       setDeletingWorktreeId(null);
@@ -180,9 +176,9 @@ export function AppSidebar({
         reactivityKeys: [WORKTREE_LIST_KEY, `worktrees:repo:${repository.id}`],
       });
 
-      // Select the new worktree after server confirms
+      // Navigate to the new worktree after server confirms
       if (result._tag === "Success") {
-        onWorktreeSelect(result.value.worktree);
+        navigate(`/worktrees/${result.value.worktree.id}`);
       }
       // No need for manual refresh - reactivityKeys handles it
     } finally {
@@ -213,7 +209,6 @@ export function AppSidebar({
               onWorktreeSelect={handleWorktreeSelect}
               onWorktreeDelete={handleWorktreeDelete}
               deletingWorktreeId={deletingWorktreeId}
-              contentClassName="pt-7"
             />
           ) : (
             <SidebarSkeleton />
@@ -232,7 +227,6 @@ export function AppSidebar({
               onWorktreeSelect={handleWorktreeSelect}
               onWorktreeDelete={handleWorktreeDelete}
               deletingWorktreeId={deletingWorktreeId}
-              contentClassName="pt-7"
             />
           ) : (
             <SidebarError />
@@ -251,7 +245,6 @@ export function AppSidebar({
               onWorktreeSelect={handleWorktreeSelect}
               onWorktreeDelete={handleWorktreeDelete}
               deletingWorktreeId={deletingWorktreeId}
-              contentClassName="pt-7"
             />
           ) : (
             <SidebarError />
@@ -269,7 +262,6 @@ export function AppSidebar({
             onWorktreeSelect={handleWorktreeSelect}
             onWorktreeDelete={handleWorktreeDelete}
             deletingWorktreeId={deletingWorktreeId}
-            contentClassName="pt-7"
           />
         ),
       })}
@@ -280,7 +272,7 @@ export function AppSidebar({
 function SidebarSkeleton() {
   return (
     <aside className="bg-background border-border flex h-full w-64 flex-col border-r">
-      <div className="flex flex-1 flex-col overflow-hidden pt-7">
+      <div className="flex flex-1 flex-col overflow-hidden">
         <div className="border-border flex shrink-0 items-center border-b p-3">
           <div className="bg-muted h-5 w-20 animate-pulse rounded" />
         </div>
@@ -297,7 +289,7 @@ function SidebarSkeleton() {
 function SidebarError() {
   return (
     <aside className="bg-background border-border flex h-full w-64 flex-col border-r">
-      <div className="flex flex-1 flex-col overflow-hidden pt-7">
+      <div className="flex flex-1 flex-col overflow-hidden">
         <div className="border-border flex shrink-0 items-center border-b p-3">
           <span className="text-foreground text-sm font-medium">Projects</span>
         </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useEffect, useCallback, useMemo } from "react";
 import {
   Result,
   useAtom,
@@ -21,14 +21,17 @@ import { OpenButton } from "./open-button";
 
 interface WorktreeContentProps {
   worktree: Worktree;
+  sessionId?: string | null;
+  onSessionSelect: (sessionId: string) => void;
   isRefreshing?: boolean;
 }
 
 export function WorktreeContent({
   worktree,
+  sessionId,
+  onSessionSelect,
   isRefreshing,
 }: WorktreeContentProps) {
-  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   // Use stable atom from family for proper caching and refresh
   const sessionsAtom = useMemo(
     () => sessionListByWorktreeAtomFamily(worktree.id),
@@ -40,17 +43,17 @@ export function WorktreeContent({
     mode: "promiseExit",
   });
 
-  // Auto-select first session or create one if none exist
+  // Auto-select first session if no session is selected
   useEffect(() => {
-    if (activeSessionId !== null) return;
+    if (sessionId) return; // Already have a session selected
 
     if (sessionsResult._tag === "Success") {
       const sessions = sessionsResult.value;
       if (sessions.length > 0 && sessions[0]) {
-        setActiveSessionId(sessions[0].id);
+        onSessionSelect(sessions[0].id);
       }
     }
-  }, [sessionsResult, activeSessionId]);
+  }, [sessionsResult, sessionId, onSessionSelect]);
 
   // Create initial session if none exist
   const handleCreateInitialSession = useCallback(async () => {
@@ -63,13 +66,9 @@ export function WorktreeContent({
     });
     if (result._tag === "Success") {
       refreshSessions();
-      setActiveSessionId(result.value.id);
+      onSessionSelect(result.value.id);
     }
-  }, [worktree.id, createSession, refreshSessions]);
-
-  const handleSessionSelect = useCallback((sessionId: string) => {
-    setActiveSessionId(sessionId);
-  }, []);
+  }, [worktree.id, createSession, refreshSessions, onSessionSelect]);
 
   // Check if we have sessions
   const hasSessions = Result.matchWithWaiting(sessionsResult, {
@@ -82,7 +81,10 @@ export function WorktreeContent({
   return (
     <div className="flex flex-col h-full">
       {/* Header with worktree info and actions */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-background">
+      <div
+        data-tauri-drag-region
+        className="flex shrink-0 items-center justify-between px-3 py-2 border-b border-border bg-background"
+      >
         <div className="flex items-center gap-2 min-w-0">
           <span className="font-medium text-sm truncate">{worktree.name}</span>
           <span className="text-xs text-muted-foreground truncate">
@@ -92,24 +94,23 @@ export function WorktreeContent({
             <span className="text-muted-foreground text-xs">Refreshing...</span>
           )}
         </div>
-        <OpenButton worktree={worktree} />
+        <OpenButton worktree={worktree} size="sm" />
       </div>
 
       {/* Session tabs */}
       <SessionTabs
         worktreeId={worktree.id}
-        activeSessionId={activeSessionId}
-        onSessionSelect={handleSessionSelect}
+        activeSessionId={sessionId ?? null}
+        onSessionSelect={onSessionSelect}
       />
 
       {/* Chat session or empty state */}
       <div className="flex-1 min-h-0 overflow-hidden">
-        {activeSessionId ? (
-          <ChatSession sessionId={activeSessionId} worktreeId={worktree.id} />
+        {sessionId ? (
+          <ChatSession sessionId={sessionId} worktreeId={worktree.id} />
         ) : hasSessions ? (
-          <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
-            Select a session
-          </div>
+          // Sessions exist but none selected - auto-redirect is pending, show nothing
+          null
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground text-sm gap-3 p-4">
             <span>No sessions yet</span>
