@@ -26,7 +26,7 @@ import {
   DropdownMenuTrigger,
 } from "@sandcastle/ui/components/dropdown-menu";
 import { SessionTabs } from "../chat/session-tabs";
-import { ChatSession } from "../chat/chat-session";
+import { ChatSession } from "@sandcastle/ui/features/chat";
 
 // Placeholder icons - replace with actual SVG icons later
 function FinderIcon({ className }: { className?: string }) {
