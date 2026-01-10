@@ -1,6 +1,7 @@
 import {
 	HttpMiddleware,
 	HttpRouter,
+	HttpServerRequest,
 	HttpServerResponse,
 } from "@effect/platform";
 import { BunHttpServer, BunRuntime } from "@effect/platform-bun";
@@ -38,6 +39,20 @@ const CorsMiddleware = HttpMiddleware.cors({
 	credentials: false, // Set to true if you need cookies/auth headers
 });
 
+const LoggingMiddleware = HttpMiddleware.make((app) =>
+	Effect.gen(function* () {
+		const request = yield* HttpServerRequest.HttpServerRequest;
+		const start = Date.now();
+		console.log(`→ ${request.method} ${request.url}`);
+
+		const response = yield* app;
+		const duration = Date.now() - start;
+		console.log(`← ${request.method} ${request.url} ${response.status} (${duration}ms)`);
+
+		return response;
+	}),
+);
+
 // ─── RPC Layers ──────────────────────────────────────────────
 
 const SandcastleRpc = RepositoryRpc.merge(WorktreeRpc)
@@ -72,7 +87,7 @@ const CustomRoutes = HttpRouter.Default.use((router) =>
 const port = Number(process.env.PORT) || 3000;
 
 export const makeServerLayer = (options?: { port?: number }) =>
-	HttpRouter.Default.serve(CorsMiddleware).pipe(
+	HttpRouter.Default.serve((httpApp) => CorsMiddleware(LoggingMiddleware(httpApp))).pipe(
 		Layer.provide(CustomRoutes),
 		Layer.provide(RpcLayer),
 		Layer.provide(HttpProtocol),
@@ -83,4 +98,5 @@ export const makeServerLayer = (options?: { port?: number }) =>
 
 export const ServerLive = Layer.mergeAll(makeServerLayer(), StartupTasksLive);
 
+console.log(`Server starting on port ${port}...`);
 BunRuntime.runMain(Layer.launch(ServerLive));
