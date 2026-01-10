@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback } from "react";
-import { useParams, useNavigate } from "react-router";
-import { WorktreePanel } from "@sandcastle/ui/features/worktrees";
+import { useNavigate, useParams } from "react-router";
+
+import { WorktreePanel } from "@/features/worktrees";
 
 export function WorktreeView() {
   const { worktreeId, sessionId } = useParams<{

@@ -1,17 +1,17 @@
-import { Routes, Route } from "react-router";
+"use client";
+
+import { Route, Routes } from "react-router";
+
+import { EmptyState } from "./empty-state";
 import { ShellLayout } from "./shell-layout";
-import { EmptyState } from "@/components/views/empty-state";
-import { WorktreeView } from "@/components/views/worktree-view";
+import { WorktreeView } from "./worktree-view";
 
 export function RootLayout() {
   return (
     <Routes>
       <Route element={<ShellLayout />}>
         <Route index element={<EmptyState />} />
-        <Route
-          path="worktrees/:worktreeId/sessions/:sessionId"
-          element={<WorktreeView />}
-        />
+        <Route path="worktrees/:worktreeId/sessions/:sessionId" element={<WorktreeView />} />
         <Route path="worktrees/:worktreeId" element={<WorktreeView />} />
       </Route>
     </Routes>

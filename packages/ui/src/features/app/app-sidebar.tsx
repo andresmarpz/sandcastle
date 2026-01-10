@@ -1,30 +1,26 @@
 "use client";
 
+import { Result, useAtom, useAtomRefresh, useAtomValue } from "@effect-atom/atom-react";
+import * as Option from "effect/Option";
 import * as React from "react";
 import { useNavigate, useParams } from "react-router";
+
+import type { Repository, Worktree } from "@sandcastle/rpc";
 import {
-  Result,
-  useAtomValue,
-  useAtom,
-  useAtomRefresh,
-} from "@effect-atom/atom-react";
-import * as Option from "effect/Option";
-import { Sidebar } from "@sandcastle/ui/components/sidebar";
-import { NewProjectDialog } from "@sandcastle/ui/components/new-project-dialog";
-import {
-  repositoryListAtom,
-  updateRepositoryMutation,
   deleteRepositoryMutation,
   REPOSITORY_LIST_KEY,
-} from "@sandcastle/ui/api/repository-atoms";
+  repositoryListAtom,
+  updateRepositoryMutation
+} from "@/api/repository-atoms";
 import {
   createWorktreeOptimisticMutation,
-  optimisticWorktreeListAtom,
   deleteWorktreeMutation,
-  syncWorktreesMutation,
-} from "@sandcastle/ui/api/worktree-atoms";
-import type { Repository, Worktree } from "@sandcastle/rpc";
+  optimisticWorktreeListAtom,
+  syncWorktreesMutation
+} from "@/api/worktree-atoms";
 import { WORKTREE_LIST_KEY } from "@/api/worktree-client";
+import { NewProjectDialog } from "@/components/new-project-dialog";
+import { Sidebar } from "@/components/sidebar";
 
 export function AppSidebar() {
   const navigate = useNavigate();
@@ -33,12 +29,8 @@ export function AppSidebar() {
   }>();
 
   const [isNewProjectOpen, setIsNewProjectOpen] = React.useState(false);
-  const [creatingWorktreeId, setCreatingWorktreeId] = React.useState<
-    string | null
-  >(null);
-  const [deletingWorktreeId, setDeletingWorktreeId] = React.useState<
-    string | null
-  >(null);
+  const [creatingWorktreeId, setCreatingWorktreeId] = React.useState<string | null>(null);
+  const [deletingWorktreeId, setDeletingWorktreeId] = React.useState<string | null>(null);
 
   // Use stable atoms directly for proper caching
   const repositoriesResult = useAtomValue(repositoryListAtom);
@@ -50,19 +42,19 @@ export function AppSidebar() {
   const refreshWorktrees = useAtomRefresh(optimisticWorktreeListAtom);
 
   const [, updateRepository] = useAtom(updateRepositoryMutation, {
-    mode: "promiseExit",
+    mode: "promiseExit"
   });
   const [, deleteRepository] = useAtom(deleteRepositoryMutation, {
-    mode: "promiseExit",
+    mode: "promiseExit"
   });
   const [, createWorktree] = useAtom(createWorktreeOptimisticMutation, {
-    mode: "promiseExit",
+    mode: "promiseExit"
   });
   const [, deleteWorktree] = useAtom(deleteWorktreeMutation, {
-    mode: "promiseExit",
+    mode: "promiseExit"
   });
   const [, syncWorktrees] = useAtom(syncWorktreesMutation, {
-    mode: "promiseExit",
+    mode: "promiseExit"
   });
 
   // Sync worktrees on mount to clean up orphaned DB records
@@ -71,7 +63,7 @@ export function AppSidebar() {
       try {
         const result = await syncWorktrees({
           payload: {},
-          reactivityKeys: [WORKTREE_LIST_KEY],
+          reactivityKeys: [WORKTREE_LIST_KEY]
         });
         refreshWorktrees();
         // If the selected worktree was removed, navigate home
@@ -93,13 +85,13 @@ export function AppSidebar() {
 
   const repositories = React.useMemo(
     () => Option.getOrElse(Result.value(repositoriesResult), () => []),
-    [repositoriesResult],
+    [repositoriesResult]
   );
 
   // Worktrees from the optimistic atom (includes optimistic updates automatically)
   const worktrees = React.useMemo(
     () => Option.getOrElse(Result.value(worktreesResult), () => []),
-    [worktreesResult],
+    [worktreesResult]
   );
 
   // Group worktrees by repository ID
@@ -128,7 +120,7 @@ export function AppSidebar() {
   const handleRepositoryPin = async (id: string, pinned: boolean) => {
     await updateRepository({
       payload: { id, input: { pinned } },
-      reactivityKeys: [REPOSITORY_LIST_KEY, `repository:${id}`],
+      reactivityKeys: [REPOSITORY_LIST_KEY, `repository:${id}`]
     });
     refreshRepositories();
   };
@@ -136,7 +128,7 @@ export function AppSidebar() {
   const handleRepositoryDelete = async (id: string) => {
     await deleteRepository({
       payload: { id },
-      reactivityKeys: [REPOSITORY_LIST_KEY, `repository:${id}`],
+      reactivityKeys: [REPOSITORY_LIST_KEY, `repository:${id}`]
     });
     refreshRepositories();
     refreshWorktrees(); // Worktrees may be cascade-deleted
@@ -153,10 +145,7 @@ export function AppSidebar() {
     try {
       await deleteWorktree({
         payload: { id: worktree.id },
-        reactivityKeys: [
-          WORKTREE_LIST_KEY,
-          `worktrees:repo:${worktree.repositoryId}`,
-        ],
+        reactivityKeys: [WORKTREE_LIST_KEY, `worktrees:repo:${worktree.repositoryId}`]
       });
       refreshWorktrees();
       // Navigate home if the deleted worktree was selected
@@ -175,7 +164,7 @@ export function AppSidebar() {
       // and automatically rolls back on failure
       const result = await createWorktree({
         payload: { repositoryId: repository.id },
-        reactivityKeys: [WORKTREE_LIST_KEY, `worktrees:repo:${repository.id}`],
+        reactivityKeys: [WORKTREE_LIST_KEY, `worktrees:repo:${repository.id}`]
       });
 
       // Navigate to the new worktree after server confirms
@@ -192,10 +181,7 @@ export function AppSidebar() {
 
   return (
     <>
-      <NewProjectDialog
-        open={isNewProjectOpen}
-        onOpenChange={setIsNewProjectOpen}
-      />
+      <NewProjectDialog open={isNewProjectOpen} onOpenChange={setIsNewProjectOpen} />
       {Result.matchWithWaiting(repositoriesResult, {
         onWaiting: () =>
           hasRepositoryCache ? (
@@ -265,7 +251,7 @@ export function AppSidebar() {
             onWorktreeDelete={handleWorktreeDelete}
             deletingWorktreeId={deletingWorktreeId}
           />
-        ),
+        )
       })}
     </>
   );
@@ -279,7 +265,7 @@ function SidebarSkeleton() {
           <div className="bg-muted h-5 w-20 animate-pulse rounded" />
         </div>
         <div className="space-y-2 p-2">
-          {[1, 2, 3].map((i) => (
+          {[1, 2, 3].map(i => (
             <div key={i} className="bg-muted h-8 animate-pulse rounded" />
           ))}
         </div>
@@ -295,9 +281,7 @@ function SidebarError() {
         <div className="border-border flex shrink-0 items-center border-b p-3">
           <span className="text-foreground text-sm font-medium">Projects</span>
         </div>
-        <div className="text-destructive p-4 text-sm">
-          Failed to load projects
-        </div>
+        <div className="text-destructive p-4 text-sm">Failed to load projects</div>
       </div>
     </aside>
   );

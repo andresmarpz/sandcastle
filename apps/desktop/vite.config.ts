@@ -1,6 +1,6 @@
-import { defineConfig } from "vite";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
+import { defineConfig } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 
 // @ts-expect-error process is a nodejs global
@@ -13,8 +13,8 @@ export default defineConfig(async () => ({
     tailwindcss(),
     tsconfigPaths({
       // Include both the desktop app and UI package tsconfigs
-      projects: [".", "../../packages/ui"],
-    }),
+      projects: [".", "../../packages/ui"]
+    })
   ],
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
@@ -30,12 +30,12 @@ export default defineConfig(async () => ({
       ? {
           protocol: "ws",
           host,
-          port: 1421,
+          port: 1421
         }
       : undefined,
     watch: {
       // 3. tell Vite to ignore watching `src-tauri`
-      ignored: ["**/src-tauri/**"],
-    },
-  },
+      ignored: ["**/src-tauri/**"]
+    }
+  }
 }));

@@ -8,8 +8,7 @@
     <script>
       const t = localStorage.getItem("theme") ?? "system";
       const isDark =
-        t === "dark" ||
-        (t === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
+        t === "dark" || (t === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
       if (isDark) document.documentElement.classList.add("dark");
     </script>
   </head>
