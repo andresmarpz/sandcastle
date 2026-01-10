@@ -21,12 +21,16 @@ interface QuestionCardProps {
   onSelect: (values: string[]) => void;
 }
 
-function QuestionCard({ question, selectedValues, onSelect }: QuestionCardProps) {
+function QuestionCard({
+  question,
+  selectedValues,
+  onSelect,
+}: QuestionCardProps) {
   const handleOptionClick = (label: string) => {
     if (question.multiSelect) {
       // Toggle selection for multi-select
       if (selectedValues.includes(label)) {
-        onSelect(selectedValues.filter(v => v !== label));
+        onSelect(selectedValues.filter((v) => v !== label));
       } else {
         onSelect([...selectedValues, label]);
       }
@@ -54,17 +58,19 @@ function QuestionCard({ question, selectedValues, onSelect }: QuestionCardProps)
               "w-full text-left p-3 rounded-lg border transition-colors",
               selectedValues.includes(option.label)
                 ? "border-primary bg-primary/5"
-                : "border-border hover:border-muted-foreground/30"
+                : "border-border hover:border-muted-foreground/30",
             )}
           >
             <div className="flex items-start gap-3">
-              <div className={cn(
-                "mt-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0",
-                question.multiSelect ? "rounded" : "rounded-full",
-                selectedValues.includes(option.label)
-                  ? "border-primary bg-primary"
-                  : "border-muted-foreground/30"
-              )}>
+              <div
+                className={cn(
+                  "mt-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0",
+                  question.multiSelect ? "rounded" : "rounded-full",
+                  selectedValues.includes(option.label)
+                    ? "border-primary bg-primary"
+                    : "border-muted-foreground/30",
+                )}
+              >
                 {selectedValues.includes(option.label) && (
                   <svg
                     className="w-2.5 h-2.5 text-primary-foreground"
@@ -93,7 +99,7 @@ export function AskUserModal({
   sessionId,
   toolUseId,
   questions,
-  onClose
+  onClose,
 }: AskUserModalProps) {
   const [, respond] = useAtom(chatRespondMutation, { mode: "promiseExit" });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -101,22 +107,22 @@ export function AskUserModal({
   // Track answers for each question by header
   const [answers, setAnswers] = useState<Record<string, string[]>>(() => {
     const initial: Record<string, string[]> = {};
-    questions.forEach(q => {
+    questions.forEach((q) => {
       initial[q.header] = [];
     });
     return initial;
   });
 
   const handleSelectAnswer = useCallback((header: string, values: string[]) => {
-    setAnswers(prev => ({
+    setAnswers((prev) => ({
       ...prev,
-      [header]: values
+      [header]: values,
     }));
   }, []);
 
   const handleSubmit = useCallback(async () => {
     // Validate that all questions have at least one answer
-    const allAnswered = questions.every(q => {
+    const allAnswered = questions.every((q) => {
       const selected = answers[q.header];
       return selected && selected.length > 0;
     });
@@ -127,7 +133,7 @@ export function AskUserModal({
     try {
       // Convert answers to the expected format (comma-separated for multi-select)
       const formattedAnswers: Record<string, string> = {};
-      questions.forEach(q => {
+      questions.forEach((q) => {
         const selected = answers[q.header];
         if (selected) {
           formattedAnswers[q.header] = selected.join(", ");
@@ -138,9 +144,9 @@ export function AskUserModal({
         payload: {
           sessionId,
           toolUseId,
-          answers: formattedAnswers
+          answers: formattedAnswers,
         },
-        reactivityKeys: []
+        reactivityKeys: [],
       });
 
       onClose();
@@ -152,7 +158,7 @@ export function AskUserModal({
   }, [questions, answers, sessionId, toolUseId, respond, onClose]);
 
   // Check if all questions are answered
-  const allAnswered = questions.every(q => {
+  const allAnswered = questions.every((q) => {
     const selected = answers[q.header];
     return selected && selected.length > 0;
   });
@@ -183,7 +189,9 @@ export function AskUserModal({
                 key={`${question.header}-${index}`}
                 question={question}
                 selectedValues={answers[question.header] ?? []}
-                onSelect={(values) => handleSelectAnswer(question.header, values)}
+                onSelect={(values) =>
+                  handleSelectAnswer(question.header, values)
+                }
               />
             ))}
           </div>

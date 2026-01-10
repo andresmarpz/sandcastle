@@ -97,13 +97,13 @@ export function AppSidebar({
 
   const repositories = React.useMemo(
     () => Option.getOrElse(Result.value(repositoriesResult), () => []),
-    [repositoriesResult]
+    [repositoriesResult],
   );
 
   // Worktrees from the optimistic atom (includes optimistic updates automatically)
   const worktrees = React.useMemo(
     () => Option.getOrElse(Result.value(worktreesResult), () => []),
-    [worktreesResult]
+    [worktreesResult],
   );
 
   // Group worktrees by repository ID

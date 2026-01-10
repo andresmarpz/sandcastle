@@ -1,8 +1,8 @@
-import { Database, type SQLQueryBindings } from "bun:sqlite";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 
+import { Database, type SQLQueryBindings } from "bun:sqlite";
 import { Effect, Layer, Schema } from "effect";
 
 import {
@@ -164,11 +164,12 @@ export const makeStorageService = (
 
     // Run migrations automatically on service creation
     yield* runMigrations(db).pipe(
-      Effect.mapError(migrationError =>
-        new DatabaseConnectionError({
-          path: dbPath,
-          message: `Migration failed: ${migrationError.message}`
-        })
+      Effect.mapError(
+        migrationError =>
+          new DatabaseConnectionError({
+            path: dbPath,
+            message: `Migration failed: ${migrationError.message}`
+          })
       )
     );
 
@@ -540,7 +541,20 @@ export const makeStorageService = (
               db.run(
                 `INSERT INTO sessions (id, worktree_id, title, description, status, claude_session_id, model, total_cost_usd, input_tokens, output_tokens, created_at, last_activity_at)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                [id, input.worktreeId, input.title, description, status, null, null, 0, 0, 0, now, now]
+                [
+                  id,
+                  input.worktreeId,
+                  input.title,
+                  description,
+                  status,
+                  null,
+                  null,
+                  0,
+                  0,
+                  0,
+                  now,
+                  now
+                ]
               )
             );
 
@@ -791,7 +805,10 @@ export const makeStorageService = (
           Effect.gen(function* () {
             const row = yield* tryDb("chatMessages.get", () =>
               db
-                .query<Record<string, unknown>, [string]>("SELECT * FROM chat_messages WHERE id = ?")
+                .query<
+                  Record<string, unknown>,
+                  [string]
+                >("SELECT * FROM chat_messages WHERE id = ?")
                 .get(id)
             );
             if (!row) {

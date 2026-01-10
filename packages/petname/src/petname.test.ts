@@ -1,5 +1,4 @@
 import { describe, expect, test } from "bun:test";
-
 import { Effect } from "effect";
 
 import { generate, petname, PetnameService, PetnameServiceLive } from "../index.ts";

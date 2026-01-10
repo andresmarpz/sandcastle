@@ -4,25 +4,18 @@ import {
   ChatRpc,
   ChatRpcError,
   ChatSessionNotFoundRpcError,
-  ChatStreamEvent,
   DatabaseRpcError,
   NoPendingQuestionRpcError
 } from "@sandcastle/rpc";
-import {
-  StorageService,
-  StorageServiceDefault,
-  type DatabaseError
-} from "@sandcastle/storage";
+import { StorageService, StorageServiceDefault, type DatabaseError } from "@sandcastle/storage";
 
 import {
   ClaudeAgentService,
   ClaudeAgentServiceLive,
-  ClaudeAgentError,
-  SessionNotActiveError,
-  NoPendingQuestionError
+  type ClaudeAgentError,
+  type NoPendingQuestionError,
+  type SessionNotActiveError
 } from "../services";
-
-// ─── Error Mapping ───────────────────────────────────────────
 
 const mapClaudeError = (error: ClaudeAgentError): ChatRpcError =>
   new ChatRpcError({ message: error.message, code: error.code });
@@ -35,8 +28,6 @@ const mapSessionNotActiveError = (error: SessionNotActiveError): ChatSessionNotF
 
 const mapNoPendingQuestionError = (error: NoPendingQuestionError): NoPendingQuestionRpcError =>
   new NoPendingQuestionRpcError({ sessionId: error.sessionId });
-
-// ─── Handlers ────────────────────────────────────────────────
 
 export const ChatRpcHandlers = ChatRpc.toLayer(
   Effect.gen(function* () {
@@ -86,18 +77,22 @@ export const ChatRpcHandlers = ChatRpc.toLayer(
               Stream.tap(event => {
                 // Update session with claude_session_id and cost info on result
                 if (event.type === "init" && event.claudeSessionId) {
-                  return storage.sessions.update(params.sessionId, {
-                    claudeSessionId: event.claudeSessionId
-                  }).pipe(Effect.ignore);
+                  return storage.sessions
+                    .update(params.sessionId, {
+                      claudeSessionId: event.claudeSessionId
+                    })
+                    .pipe(Effect.ignore);
                 }
                 if (event.type === "result") {
-                  return storage.sessions.update(params.sessionId, {
-                    status: "paused",
-                    claudeSessionId: event.claudeSessionId ?? undefined,
-                    totalCostUsd: event.costUsd,
-                    inputTokens: event.inputTokens,
-                    outputTokens: event.outputTokens
-                  }).pipe(Effect.ignore);
+                  return storage.sessions
+                    .update(params.sessionId, {
+                      status: "paused",
+                      claudeSessionId: event.claudeSessionId ?? undefined,
+                      totalCostUsd: event.costUsd,
+                      inputTokens: event.inputTokens,
+                      outputTokens: event.outputTokens
+                    })
+                    .pipe(Effect.ignore);
                 }
                 return Effect.void;
               }),
@@ -143,22 +138,22 @@ export const ChatRpcHandlers = ChatRpc.toLayer(
        * Get message history for a session.
        */
       "chat.history": params =>
-        storage.chatMessages.listBySession(params.sessionId).pipe(
-          Effect.mapError(mapDatabaseError)
-        ),
+        storage.chatMessages
+          .listBySession(params.sessionId)
+          .pipe(Effect.mapError(mapDatabaseError)),
 
       /**
        * Check if a session is currently streaming.
        */
       "chat.isActive": params =>
-        claude.isActive(params.sessionId).pipe(
-          Effect.mapError(() => new ChatRpcError({ message: "Failed to check session status" }))
-        )
+        claude
+          .isActive(params.sessionId)
+          .pipe(
+            Effect.mapError(() => new ChatRpcError({ message: "Failed to check session status" }))
+          )
     });
   })
 );
-
-// ─── Live Layer ──────────────────────────────────────────────
 
 export const ChatRpcHandlersLive = ChatRpcHandlers.pipe(
   Layer.provide(ClaudeAgentServiceLive),

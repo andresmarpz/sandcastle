@@ -1,14 +1,19 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-import { Result, useAtom, useAtomValue, useAtomRefresh } from "@effect-atom/atom-react";
+import {
+  Result,
+  useAtom,
+  useAtomValue,
+  useAtomRefresh,
+} from "@effect-atom/atom-react";
 import * as Option from "effect/Option";
 
 import type { Session } from "@sandcastle/rpc";
 import {
   sessionListByWorktreeAtomFamily,
   createSessionMutation,
-  SESSION_LIST_KEY
+  SESSION_LIST_KEY,
 } from "@sandcastle/ui/api/session-atoms";
 import { isSessionStreamingFamily } from "@sandcastle/ui/api/chat-atoms";
 import { Button } from "@sandcastle/ui/components/button";
@@ -22,7 +27,13 @@ interface SessionTabsProps {
 
 function PlusIcon({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg
+      className={className}
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
       <path d="M8 3v10M3 8h10" strokeLinecap="round" />
     </svg>
   );
@@ -55,21 +66,32 @@ function SessionTab({ session, isActive, onClick }: SessionTabProps) {
         "hover:bg-muted/50",
         isActive
           ? "bg-muted text-foreground"
-          : "text-muted-foreground hover:text-foreground"
+          : "text-muted-foreground hover:text-foreground",
       )}
     >
       {isStreaming && <StreamingIndicator />}
-      <span className="truncate max-w-[120px]">{session.title || "New Session"}</span>
+      <span className="truncate max-w-[120px]">
+        {session.title || "New Session"}
+      </span>
     </button>
   );
 }
 
-export function SessionTabs({ worktreeId, activeSessionId, onSessionSelect }: SessionTabsProps) {
+export function SessionTabs({
+  worktreeId,
+  activeSessionId,
+  onSessionSelect,
+}: SessionTabsProps) {
   // Use stable atom from family for proper caching and refresh
-  const sessionsAtom = useMemo(() => sessionListByWorktreeAtomFamily(worktreeId), [worktreeId]);
+  const sessionsAtom = useMemo(
+    () => sessionListByWorktreeAtomFamily(worktreeId),
+    [worktreeId],
+  );
   const sessionsResult = useAtomValue(sessionsAtom);
   const refreshSessions = useAtomRefresh(sessionsAtom);
-  const [, createSession] = useAtom(createSessionMutation, { mode: "promiseExit" });
+  const [, createSession] = useAtom(createSessionMutation, {
+    mode: "promiseExit",
+  });
   const [isCreating, setIsCreating] = useState(false);
 
   const handleCreateSession = useCallback(async () => {
@@ -79,9 +101,9 @@ export function SessionTabs({ worktreeId, activeSessionId, onSessionSelect }: Se
       const result = await createSession({
         payload: {
           worktreeId,
-          title: "New Session"
+          title: "New Session",
         },
-        reactivityKeys: [SESSION_LIST_KEY, `sessions:worktree:${worktreeId}`]
+        reactivityKeys: [SESSION_LIST_KEY, `sessions:worktree:${worktreeId}`],
       });
       if (result._tag === "Success") {
         refreshSessions();
@@ -98,7 +120,7 @@ export function SessionTabs({ worktreeId, activeSessionId, onSessionSelect }: Se
         onWaiting: (result) => {
           const cached = Option.getOrNull(Result.value(result));
           if (cached) {
-            return cached.map(session => (
+            return cached.map((session) => (
               <SessionTab
                 key={session.id}
                 session={session}
@@ -110,20 +132,24 @@ export function SessionTabs({ worktreeId, activeSessionId, onSessionSelect }: Se
           return null;
         },
         onError: () => (
-          <span className="text-destructive text-xs">Failed to load sessions</span>
+          <span className="text-destructive text-xs">
+            Failed to load sessions
+          </span>
         ),
         onDefect: () => (
-          <span className="text-destructive text-xs">Failed to load sessions</span>
+          <span className="text-destructive text-xs">
+            Failed to load sessions
+          </span>
         ),
         onSuccess: (success) =>
-          success.value.map(session => (
+          success.value.map((session) => (
             <SessionTab
               key={session.id}
               session={session}
               isActive={session.id === activeSessionId}
               onClick={() => onSessionSelect(session.id)}
             />
-          ))
+          )),
       })}
 
       <Button

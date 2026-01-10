@@ -74,7 +74,7 @@ function MessageBubble({ message }: MessageBubbleProps) {
             <pre
               className={cn(
                 "rounded p-2 overflow-x-auto",
-                content.isError ? "bg-destructive/10" : "bg-muted/50"
+                content.isError ? "bg-destructive/10" : "bg-muted/50",
               )}
             >
               {typeof content.output === "string"
@@ -98,13 +98,13 @@ function MessageBubble({ message }: MessageBubbleProps) {
     <div
       className={cn(
         "flex gap-2 mb-3",
-        isUser ? "justify-end" : "justify-start"
+        isUser ? "justify-end" : "justify-start",
       )}
     >
       <div
         className={cn(
           "max-w-[80%] rounded-lg px-3 py-2 text-sm",
-          isUser ? "bg-primary text-primary-foreground" : "bg-muted"
+          isUser ? "bg-primary text-primary-foreground" : "bg-muted",
         )}
       >
         {renderContent()}
@@ -180,7 +180,7 @@ function ChatInput({ onSend, onStop, isStreaming, disabled }: ChatInputProps) {
             "flex-1 resize-none rounded-lg border border-input bg-background px-3 py-2 text-sm",
             "focus:outline-none focus:ring-2 focus:ring-ring",
             "placeholder:text-muted-foreground",
-            "min-h-[40px] max-h-[120px]"
+            "min-h-[40px] max-h-[120px]",
           )}
           rows={1}
           disabled={disabled || isStreaming}
@@ -229,7 +229,7 @@ export function ChatSession({ sessionId, worktreeId }: ChatSessionProps) {
         setActiveSessions((prev) =>
           updateSessionState(prev, sessionId, {
             messages: [...history],
-          })
+          }),
         );
       }
       setIsHistoryLoaded(true);
@@ -254,7 +254,7 @@ export function ChatSession({ sessionId, worktreeId }: ChatSessionProps) {
 
   const handleCloseQuestion = useCallback(() => {
     setActiveSessions((prev) =>
-      updateSessionState(prev, sessionId, { pendingQuestion: null })
+      updateSessionState(prev, sessionId, { pendingQuestion: null }),
     );
   }, [sessionId, setActiveSessions]);
 
@@ -267,7 +267,7 @@ export function ChatSession({ sessionId, worktreeId }: ChatSessionProps) {
         updateSessionState(prev, sessionId, {
           isStreaming: true,
           error: null,
-        })
+        }),
       );
 
       // Start the stream
@@ -276,7 +276,8 @@ export function ChatSession({ sessionId, worktreeId }: ChatSessionProps) {
         sessionId,
         worktreeId,
         prompt,
-        claudeSessionId: sessionState?.claudeSessionId ?? session.claudeSessionId,
+        claudeSessionId:
+          sessionState?.claudeSessionId ?? session.claudeSessionId,
       };
 
       const subscription = startChatStream(
@@ -300,21 +301,21 @@ export function ChatSession({ sessionId, worktreeId }: ChatSessionProps) {
             updateSessionState(prev, sessionId, {
               isStreaming: false,
               error: error instanceof Error ? error.message : String(error),
-            })
+            }),
           );
         },
         () => {
           // Stream complete
           setActiveSessions((prev) =>
-            updateSessionState(prev, sessionId, { isStreaming: false })
+            updateSessionState(prev, sessionId, { isStreaming: false }),
           );
           abortRef.current = null;
-        }
+        },
       );
 
       abortRef.current = subscription;
     },
-    [session, sessionState, sessionId, worktreeId, setActiveSessions]
+    [session, sessionState, sessionId, worktreeId, setActiveSessions],
   );
 
   const handleStop = useCallback(() => {
@@ -323,13 +324,13 @@ export function ChatSession({ sessionId, worktreeId }: ChatSessionProps) {
       abortRef.current = null;
     }
     setActiveSessions((prev) =>
-      updateSessionState(prev, sessionId, { isStreaming: false })
+      updateSessionState(prev, sessionId, { isStreaming: false }),
     );
   }, [sessionId, setActiveSessions]);
 
   const clearError = useCallback(() => {
     setActiveSessions((prev) =>
-      updateSessionState(prev, sessionId, { error: null })
+      updateSessionState(prev, sessionId, { error: null }),
     );
   }, [sessionId, setActiveSessions]);
 

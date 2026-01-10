@@ -130,6 +130,4 @@ export const SessionRpcHandlers = SessionRpc.toLayer(
   })
 );
 
-export const SessionRpcHandlersLive = SessionRpcHandlers.pipe(
-  Layer.provide(StorageServiceDefault)
-);
+export const SessionRpcHandlersLive = SessionRpcHandlers.pipe(Layer.provide(StorageServiceDefault));
