@@ -22,7 +22,7 @@ jobs:
           turbo-cache-key: format
 
       - name: Check formatting
-        run: bun --bun run format:check
+        run: bun run format:check
 
   lint:
     name: Lint Check
@@ -37,7 +37,7 @@ jobs:
           turbo-cache-key: lint
 
       - name: Lint
-        run: bun --bun run lint:check
+        run: bun run lint:check
 
   typecheck:
     name: Type Check
@@ -52,4 +52,4 @@ jobs:
           turbo-cache-key: typecheck
 
       - name: Type check
-        run: bun --bun run typecheck
+        run: bun run typecheck
