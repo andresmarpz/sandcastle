@@ -1,4 +1,4 @@
-export { WorktreePanel } from "./worktree-panel";
-export { WorktreeContent } from "./worktree-content";
+export { ChevronDownIcon, CopyIcon, CursorIcon, FinderIcon } from "./icons";
 export { OpenButton } from "./open-button";
-export { FinderIcon, CursorIcon, CopyIcon, ChevronDownIcon } from "./icons";
+export { WorktreeContent } from "./worktree-content";
+export { WorktreePanel } from "./worktree-panel";
