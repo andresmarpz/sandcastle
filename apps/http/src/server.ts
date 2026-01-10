@@ -47,7 +47,9 @@ const LoggingMiddleware = HttpMiddleware.make((app) =>
 
 		const response = yield* app;
 		const duration = Date.now() - start;
-		console.log(`← ${request.method} ${request.url} ${response.status} (${duration}ms)`);
+		console.log(
+			`← ${request.method} ${request.url} ${response.status} (${duration}ms)`,
+		);
 
 		return response;
 	}),
@@ -87,7 +89,9 @@ const CustomRoutes = HttpRouter.Default.use((router) =>
 const port = Number(process.env.PORT) || 3000;
 
 export const makeServerLayer = (options?: { port?: number }) =>
-	HttpRouter.Default.serve((httpApp) => CorsMiddleware(LoggingMiddleware(httpApp))).pipe(
+	HttpRouter.Default.serve((httpApp) =>
+		CorsMiddleware(LoggingMiddleware(httpApp)),
+	).pipe(
 		Layer.provide(CustomRoutes),
 		Layer.provide(RpcLayer),
 		Layer.provide(HttpProtocol),
