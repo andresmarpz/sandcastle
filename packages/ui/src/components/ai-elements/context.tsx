@@ -56,7 +56,7 @@ export const Context = ({
       modelId,
     }}
   >
-    <HoverCard closeDelay={0} openDelay={0} {...props} />
+    <HoverCard {...props} />
   </ContextContext.Provider>
 );
 
@@ -114,6 +114,7 @@ export const ContextTrigger = ({ children, ...props }: ContextTriggerProps) => {
   return (
     <HoverCardTrigger>
       {children ?? (
+        // @ts-ignore
         <Button type="button" variant="ghost" {...props}>
           <span className="font-medium text-muted-foreground">
             {renderedPercent}

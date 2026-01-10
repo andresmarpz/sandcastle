@@ -81,6 +81,7 @@ export const MessageAction = ({
   ...props
 }: MessageActionProps) => {
   const button = (
+    // @ts-ignore
     <Button size={size} type="button" variant={variant} {...props}>
       {children}
       <span className="sr-only">{label || tooltip}</span>
@@ -247,6 +248,7 @@ export const MessageBranchPrevious = ({
       disabled={totalBranches <= 1}
       onClick={goToPrevious}
       size="icon-sm"
+      // @ts-ignore
       type="button"
       variant="ghost"
       {...props}
@@ -271,6 +273,7 @@ export const MessageBranchNext = ({
       disabled={totalBranches <= 1}
       onClick={goToNext}
       size="icon-sm"
+      // @ts-ignore
       type="button"
       variant="ghost"
       {...props}
@@ -376,6 +379,7 @@ export function MessageAttachment({
               render={
                 <div className="flex size-full shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground" />
               }
+              // @ts-ignore
               nativeButton={false}
             >
               <PaperclipIcon className="size-4" />

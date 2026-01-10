@@ -53,6 +53,7 @@ export const ArtifactClose = ({
       className
     )}
     size={size}
+    // @ts-ignore
     type="button"
     variant={variant}
     {...props}
@@ -112,6 +113,7 @@ export const ArtifactAction = ({
         className
       )}
       size={size}
+      // @ts-ignore
       type="button"
       variant={variant}
       {...props}

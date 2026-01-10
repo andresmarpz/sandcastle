@@ -22,7 +22,6 @@ import { useIsMobile } from "@/hooks/use-mobile";
 const SIDEBAR_COOKIE_NAME = "sidebar_state";
 const SIDEBAR_WIDTH_COOKIE_NAME = "sidebar_width";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
-const SIDEBAR_WIDTH = "16rem";
 const SIDEBAR_WIDTH_MOBILE = "18rem";
 const SIDEBAR_WIDTH_ICON = "3rem";
 const SIDEBAR_KEYBOARD_SHORTCUT = "b";
@@ -82,9 +81,13 @@ function SidebarProvider({
       const match = document.cookie.match(
         new RegExp(`${SIDEBAR_WIDTH_COOKIE_NAME}=([^;]+)`)
       );
-      if (match) {
+      if (match?.length && match[1]) {
         const parsed = parseInt(match[1], 10);
-        if (!isNaN(parsed) && parsed >= SIDEBAR_MIN_WIDTH && parsed <= SIDEBAR_MAX_WIDTH) {
+        if (
+          !isNaN(parsed) &&
+          parsed >= SIDEBAR_MIN_WIDTH &&
+          parsed <= SIDEBAR_MAX_WIDTH
+        ) {
           return parsed;
         }
       }
@@ -94,7 +97,10 @@ function SidebarProvider({
   const [isResizing, setIsResizing] = React.useState(false);
 
   const setWidth = React.useCallback((newWidth: number) => {
-    const clampedWidth = Math.min(Math.max(newWidth, SIDEBAR_MIN_WIDTH), SIDEBAR_MAX_WIDTH);
+    const clampedWidth = Math.min(
+      Math.max(newWidth, SIDEBAR_MIN_WIDTH),
+      SIDEBAR_MAX_WIDTH
+    );
     _setWidth(clampedWidth);
     // Persist to cookie
     document.cookie = `${SIDEBAR_WIDTH_COOKIE_NAME}=${clampedWidth}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
@@ -158,7 +164,18 @@ function SidebarProvider({
       isResizing,
       setIsResizing,
     }),
-    [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar, width, setWidth, isResizing]
+    [
+      state,
+      open,
+      setOpen,
+      isMobile,
+      openMobile,
+      setOpenMobile,
+      toggleSidebar,
+      width,
+      setWidth,
+      isResizing,
+    ]
   );
 
   return (
@@ -315,7 +332,15 @@ function SidebarTrigger({
 }
 
 function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
-  const { toggleSidebar, width, setWidth, open, setOpen, isResizing, setIsResizing } = useSidebar();
+  const {
+    toggleSidebar,
+    width,
+    setWidth,
+    open,
+    setOpen,
+    isResizing,
+    setIsResizing,
+  } = useSidebar();
   const startXRef = React.useRef(0);
   const startWidthRef = React.useRef(0);
 

@@ -1,7 +1,7 @@
 import { RegistryProvider } from "@effect-atom/atom-react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Command } from "@tauri-apps/plugin-shell";
-import React, { Suspense, useEffect, lazy } from "react";
+import React, { lazy, Suspense, useEffect } from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router";
 
@@ -14,7 +14,7 @@ import "./tauri.css";
 
 // Lazy load the main app to defer heavy dependencies
 const RootLayout = lazy(() =>
-  import("@sandcastle/ui/features/app").then((m) => ({ default: m.RootLayout }))
+  import("@sandcastle/ui/features/app").then(m => ({ default: m.RootLayout }))
 );
 
 const openDirectory = async () => {

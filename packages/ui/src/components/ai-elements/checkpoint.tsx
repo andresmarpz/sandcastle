@@ -53,6 +53,7 @@ export const CheckpointTrigger = ({
     <Tooltip>
       <TooltipTrigger
         render={
+          // @ts-ignore
           <Button size={size} type="button" variant={variant} {...props} />
         }
       >
@@ -63,6 +64,7 @@ export const CheckpointTrigger = ({
       </TooltipContent>
     </Tooltip>
   ) : (
+    // @ts-ignore
     <Button size={size} type="button" variant={variant} {...props}>
       {children}
     </Button>

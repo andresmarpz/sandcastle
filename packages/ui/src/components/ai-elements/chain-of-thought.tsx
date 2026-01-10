@@ -4,7 +4,7 @@ import { useControllableState } from "@radix-ui/react-use-controllable-state";
 import { Badge } from "@/components/badge";
 import {
   Collapsible,
-  CollapsibleContent,
+  CollapsiblePanel,
   CollapsibleTrigger,
 } from "@/components/collapsible";
 import { cn } from "@/lib/utils";
@@ -183,7 +183,7 @@ export const ChainOfThoughtSearchResult = memo(
 );
 
 export type ChainOfThoughtContentProps = ComponentProps<
-  typeof CollapsibleContent
+  typeof CollapsiblePanel
 >;
 
 export const ChainOfThoughtContent = memo(
@@ -192,7 +192,7 @@ export const ChainOfThoughtContent = memo(
 
     return (
       <Collapsible open={isOpen}>
-        <CollapsibleContent
+        <CollapsiblePanel
           className={cn(
             "mt-2 space-y-3",
             "data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2 text-popover-foreground outline-none data-[state=closed]:animate-out data-[state=open]:animate-in",
@@ -201,7 +201,7 @@ export const ChainOfThoughtContent = memo(
           {...props}
         >
           {children}
-        </CollapsibleContent>
+        </CollapsiblePanel>
       </Collapsible>
     );
   }

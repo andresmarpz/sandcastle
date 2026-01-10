@@ -2,7 +2,7 @@
 
 import {
   Collapsible,
-  CollapsibleContent,
+  CollapsiblePanel,
   CollapsibleTrigger,
 } from "@/components/collapsible";
 import { cn } from "@/lib/utils";
@@ -41,13 +41,13 @@ export const SourcesTrigger = ({
   </CollapsibleTrigger>
 );
 
-export type SourcesContentProps = ComponentProps<typeof CollapsibleContent>;
+export type SourcesContentProps = ComponentProps<typeof CollapsiblePanel>;
 
 export const SourcesContent = ({
   className,
   ...props
 }: SourcesContentProps) => (
-  <CollapsibleContent
+  <CollapsiblePanel
     className={cn(
       "mt-3 flex w-fit flex-col gap-2",
       "data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2 outline-none data-[state=closed]:animate-out data-[state=open]:animate-in",
