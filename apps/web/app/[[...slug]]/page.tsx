@@ -1,32 +1,11 @@
 "use client";
 
-import { RegistryProvider } from "@effect-atom/atom-react";
-import { BrowserRouter } from "react-router";
+import dynamic from "next/dynamic";
 
-import { PlatformProvider } from "@sandcastle/ui/context/platform-context";
-import { ThemeProvider } from "@sandcastle/ui/context/theme-context";
-import { RootLayout } from "@sandcastle/ui/features/app";
-
-// Web platform implementations
-const copyToClipboard = async (text: string) => {
-  await navigator.clipboard.writeText(text);
-};
+// Dynamically import the entire app with SSR disabled
+// BrowserRouter requires document/window which don't exist during SSR
+const ClientApp = dynamic(() => import("./client-app"), { ssr: false });
 
 export default function Page() {
-  return (
-    <BrowserRouter>
-      <ThemeProvider>
-        <PlatformProvider
-          openDirectory={async () => null}
-          openInFileManager={null}
-          openInEditor={null}
-          copyToClipboard={copyToClipboard}
-        >
-          <RegistryProvider>
-            <RootLayout />
-          </RegistryProvider>
-        </PlatformProvider>
-      </ThemeProvider>
-    </BrowserRouter>
-  );
+  return <ClientApp />;
 }

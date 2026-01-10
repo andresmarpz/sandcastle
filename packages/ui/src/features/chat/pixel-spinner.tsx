@@ -30,7 +30,10 @@ function isPixelActive(headIdx: number, pixelIdx: number | undefined): boolean {
   return calculatePixelDistance(headIdx, pixelIdx) < TAIL_LENGTH;
 }
 
-function calculatePixelOpacity(headIdx: number, pixelIdx: number | undefined): number {
+function calculatePixelOpacity(
+  headIdx: number,
+  pixelIdx: number | undefined
+): number {
   if (pixelIdx === undefined) return NON_ACTIVE_OPACITY;
 
   const distance = calculatePixelDistance(headIdx, pixelIdx);
@@ -38,9 +41,21 @@ function calculatePixelOpacity(headIdx: number, pixelIdx: number | undefined): n
   return distance < TAIL_LENGTH ? 100 - distance * step : NON_ACTIVE_OPACITY;
 }
 
-export function PixelSpinner({ className }: { className?: string }) {
+interface PixelSpinnerProps {
+  className?: string;
+  /** Pixel size in pixels (default: 3.5) */
+  pixelSize?: number;
+}
+
+export function PixelSpinner({
+  className,
+  pixelSize = 3.5,
+}: PixelSpinnerProps) {
   const [headIndex, setHeadIndex] = useState(0);
-  const pixelIndices = useMemo(() => Array.from({ length: 9 }, (_, i) => i), []);
+  const pixelIndices = useMemo(
+    () => Array.from({ length: 9 }, (_, i) => i),
+    []
+  );
 
   useEffect(() => {
     const intervalId = setInterval(() => {
@@ -51,7 +66,14 @@ export function PixelSpinner({ className }: { className?: string }) {
   }, []);
 
   return (
-    <div className={cn("pixel-spinner", className)}>
+    <div
+      className={cn("pixel-spinner", className)}
+      style={
+        pixelSize
+          ? ({ "--pixel-size": `${pixelSize}px` } as React.CSSProperties)
+          : undefined
+      }
+    >
       <div className="grid grid-cols-3 gap-px">
         {pixelIndices.map((idx) => {
           const animIdx = renderToAnimation[idx];

@@ -1,40 +1,18 @@
+"use client";
+
 import { RegistryProvider } from "@effect-atom/atom-react";
-import { open } from "@tauri-apps/plugin-dialog";
-import { Command } from "@tauri-apps/plugin-shell";
-import React, { Suspense, useEffect, lazy } from "react";
-import ReactDOM from "react-dom/client";
+import { lazy, Suspense, useEffect } from "react";
 import { BrowserRouter } from "react-router";
 
 import { PlatformProvider } from "@sandcastle/ui/context/platform-context";
 import { ThemeProvider } from "@sandcastle/ui/context/theme-context";
-
-import "@sandcastle/ui/globals.css";
-import "@fontsource-variable/inter";
-import "./tauri.css";
 
 // Lazy load the main app to defer heavy dependencies
 const RootLayout = lazy(() =>
   import("@sandcastle/ui/features/app").then((m) => ({ default: m.RootLayout }))
 );
 
-const openDirectory = async () => {
-  const selection = await open({ directory: true, multiple: false });
-  if (!selection) return null;
-  return Array.isArray(selection) ? (selection[0] ?? null) : selection;
-};
-
-const openInFileManager = async (path: string) => {
-  // Open -R reveals the item in Finder on macOS
-  const command = Command.create("open", ["-R", path]);
-  await command.execute();
-};
-
-const openInEditor = async (path: string) => {
-  // Open the path with Cursor using macOS open command
-  const command = Command.create("open", ["-a", "Cursor", path]);
-  await command.execute();
-};
-
+// Web platform implementations
 const copyToClipboard = async (text: string) => {
   await navigator.clipboard.writeText(text);
 };
@@ -53,14 +31,14 @@ function AppReady({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-function App() {
+export default function ClientApp() {
   return (
     <BrowserRouter>
       <ThemeProvider>
         <PlatformProvider
-          openDirectory={openDirectory}
-          openInFileManager={openInFileManager}
-          openInEditor={openInEditor}
+          openDirectory={async () => null}
+          openInFileManager={null}
+          openInEditor={null}
           copyToClipboard={copyToClipboard}
         >
           <RegistryProvider>
@@ -75,9 +53,3 @@ function App() {
     </BrowserRouter>
   );
 }
-
-ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);

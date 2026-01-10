@@ -47,7 +47,7 @@ export function MessageList({
         )}
 
         {/* Show spinner when streaming but no partial text yet */}
-        {isStreaming && !partialMessage?.text && (
+        {isStreaming && (
           <Message from="assistant">
             <MessageContent className="flex items-center">
               <PixelSpinner className="text-muted-foreground" />
