@@ -18,7 +18,7 @@ export class ChatClient extends AtomRpc.Tag<ChatClient>()(
   {
     group: ChatRpc,
     protocol: RpcClient.layerProtocolHttp({ url: RPC_URL }).pipe(
-      Layer.provide(RpcSerialization.layerJson),
+      Layer.provide(RpcSerialization.layerNdjson),
       Layer.provide(FetchHttpClient.layer)
     )
   }

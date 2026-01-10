@@ -45,7 +45,7 @@ const RpcLayer = RpcServer.layer(SandcastleRpc).pipe(Layer.provide(RpcHandlersLi
 
 const HttpProtocol = RpcServer.layerProtocolHttp({
   path: "/api/rpc"
-}).pipe(Layer.provide(RpcSerialization.layerJson));
+}).pipe(Layer.provide(RpcSerialization.layerNdjson));
 
 // ─── Custom Routes ───────────────────────────────────────────
 

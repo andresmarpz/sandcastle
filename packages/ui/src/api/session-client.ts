@@ -18,7 +18,7 @@ export class SessionClient extends AtomRpc.Tag<SessionClient>()(
   {
     group: SessionRpc,
     protocol: RpcClient.layerProtocolHttp({ url: RPC_URL }).pipe(
-      Layer.provide(RpcSerialization.layerJson),
+      Layer.provide(RpcSerialization.layerNdjson),
       Layer.provide(FetchHttpClient.layer),
     ),
   },

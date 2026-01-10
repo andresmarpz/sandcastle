@@ -49,7 +49,8 @@ export const ChatStreamEventType = Schema.Literal(
   "ask_user", // AskUserQuestion - need user input
   "progress", // Progress indicator for long operations
   "error", // Error occurred
-  "result" // Final result with cost/token info
+  "result", // Final result with cost/token info
+  "text_delta" // Streaming text chunk
 );
 export type ChatStreamEventType = typeof ChatStreamEventType.Type;
 
@@ -91,7 +92,12 @@ export class ChatStreamEvent extends Schema.Class<ChatStreamEvent>("ChatStreamEv
   result: Schema.optional(Schema.String),
   costUsd: Schema.optional(Schema.Number),
   inputTokens: Schema.optional(Schema.Number),
-  outputTokens: Schema.optional(Schema.Number)
+  outputTokens: Schema.optional(Schema.Number),
+
+  // For text_delta (streaming text chunks)
+  textDelta: Schema.optional(Schema.String),
+  contentBlockIndex: Schema.optional(Schema.Number),
+  uuid: Schema.optional(Schema.String)
 }) {}
 
 // ─── Input Types ─────────────────────────────────────────────

@@ -18,7 +18,7 @@ export class AgentClient extends AtomRpc.Tag<AgentClient>()(
   {
     group: AgentRpc,
     protocol: RpcClient.layerProtocolHttp({ url: RPC_URL }).pipe(
-      Layer.provide(RpcSerialization.layerJson),
+      Layer.provide(RpcSerialization.layerNdjson),
       Layer.provide(FetchHttpClient.layer),
     ),
   },

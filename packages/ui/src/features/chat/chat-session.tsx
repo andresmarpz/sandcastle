@@ -12,6 +12,8 @@ import {
   startChatStream,
   processChatStreamEvent,
   updateSessionState,
+  addMessage,
+  createUserMessage,
   type StartChatStreamParams,
 } from "@/api/chat-atoms";
 import { MessageList } from "./message-list";
@@ -73,13 +75,18 @@ export function ChatSession({ sessionId, worktreeId }: ChatSessionProps) {
     (prompt: string) => {
       if (!session) return;
 
-      // Set streaming state
-      setActiveSessions((prev) =>
-        updateSessionState(prev, sessionId, {
+      // Create and add user message immediately for instant feedback
+      const userMessage = createUserMessage(sessionId, prompt, messages);
+
+      // Add user message and set streaming state
+      setActiveSessions((prev) => {
+        let updated = addMessage(prev, sessionId, userMessage);
+        updated = updateSessionState(updated, sessionId, {
           isStreaming: true,
           error: null,
-        })
-      );
+        });
+        return updated;
+      });
 
       // Start the stream
       // Prefer claudeSessionId from local state (updated by stream events) over DB query (may be stale)
@@ -126,7 +133,7 @@ export function ChatSession({ sessionId, worktreeId }: ChatSessionProps) {
 
       abortRef.current = subscription;
     },
-    [session, sessionState, sessionId, worktreeId, setActiveSessions]
+    [session, sessionState, sessionId, worktreeId, messages, setActiveSessions]
   );
 
   const handleStop = useCallback(() => {
@@ -155,17 +162,6 @@ export function ChatSession({ sessionId, worktreeId }: ChatSessionProps) {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Session stats bar */}
-      {(costUsd > 0 || inputTokens > 0 || outputTokens > 0) && (
-        <div className="flex items-center gap-4 px-4 py-1.5 border-b border-border text-xs text-muted-foreground">
-          {costUsd > 0 && <span>Cost: ${costUsd.toFixed(4)}</span>}
-          {inputTokens > 0 && <span>In: {inputTokens.toLocaleString()}</span>}
-          {outputTokens > 0 && (
-            <span>Out: {outputTokens.toLocaleString()}</span>
-          )}
-        </div>
-      )}
-
       {/* Error banner */}
       {error && (
         <div className="flex items-center justify-between px-4 py-2 bg-destructive/10 border-b border-destructive/20">
@@ -180,7 +176,19 @@ export function ChatSession({ sessionId, worktreeId }: ChatSessionProps) {
         </div>
       )}
 
-      <MessageList messages={messages} />
+      <MessageList messages={messages} isStreaming={isStreaming} sessionId={sessionId} />
+
+      {/* Session stats bar */}
+      {(costUsd > 0 || inputTokens > 0 || outputTokens > 0) && (
+        <div className="flex items-center gap-4 px-4 py-1.5 border-b border-border text-xs text-muted-foreground">
+          {costUsd > 0 && <span>Cost: ${costUsd.toFixed(4)}</span>}
+          {inputTokens > 0 && <span>In: {inputTokens.toLocaleString()}</span>}
+          {outputTokens > 0 && (
+            <span>Out: {outputTokens.toLocaleString()}</span>
+          )}
+        </div>
+      )}
+
       <ChatInput
         onSend={handleSend}
         onStop={handleStop}

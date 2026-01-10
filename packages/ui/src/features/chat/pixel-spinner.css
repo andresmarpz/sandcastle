@@ -1,5 +1,5 @@
 .pixel-spinner {
-  --pixel-size: 4px;
+  --pixel-size: 3.5px;
   --active-color: var(--color-primary);
   --inactive-color: var(--color-foreground);
   aspect-ratio: 1/1;
