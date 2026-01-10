@@ -1,5 +1,4 @@
 import type { Database } from "bun:sqlite";
-
 import { Effect } from "effect";
 
 import { MigrationError } from "./errors";

@@ -1,10 +1,7 @@
-import { Context, Deferred, Effect, Layer, Ref, Stream } from "effect";
 import { query, type SDKMessage } from "@anthropic-ai/claude-agent-sdk";
+import { Context, Deferred, Effect, Layer, Ref, Stream } from "effect";
 
-import {
-  ChatStreamEvent,
-  type ChatRespondInput
-} from "@sandcastle/rpc/chat";
+import { ChatStreamEvent, type ChatRespondInput } from "@sandcastle/rpc/chat";
 import {
   TextContent,
   ToolUseContent,
@@ -176,9 +173,7 @@ export const makeClaudeAgentService = Effect.gen(function* () {
                   emit.end();
                 } else {
                   emit.fail(
-                    new ClaudeAgentError(
-                      error instanceof Error ? error.message : String(error)
-                    )
+                    new ClaudeAgentError(error instanceof Error ? error.message : String(error))
                   );
                 }
               }
@@ -216,8 +211,7 @@ export const makeClaudeAgentService = Effect.gen(function* () {
         yield* removeSession(sessionId);
       }),
 
-    isActive: sessionId =>
-      getSession(sessionId).pipe(Effect.map(session => session !== undefined))
+    isActive: sessionId => getSession(sessionId).pipe(Effect.map(session => session !== undefined))
   };
 
   return service;

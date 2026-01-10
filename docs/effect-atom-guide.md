@@ -23,6 +23,7 @@ This guide covers best practices for using `effect-atom` to achieve common data 
 ### Atom
 
 An `Atom<A>` is a reactive state container. It can hold:
+
 - **Primitive values**: `Atom.make(0)` creates a `Writable<number>`
 - **Computed values**: `Atom.make((get) => get(other) * 2)` creates a derived `Atom<number>`
 - **Effects**: `Atom.make(Effect.succeed(42))` creates an `Atom<Result<number>>`
@@ -1294,6 +1295,7 @@ function App() {
 **Important: One RegistryProvider per app**
 
 All RPC clients share the same registry, which means:
+
 - Reactivity keys work across clients
 - TTL is managed centrally
 - Atoms from different clients can depend on each other

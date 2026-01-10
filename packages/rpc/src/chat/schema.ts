@@ -1,10 +1,7 @@
 import { Rpc, RpcGroup } from "@effect/rpc";
 import { Schema } from "effect";
 
-import {
-  AskUserQuestionItem,
-  ChatMessage
-} from "@sandcastle/storage/entities";
+import { AskUserQuestionItem, ChatMessage } from "@sandcastle/storage/entities";
 
 import { DatabaseRpcError } from "../common/errors";
 

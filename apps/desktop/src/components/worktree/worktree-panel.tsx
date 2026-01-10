@@ -1,7 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Result, useAtom, useAtomValue, useAtomRefresh } from "@effect-atom/atom-react";
+import {
+  Result,
+  useAtom,
+  useAtomValue,
+  useAtomRefresh,
+} from "@effect-atom/atom-react";
 import * as Option from "effect/Option";
 import { Command } from "@tauri-apps/plugin-shell";
 import {
@@ -11,7 +16,7 @@ import {
 import {
   sessionListByWorktreeAtomFamily,
   createSessionMutation,
-  SESSION_LIST_KEY
+  SESSION_LIST_KEY,
 } from "@sandcastle/ui/api/session-atoms";
 import { Button } from "@sandcastle/ui/components/button";
 import {
@@ -133,10 +138,15 @@ interface WorktreeContentProps {
 function WorktreeContent({ worktree, isRefreshing }: WorktreeContentProps) {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   // Use stable atom from family for proper caching and refresh
-  const sessionsAtom = useMemo(() => sessionListByWorktreeAtomFamily(worktree.id), [worktree.id]);
+  const sessionsAtom = useMemo(
+    () => sessionListByWorktreeAtomFamily(worktree.id),
+    [worktree.id],
+  );
   const sessionsResult = useAtomValue(sessionsAtom);
   const refreshSessions = useAtomRefresh(sessionsAtom);
-  const [, createSession] = useAtom(createSessionMutation, { mode: "promiseExit" });
+  const [, createSession] = useAtom(createSessionMutation, {
+    mode: "promiseExit",
+  });
 
   // Auto-select first session or create one if none exist
   useEffect(() => {
@@ -155,9 +165,9 @@ function WorktreeContent({ worktree, isRefreshing }: WorktreeContentProps) {
     const result = await createSession({
       payload: {
         worktreeId: worktree.id,
-        title: "New Session"
+        title: "New Session",
       },
-      reactivityKeys: [SESSION_LIST_KEY, `sessions:worktree:${worktree.id}`]
+      reactivityKeys: [SESSION_LIST_KEY, `sessions:worktree:${worktree.id}`],
     });
     if (result._tag === "Success") {
       refreshSessions();
@@ -174,7 +184,7 @@ function WorktreeContent({ worktree, isRefreshing }: WorktreeContentProps) {
     onWaiting: () => false,
     onError: () => false,
     onDefect: () => false,
-    onSuccess: (success) => success.value.length > 0
+    onSuccess: (success) => success.value.length > 0,
   });
 
   return (
@@ -183,7 +193,9 @@ function WorktreeContent({ worktree, isRefreshing }: WorktreeContentProps) {
       <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-background">
         <div className="flex items-center gap-2 min-w-0">
           <span className="font-medium text-sm truncate">{worktree.name}</span>
-          <span className="text-xs text-muted-foreground truncate">{worktree.branch}</span>
+          <span className="text-xs text-muted-foreground truncate">
+            {worktree.branch}
+          </span>
           {isRefreshing && (
             <span className="text-muted-foreground text-xs">Refreshing...</span>
           )}
@@ -201,10 +213,7 @@ function WorktreeContent({ worktree, isRefreshing }: WorktreeContentProps) {
       {/* Chat session or empty state */}
       <div className="flex-1 min-h-0 overflow-hidden">
         {activeSessionId ? (
-          <ChatSession
-            sessionId={activeSessionId}
-            worktreeId={worktree.id}
-          />
+          <ChatSession sessionId={activeSessionId} worktreeId={worktree.id} />
         ) : hasSessions ? (
           <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
             Select a session
@@ -224,7 +233,10 @@ function WorktreeContent({ worktree, isRefreshing }: WorktreeContentProps) {
 
 export function WorktreePanel({ worktreeId }: WorktreePanelProps) {
   // Use stable atom from family for proper caching
-  const worktreeAtom = useMemo(() => worktreeAtomFamily(worktreeId), [worktreeId]);
+  const worktreeAtom = useMemo(
+    () => worktreeAtomFamily(worktreeId),
+    [worktreeId],
+  );
   const worktreeResult = useAtomValue(worktreeAtom);
 
   return (
@@ -233,7 +245,11 @@ export function WorktreePanel({ worktreeId }: WorktreePanelProps) {
         onWaiting: (result) => {
           const cached = Option.getOrNull(Result.value(result));
           if (!cached) {
-            return <div className="text-muted-foreground text-sm p-4">Loading...</div>;
+            return (
+              <div className="text-muted-foreground text-sm p-4">
+                Loading...
+              </div>
+            );
           }
           return <WorktreeContent worktree={cached} isRefreshing />;
         },
