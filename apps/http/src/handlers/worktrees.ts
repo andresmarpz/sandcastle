@@ -310,7 +310,16 @@ export const WorktreeRpcHandlers = WorktreeRpc.toLayer(
 						},
 					});
 
-					// 2. Create git worktree
+					// 2. Try to git pull on the base branch to get latest changes
+					// This is a best-effort operation - we ignore failures (e.g., no remote, offline)
+					yield* Effect.tryPromise({
+						try: async () => {
+							await Bun.$`git -C ${repository.directoryPath} pull --ff-only origin ${baseBranch}`.quiet();
+						},
+						catch: () => new FileSystemError({ message: "git pull failed" }),
+					}).pipe(Effect.ignore);
+
+					// 3. Create git worktree
 					yield* gitWorktree.create({
 						repoPath: repository.directoryPath,
 						worktreePath,
@@ -319,7 +328,7 @@ export const WorktreeRpcHandlers = WorktreeRpc.toLayer(
 						fromRef: baseBranch,
 					});
 
-					// 3. Create storage record
+					// 4. Create storage record
 					const worktree = yield* storage.worktrees.create({
 						repositoryId: params.repositoryId,
 						path: worktreePath,
@@ -328,7 +337,7 @@ export const WorktreeRpcHandlers = WorktreeRpc.toLayer(
 						baseBranch,
 					});
 
-					// 4. Create default session so user can start working immediately
+					// 5. Create default session so user can start working immediately
 					const session = yield* storage.sessions.create({
 						worktreeId: worktree.id,
 						title: "Session 1",
