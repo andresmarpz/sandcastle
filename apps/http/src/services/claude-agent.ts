@@ -140,7 +140,8 @@ export const makeClaudeAgentService = Effect.gen(function* () {
                     systemPrompt: { type: "preset", preset: "claude_code" },
                     permissionMode: "bypassPermissions",
                     abortController,
-                    allowDangerouslySkipPermissions: true
+                    allowDangerouslySkipPermissions: true,
+                    includePartialMessages: true
                   }
                 };
 
@@ -359,6 +360,36 @@ async function handleSDKMessage(
         claudeSessionId: resultMsg.session_id ?? currentClaudeSessionId ?? undefined
       })
     );
+    return;
+  }
+
+  // Handle streaming partial messages (text deltas)
+  if (message.type === "stream_event") {
+    const streamMsg = message as {
+      type: "stream_event";
+      event: {
+        type: string;
+        index?: number;
+        delta?: { type: string; text?: string };
+      };
+      uuid: string;
+    };
+
+    // Only process content_block_delta events with text deltas
+    if (
+      streamMsg.event.type === "content_block_delta" &&
+      streamMsg.event.delta?.type === "text_delta" &&
+      streamMsg.event.delta?.text
+    ) {
+      emit.single(
+        new ChatStreamEvent({
+          type: "text_delta",
+          textDelta: streamMsg.event.delta.text,
+          contentBlockIndex: streamMsg.event.index ?? 0,
+          uuid: streamMsg.uuid
+        })
+      );
+    }
     return;
   }
 }

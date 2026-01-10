@@ -38,6 +38,12 @@ export interface ActiveSessionState {
   outputTokens: number;
   /** Active tool calls (for progress indicators) */
   activeTools: Map<string, { name: string; startTime: number }>;
+  /** Partial message being streamed (not yet complete) */
+  partialMessage: {
+    uuid: string;
+    text: string;
+    contentBlockIndex: number;
+  } | null;
 }
 
 /**
@@ -77,7 +83,8 @@ function createEmptySessionState(): ActiveSessionState {
     costUsd: 0,
     inputTokens: 0,
     outputTokens: 0,
-    activeTools: new Map()
+    activeTools: new Map(),
+    partialMessage: null
   };
 }
 
@@ -109,6 +116,13 @@ export const sessionMessagesFamily = Atom.family((sessionId: string) =>
  */
 export const pendingQuestionFamily = Atom.family((sessionId: string) =>
   Atom.readable((get) => get(activeSessionsAtom).get(sessionId)?.pendingQuestion ?? null)
+);
+
+/**
+ * Get partial (streaming) message for a specific session (derived).
+ */
+export const partialMessageFamily = Atom.family((sessionId: string) =>
+  Atom.readable((get) => get(activeSessionsAtom).get(sessionId)?.partialMessage ?? null)
 );
 
 // ─── Update Functions ─────────────────────────────────────────
@@ -157,6 +171,36 @@ export function clearSessionState(
   const newSessions = new Map(sessions);
   newSessions.delete(sessionId);
   return newSessions;
+}
+
+/**
+ * Create a user message for immediate display.
+ * Uses a client-generated ID that will be used locally.
+ */
+export function createUserMessage(
+  sessionId: string,
+  prompt: string,
+  existingMessages: readonly ChatMessage[]
+): ChatMessage {
+  const clientId = `client-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  const sequenceNumber = existingMessages.length > 0
+    ? Math.max(...existingMessages.map(m => m.sequenceNumber)) + 1
+    : 0;
+
+  return {
+    id: clientId,
+    sessionId,
+    sequenceNumber,
+    role: "user" as const,
+    contentType: "text" as const,
+    content: {
+      type: "text" as const,
+      text: prompt
+    },
+    parentToolUseId: null,
+    uuid: null,
+    createdAt: new Date().toISOString()
+  } as ChatMessage;
 }
 
 // ─── RPC Queries/Mutations ────────────────────────────────────
@@ -234,7 +278,7 @@ export function startChatStream(
 
   const makeRpcClientLayer = () =>
     RpcClient.layerProtocolHttp({ url: RPC_URL }).pipe(
-      Layer.provide(RpcSerialization.layerJson),
+      Layer.provide(RpcSerialization.layerNdjson),
       Layer.provide(FetchHttpClient.layer)
     );
 
@@ -314,10 +358,62 @@ export function processChatStreamEvent(
 
     case "message":
       if (event.message) {
-        updateState(prev => ({
-          ...prev,
-          messages: [...prev.messages, event.message!]
-        }));
+        updateState(prev => {
+          const message = event.message!;
+
+          // Skip user messages from server since we already added them locally
+          if (message.role === "user" && message.contentType === "text") {
+            const messageText = (message.content as { type: "text"; text: string }).text;
+
+            // Check if we already have this user message locally
+            const existingUserMsg = prev.messages.find(m =>
+              m.role === "user" &&
+              m.contentType === "text" &&
+              (m.content as { type: "text"; text: string }).text === messageText
+            );
+
+            if (existingUserMsg) {
+              // Already have this message, skip it
+              return prev;
+            }
+          }
+
+          // Add the message and clear partial message (complete message replaces partial)
+          return {
+            ...prev,
+            messages: [...prev.messages, message],
+            partialMessage: null
+          };
+        });
+      }
+      break;
+
+    case "text_delta":
+      if (event.textDelta) {
+        updateState(prev => {
+          const currentPartial = prev.partialMessage;
+
+          // If no partial message exists, create one
+          if (!currentPartial) {
+            return {
+              ...prev,
+              partialMessage: {
+                uuid: event.uuid ?? `partial-${Date.now()}`,
+                text: event.textDelta!,
+                contentBlockIndex: event.contentBlockIndex ?? 0
+              }
+            };
+          }
+
+          // Append to existing partial message
+          return {
+            ...prev,
+            partialMessage: {
+              ...currentPartial,
+              text: currentPartial.text + event.textDelta!
+            }
+          };
+        });
       }
       break;
 
@@ -374,6 +470,7 @@ export function processChatStreamEvent(
       updateState(prev => ({
         ...prev,
         isStreaming: false,
+        partialMessage: null,
         claudeSessionId: event.claudeSessionId ?? prev.claudeSessionId,
         costUsd: event.costUsd ?? prev.costUsd,
         inputTokens: event.inputTokens ?? prev.inputTokens,

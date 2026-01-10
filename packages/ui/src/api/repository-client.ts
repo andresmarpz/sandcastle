@@ -15,7 +15,7 @@ export class RepositoryClient extends AtomRpc.Tag<RepositoryClient>()(
   {
     group: RepositoryRpc,
     protocol: RpcClient.layerProtocolHttp({ url: RPC_URL }).pipe(
-      Layer.provide(RpcSerialization.layerJson),
+      Layer.provide(RpcSerialization.layerNdjson),
       Layer.provide(FetchHttpClient.layer),
     ),
   },

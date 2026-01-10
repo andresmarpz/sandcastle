@@ -15,7 +15,7 @@ export class WorktreeClient extends AtomRpc.Tag<WorktreeClient>()(
   {
     group: WorktreeRpc,
     protocol: RpcClient.layerProtocolHttp({ url: RPC_URL }).pipe(
-      Layer.provide(RpcSerialization.layerJson),
+      Layer.provide(RpcSerialization.layerNdjson),
       Layer.provide(FetchHttpClient.layer),
     ),
   },
