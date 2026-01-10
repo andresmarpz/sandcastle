@@ -1,7 +1,6 @@
-import { Effect, Layer } from "effect";
-
 import { StorageServiceDefault } from "@sandcastle/storage";
 import { WorktreeServiceLive } from "@sandcastle/worktree";
+import { Effect, Layer } from "effect";
 
 import { syncWorktrees } from "./handlers";
 
@@ -10,14 +9,18 @@ import { syncWorktrees } from "./handlers";
  * This runs after the server starts without blocking request handling.
  */
 const startupSync = Effect.gen(function* () {
-  yield* Effect.fork(
-    syncWorktrees.pipe(
-      Effect.tap(result =>
-        Effect.log(`Worktree sync complete: ${result.removedIds.length} orphaned records removed`)
-      ),
-      Effect.catchAll(error => Effect.logWarning(`Worktree sync failed: ${error}`))
-    )
-  );
+	yield* Effect.fork(
+		syncWorktrees.pipe(
+			Effect.tap((result) =>
+				Effect.log(
+					`Worktree sync complete: ${result.removedIds.length} orphaned records removed`,
+				),
+			),
+			Effect.catchAll((error) =>
+				Effect.logWarning(`Worktree sync failed: ${error}`),
+			),
+		),
+	);
 });
 
 /**
@@ -25,6 +28,6 @@ const startupSync = Effect.gen(function* () {
  * Runs background tasks when the server starts without blocking.
  */
 export const StartupTasksLive = Layer.scopedDiscard(startupSync).pipe(
-  Layer.provide(StorageServiceDefault),
-  Layer.provide(WorktreeServiceLive)
+	Layer.provide(StorageServiceDefault),
+	Layer.provide(WorktreeServiceLive),
 );

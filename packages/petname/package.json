@@ -1,35 +1,35 @@
 {
-  "name": "@sandcastle/petname",
-  "version": "0.1.0",
-  "description": "Generate memorable random names for worktrees and other resources",
-  "module": "index.ts",
-  "type": "module",
-  "private": true,
-  "exports": {
-    ".": "./index.ts",
-    "./errors": "./src/errors.ts",
-    "./types": "./src/types.ts",
-    "./service": "./src/service.ts",
-    "./live": "./src/live.ts"
-  },
-  "scripts": {
-    "test": "bun test",
-    "typecheck": "tsc --noEmit",
-    "lint": "eslint . --fix",
-    "lint:check": "eslint .",
-    "format": "prettier --write .",
-    "format:check": "prettier --check ."
-  },
-  "dependencies": {
-    "effect": "^3.19.14"
-  },
-  "devDependencies": {
-    "@sandcastle/tooling": "workspace:*",
-    "@types/bun": "latest",
-    "eslint": "^9.39.2",
-    "prettier": "^3.4.2"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
-  }
+	"name": "@sandcastle/petname",
+	"version": "0.1.0",
+	"description": "Generate memorable random names for worktrees and other resources",
+	"module": "index.ts",
+	"type": "module",
+	"private": true,
+	"exports": {
+		".": "./index.ts",
+		"./errors": "./src/errors.ts",
+		"./types": "./src/types.ts",
+		"./service": "./src/service.ts",
+		"./live": "./src/live.ts"
+	},
+	"scripts": {
+		"test": "bun test",
+		"typecheck": "tsc --noEmit",
+		"lint": "eslint . --fix",
+		"lint:check": "eslint .",
+		"format": "biome check --write --formatter-enabled=true --linter-enabled=false .",
+		"format:check": "biome check --formatter-enabled=true --linter-enabled=false ."
+	},
+	"dependencies": {
+		"effect": "^3.19.14"
+	},
+	"devDependencies": {
+		"@sandcastle/tooling": "workspace:*",
+		"@types/bun": "latest",
+		"eslint": "^9.39.2",
+		"prettier": "^3.4.2"
+	},
+	"peerDependencies": {
+		"typescript": "^5"
+	}
 }

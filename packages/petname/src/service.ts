@@ -13,13 +13,15 @@ import type { GenerateOptions, Petname } from "./types.ts";
  * - Temporary resource identifiers
  */
 export class PetnameService extends Context.Tag("PetnameService")<
-  PetnameService,
-  {
-    /**
-     * Generate a petname with the given options.
-     * @param options - Configuration for the generated name
-     * @returns Effect that produces a Petname or fails with InvalidWordCountError
-     */
-    readonly generate: (options?: GenerateOptions) => Effect.Effect<Petname, InvalidWordCountError>;
-  }
+	PetnameService,
+	{
+		/**
+		 * Generate a petname with the given options.
+		 * @param options - Configuration for the generated name
+		 * @returns Effect that produces a Petname or fails with InvalidWordCountError
+		 */
+		readonly generate: (
+			options?: GenerateOptions,
+		) => Effect.Effect<Petname, InvalidWordCountError>;
+	}
 >() {}

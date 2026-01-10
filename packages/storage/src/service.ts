@@ -1,159 +1,197 @@
 import { Context, type Effect } from "effect";
 
 import type {
-  Agent,
-  ChatMessage,
-  CreateAgentInput,
-  CreateChatMessageInput,
-  CreateRepositoryInput,
-  CreateSessionInput,
-  CreateWorktreeInput,
-  Repository,
-  Session,
-  UpdateAgentInput,
-  UpdateRepositoryInput,
-  UpdateSessionInput,
-  UpdateWorktreeInput,
-  Worktree
+	Agent,
+	ChatMessage,
+	CreateAgentInput,
+	CreateChatMessageInput,
+	CreateRepositoryInput,
+	CreateSessionInput,
+	CreateWorktreeInput,
+	Repository,
+	Session,
+	UpdateAgentInput,
+	UpdateRepositoryInput,
+	UpdateSessionInput,
+	UpdateWorktreeInput,
+	Worktree,
 } from "./entities";
 import type {
-  AgentNotFoundError,
-  ChatMessageNotFoundError,
-  DatabaseError,
-  ForeignKeyViolationError,
-  MigrationError,
-  RepositoryNotFoundError,
-  RepositoryPathExistsError,
-  SessionNotFoundError,
-  WorktreeNotFoundError,
-  WorktreePathExistsError
+	AgentNotFoundError,
+	ChatMessageNotFoundError,
+	DatabaseError,
+	ForeignKeyViolationError,
+	MigrationError,
+	RepositoryNotFoundError,
+	RepositoryPathExistsError,
+	SessionNotFoundError,
+	WorktreeNotFoundError,
+	WorktreePathExistsError,
 } from "./errors";
 
 export class StorageService extends Context.Tag("StorageService")<
-  StorageService,
-  {
-    // ─── Database Management ────────────────────────────────
+	StorageService,
+	{
+		// ─── Database Management ────────────────────────────────
 
-    /** Initialize the database (create tables, run migrations) */
-    initialize: () => Effect.Effect<void, DatabaseError | MigrationError>;
+		/** Initialize the database (create tables, run migrations) */
+		initialize: () => Effect.Effect<void, DatabaseError | MigrationError>;
 
-    /** Close the database connection */
-    close: () => Effect.Effect<void, DatabaseError>;
+		/** Close the database connection */
+		close: () => Effect.Effect<void, DatabaseError>;
 
-    // ─── Repository CRUD ────────────────────────────────────
+		// ─── Repository CRUD ────────────────────────────────────
 
-    repositories: {
-      list: () => Effect.Effect<Repository[], DatabaseError>;
+		repositories: {
+			list: () => Effect.Effect<Repository[], DatabaseError>;
 
-      get: (id: string) => Effect.Effect<Repository, RepositoryNotFoundError | DatabaseError>;
+			get: (
+				id: string,
+			) => Effect.Effect<Repository, RepositoryNotFoundError | DatabaseError>;
 
-      getByPath: (
-        directoryPath: string
-      ) => Effect.Effect<Repository, RepositoryNotFoundError | DatabaseError>;
+			getByPath: (
+				directoryPath: string,
+			) => Effect.Effect<Repository, RepositoryNotFoundError | DatabaseError>;
 
-      create: (
-        input: CreateRepositoryInput
-      ) => Effect.Effect<Repository, RepositoryPathExistsError | DatabaseError>;
+			create: (
+				input: CreateRepositoryInput,
+			) => Effect.Effect<Repository, RepositoryPathExistsError | DatabaseError>;
 
-      update: (
-        id: string,
-        input: UpdateRepositoryInput
-      ) => Effect.Effect<Repository, RepositoryNotFoundError | DatabaseError>;
+			update: (
+				id: string,
+				input: UpdateRepositoryInput,
+			) => Effect.Effect<Repository, RepositoryNotFoundError | DatabaseError>;
 
-      delete: (id: string) => Effect.Effect<void, RepositoryNotFoundError | DatabaseError>;
-    };
+			delete: (
+				id: string,
+			) => Effect.Effect<void, RepositoryNotFoundError | DatabaseError>;
+		};
 
-    // ─── Worktree CRUD ──────────────────────────────────────
+		// ─── Worktree CRUD ──────────────────────────────────────
 
-    worktrees: {
-      list: () => Effect.Effect<Worktree[], DatabaseError>;
+		worktrees: {
+			list: () => Effect.Effect<Worktree[], DatabaseError>;
 
-      listByRepository: (repositoryId: string) => Effect.Effect<Worktree[], DatabaseError>;
+			listByRepository: (
+				repositoryId: string,
+			) => Effect.Effect<Worktree[], DatabaseError>;
 
-      get: (id: string) => Effect.Effect<Worktree, WorktreeNotFoundError | DatabaseError>;
+			get: (
+				id: string,
+			) => Effect.Effect<Worktree, WorktreeNotFoundError | DatabaseError>;
 
-      getByPath: (path: string) => Effect.Effect<Worktree, WorktreeNotFoundError | DatabaseError>;
+			getByPath: (
+				path: string,
+			) => Effect.Effect<Worktree, WorktreeNotFoundError | DatabaseError>;
 
-      create: (
-        input: CreateWorktreeInput
-      ) => Effect.Effect<
-        Worktree,
-        WorktreePathExistsError | ForeignKeyViolationError | DatabaseError
-      >;
+			create: (
+				input: CreateWorktreeInput,
+			) => Effect.Effect<
+				Worktree,
+				WorktreePathExistsError | ForeignKeyViolationError | DatabaseError
+			>;
 
-      update: (
-        id: string,
-        input: UpdateWorktreeInput
-      ) => Effect.Effect<Worktree, WorktreeNotFoundError | DatabaseError>;
+			update: (
+				id: string,
+				input: UpdateWorktreeInput,
+			) => Effect.Effect<Worktree, WorktreeNotFoundError | DatabaseError>;
 
-      delete: (id: string) => Effect.Effect<void, WorktreeNotFoundError | DatabaseError>;
+			delete: (
+				id: string,
+			) => Effect.Effect<void, WorktreeNotFoundError | DatabaseError>;
 
-      /** Update lastAccessedAt to current time */
-      touch: (id: string) => Effect.Effect<void, WorktreeNotFoundError | DatabaseError>;
-    };
+			/** Update lastAccessedAt to current time */
+			touch: (
+				id: string,
+			) => Effect.Effect<void, WorktreeNotFoundError | DatabaseError>;
+		};
 
-    // ─── Session CRUD ───────────────────────────────────────
+		// ─── Session CRUD ───────────────────────────────────────
 
-    sessions: {
-      list: () => Effect.Effect<Session[], DatabaseError>;
+		sessions: {
+			list: () => Effect.Effect<Session[], DatabaseError>;
 
-      listByWorktree: (worktreeId: string) => Effect.Effect<Session[], DatabaseError>;
+			listByWorktree: (
+				worktreeId: string,
+			) => Effect.Effect<Session[], DatabaseError>;
 
-      get: (id: string) => Effect.Effect<Session, SessionNotFoundError | DatabaseError>;
+			get: (
+				id: string,
+			) => Effect.Effect<Session, SessionNotFoundError | DatabaseError>;
 
-      create: (
-        input: CreateSessionInput
-      ) => Effect.Effect<Session, ForeignKeyViolationError | DatabaseError>;
+			create: (
+				input: CreateSessionInput,
+			) => Effect.Effect<Session, ForeignKeyViolationError | DatabaseError>;
 
-      update: (
-        id: string,
-        input: UpdateSessionInput
-      ) => Effect.Effect<Session, SessionNotFoundError | DatabaseError>;
+			update: (
+				id: string,
+				input: UpdateSessionInput,
+			) => Effect.Effect<Session, SessionNotFoundError | DatabaseError>;
 
-      delete: (id: string) => Effect.Effect<void, SessionNotFoundError | DatabaseError>;
+			delete: (
+				id: string,
+			) => Effect.Effect<void, SessionNotFoundError | DatabaseError>;
 
-      /** Update lastActivityAt to current time */
-      touch: (id: string) => Effect.Effect<void, SessionNotFoundError | DatabaseError>;
-    };
+			/** Update lastActivityAt to current time */
+			touch: (
+				id: string,
+			) => Effect.Effect<void, SessionNotFoundError | DatabaseError>;
+		};
 
-    // ─── Agent CRUD ─────────────────────────────────────────
+		// ─── Agent CRUD ─────────────────────────────────────────
 
-    agents: {
-      list: () => Effect.Effect<Agent[], DatabaseError>;
+		agents: {
+			list: () => Effect.Effect<Agent[], DatabaseError>;
 
-      listBySession: (sessionId: string) => Effect.Effect<Agent[], DatabaseError>;
+			listBySession: (
+				sessionId: string,
+			) => Effect.Effect<Agent[], DatabaseError>;
 
-      get: (id: string) => Effect.Effect<Agent, AgentNotFoundError | DatabaseError>;
+			get: (
+				id: string,
+			) => Effect.Effect<Agent, AgentNotFoundError | DatabaseError>;
 
-      create: (
-        input: CreateAgentInput
-      ) => Effect.Effect<Agent, ForeignKeyViolationError | DatabaseError>;
+			create: (
+				input: CreateAgentInput,
+			) => Effect.Effect<Agent, ForeignKeyViolationError | DatabaseError>;
 
-      update: (
-        id: string,
-        input: UpdateAgentInput
-      ) => Effect.Effect<Agent, AgentNotFoundError | DatabaseError>;
+			update: (
+				id: string,
+				input: UpdateAgentInput,
+			) => Effect.Effect<Agent, AgentNotFoundError | DatabaseError>;
 
-      delete: (id: string) => Effect.Effect<void, AgentNotFoundError | DatabaseError>;
-    };
+			delete: (
+				id: string,
+			) => Effect.Effect<void, AgentNotFoundError | DatabaseError>;
+		};
 
-    // ─── Chat Message CRUD ────────────────────────────────────
+		// ─── Chat Message CRUD ────────────────────────────────────
 
-    chatMessages: {
-      listBySession: (sessionId: string) => Effect.Effect<ChatMessage[], DatabaseError>;
+		chatMessages: {
+			listBySession: (
+				sessionId: string,
+			) => Effect.Effect<ChatMessage[], DatabaseError>;
 
-      get: (id: string) => Effect.Effect<ChatMessage, ChatMessageNotFoundError | DatabaseError>;
+			get: (
+				id: string,
+			) => Effect.Effect<ChatMessage, ChatMessageNotFoundError | DatabaseError>;
 
-      create: (
-        input: CreateChatMessageInput
-      ) => Effect.Effect<ChatMessage, ForeignKeyViolationError | DatabaseError>;
+			create: (
+				input: CreateChatMessageInput,
+			) => Effect.Effect<ChatMessage, ForeignKeyViolationError | DatabaseError>;
 
-      delete: (id: string) => Effect.Effect<void, ChatMessageNotFoundError | DatabaseError>;
+			delete: (
+				id: string,
+			) => Effect.Effect<void, ChatMessageNotFoundError | DatabaseError>;
 
-      deleteBySession: (sessionId: string) => Effect.Effect<void, DatabaseError>;
+			deleteBySession: (
+				sessionId: string,
+			) => Effect.Effect<void, DatabaseError>;
 
-      /** Get the next sequence number for a session */
-      getNextSequenceNumber: (sessionId: string) => Effect.Effect<number, DatabaseError>;
-    };
-  }
+			/** Get the next sequence number for a session */
+			getNextSequenceNumber: (
+				sessionId: string,
+			) => Effect.Effect<number, DatabaseError>;
+		};
+	}
 >() {}

@@ -1,40 +1,40 @@
 {
-  "name": "@sandcastle/http",
-  "version": "0.1.0",
-  "description": "HTTP server for Sandcastle RPC endpoints.",
-  "module": "index.ts",
-  "type": "module",
-  "private": true,
-  "exports": {
-    ".": "./index.ts",
-    "./server": "./src/server.ts"
-  },
-  "scripts": {
-    "start": "bun run src/server.ts",
-    "dev": "bun --watch run src/server.ts",
-    "test": "bun test",
-    "typecheck": "tsc --noEmit",
-    "lint": "eslint . --fix",
-    "lint:check": "eslint .",
-    "format": "prettier --write .",
-    "format:check": "prettier --check ."
-  },
-  "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "^0.2.2",
-    "@effect/platform": "^0.94.1",
-    "@effect/platform-bun": "^0.87.0",
-    "@effect/rpc": "^0.73.0",
-    "@sandcastle/petname": "workspace:*",
-    "@sandcastle/rpc": "workspace:*",
-    "@sandcastle/storage": "workspace:*",
-    "@sandcastle/worktree": "workspace:*",
-    "effect": "^3.19.14"
-  },
-  "devDependencies": {
-    "@sandcastle/tooling": "workspace:*",
-    "@types/bun": "latest",
-    "eslint": "^9.39.2",
-    "prettier": "^3.4.2",
-    "typescript": "^5.9.3"
-  }
+	"name": "@sandcastle/http",
+	"version": "0.1.0",
+	"description": "HTTP server for Sandcastle RPC endpoints.",
+	"module": "index.ts",
+	"type": "module",
+	"private": true,
+	"exports": {
+		".": "./index.ts",
+		"./server": "./src/server.ts"
+	},
+	"scripts": {
+		"start": "bun run src/server.ts",
+		"dev": "bun --watch run src/server.ts",
+		"test": "bun test",
+		"typecheck": "tsc --noEmit",
+		"lint": "eslint . --fix",
+		"lint:check": "eslint .",
+		"format": "biome check --write --formatter-enabled=true --linter-enabled=false .",
+		"format:check": "biome check --formatter-enabled=true --linter-enabled=false ."
+	},
+	"dependencies": {
+		"@anthropic-ai/claude-agent-sdk": "^0.2.2",
+		"@effect/platform": "^0.94.1",
+		"@effect/platform-bun": "^0.87.0",
+		"@effect/rpc": "^0.73.0",
+		"@sandcastle/petname": "workspace:*",
+		"@sandcastle/rpc": "workspace:*",
+		"@sandcastle/storage": "workspace:*",
+		"@sandcastle/worktree": "workspace:*",
+		"effect": "^3.19.14"
+	},
+	"devDependencies": {
+		"@sandcastle/tooling": "workspace:*",
+		"@types/bun": "latest",
+		"eslint": "^9.39.2",
+		"prettier": "^3.4.2",
+		"typescript": "^5.9.3"
+	}
 }

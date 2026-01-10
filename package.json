@@ -13,6 +13,7 @@
     "clean": "turbo clean"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.3.11",
     "@ianvs/prettier-plugin-sort-imports": "^4.4.1",
     "@sandcastle/config": "workspace:*",
     "prettier": "^3.4.2",

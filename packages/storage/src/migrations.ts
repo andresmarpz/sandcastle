@@ -4,16 +4,16 @@ import { Effect } from "effect";
 import { MigrationError } from "./errors";
 
 interface Migration {
-  version: number;
-  description: string;
-  up: string;
+	version: number;
+	description: string;
+	up: string;
 }
 
 const migrations: Migration[] = [
-  {
-    version: 1,
-    description: "Initial schema",
-    up: `
+	{
+		version: 1,
+		description: "Initial schema",
+		up: `
       -- Repositories
       CREATE TABLE IF NOT EXISTS repositories (
         id TEXT PRIMARY KEY,
@@ -58,17 +58,17 @@ const migrations: Migration[] = [
         stopped_at TEXT,
         exit_code INTEGER
       );
-    `
-  },
-  {
-    version: 2,
-    description: "Add pinned field to repositories",
-    up: `ALTER TABLE repositories ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0;`
-  },
-  {
-    version: 3,
-    description: "Add chat messages table",
-    up: `
+    `,
+	},
+	{
+		version: 2,
+		description: "Add pinned field to repositories",
+		up: `ALTER TABLE repositories ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0;`,
+	},
+	{
+		version: 3,
+		description: "Add chat messages table",
+		up: `
       CREATE TABLE IF NOT EXISTS chat_messages (
         id TEXT PRIMARY KEY,
         session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
@@ -84,25 +84,27 @@ const migrations: Migration[] = [
         UNIQUE(session_id, sequence_number)
       );
       CREATE INDEX IF NOT EXISTS idx_chat_messages_session ON chat_messages(session_id, sequence_number);
-    `
-  },
-  {
-    version: 4,
-    description: "Add Claude-specific session fields",
-    up: `
+    `,
+	},
+	{
+		version: 4,
+		description: "Add Claude-specific session fields",
+		up: `
       ALTER TABLE sessions ADD COLUMN claude_session_id TEXT;
       ALTER TABLE sessions ADD COLUMN model TEXT DEFAULT 'claude-sonnet-4-5-20250929';
       ALTER TABLE sessions ADD COLUMN total_cost_usd REAL DEFAULT 0;
       ALTER TABLE sessions ADD COLUMN input_tokens INTEGER DEFAULT 0;
       ALTER TABLE sessions ADD COLUMN output_tokens INTEGER DEFAULT 0;
-    `
-  }
+    `,
+	},
 ];
 
-export const runMigrations = (db: Database): Effect.Effect<void, MigrationError> =>
-  Effect.gen(function* () {
-    // Create migrations tracking table if it doesn't exist
-    db.run(`
+export const runMigrations = (
+	db: Database,
+): Effect.Effect<void, MigrationError> =>
+	Effect.gen(function* () {
+		// Create migrations tracking table if it doesn't exist
+		db.run(`
       CREATE TABLE IF NOT EXISTS _migrations (
         version INTEGER PRIMARY KEY,
         description TEXT NOT NULL,
@@ -110,48 +112,56 @@ export const runMigrations = (db: Database): Effect.Effect<void, MigrationError>
       )
     `);
 
-    // Get current schema version
-    const result = db
-      .query<{ version: number }, []>("SELECT MAX(version) as version FROM _migrations")
-      .get();
-    const currentVersion = result?.version ?? 0;
+		// Get current schema version
+		const result = db
+			.query<{ version: number }, []>(
+				"SELECT MAX(version) as version FROM _migrations",
+			)
+			.get();
+		const currentVersion = result?.version ?? 0;
 
-    // Apply pending migrations
-    for (const migration of migrations) {
-      if (migration.version > currentVersion) {
-        yield* Effect.try({
-          try: () => {
-            db.run("BEGIN TRANSACTION");
-            try {
-              db.run(migration.up);
-              db.run(
-                "INSERT INTO _migrations (version, description, applied_at) VALUES (?, ?, ?)",
-                [migration.version, migration.description, new Date().toISOString()]
-              );
-              db.run("COMMIT");
-            } catch (error) {
-              db.run("ROLLBACK");
-              throw error;
-            }
-          },
-          catch: error =>
-            new MigrationError({
-              version: migration.version,
-              message: `Failed to apply migration: ${migration.description}`,
-              cause: error
-            })
-        });
-      }
-    }
-  });
+		// Apply pending migrations
+		for (const migration of migrations) {
+			if (migration.version > currentVersion) {
+				yield* Effect.try({
+					try: () => {
+						db.run("BEGIN TRANSACTION");
+						try {
+							db.run(migration.up);
+							db.run(
+								"INSERT INTO _migrations (version, description, applied_at) VALUES (?, ?, ?)",
+								[
+									migration.version,
+									migration.description,
+									new Date().toISOString(),
+								],
+							);
+							db.run("COMMIT");
+						} catch (error) {
+							db.run("ROLLBACK");
+							throw error;
+						}
+					},
+					catch: (error) =>
+						new MigrationError({
+							version: migration.version,
+							message: `Failed to apply migration: ${migration.description}`,
+							cause: error,
+						}),
+				});
+			}
+		}
+	});
 
 export const getCurrentVersion = (db: Database): number => {
-  try {
-    const result = db
-      .query<{ version: number }, []>("SELECT MAX(version) as version FROM _migrations")
-      .get();
-    return result?.version ?? 0;
-  } catch {
-    return 0;
-  }
+	try {
+		const result = db
+			.query<{ version: number }, []>(
+				"SELECT MAX(version) as version FROM _migrations",
+			)
+			.get();
+		return result?.version ?? 0;
+	} catch {
+		return 0;
+	}
 };
