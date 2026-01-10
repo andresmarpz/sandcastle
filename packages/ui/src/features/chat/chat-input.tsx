@@ -56,7 +56,9 @@ function ChatInputInner({
 						variant={autonomous ? "default" : "ghost"}
 						title={autonomous ? "Autonomous mode ON" : "Autonomous mode OFF"}
 					>
-						<BotIcon className={cn("size-4", autonomous && "text-primary")} />
+						<BotIcon
+							className={cn("size-4", autonomous && "text-primary-foreground")}
+						/>
 					</PromptInputButton>
 					{isStreaming ? (
 						<PromptInputButton onClick={onStop} variant="destructive">
