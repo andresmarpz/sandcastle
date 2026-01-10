@@ -319,7 +319,19 @@ export const WorktreeRpcHandlers = WorktreeRpc.toLayer(
 						fromRef: baseBranch,
 					});
 
-					// 3. Create storage record
+					// 3. Install dependencies
+					yield* Effect.tryPromise({
+						try: () => Bun.$`bun install`.cwd(worktreePath).quiet(),
+						catch: (error) => {
+							const message =
+								error instanceof Error ? error.message : String(error);
+							return new FileSystemError({
+								message: `Failed to install dependencies: ${message}`,
+							});
+						},
+					});
+
+					// 4. Create storage record
 					const worktree = yield* storage.worktrees.create({
 						repositoryId: params.repositoryId,
 						path: worktreePath,
@@ -328,7 +340,7 @@ export const WorktreeRpcHandlers = WorktreeRpc.toLayer(
 						baseBranch,
 					});
 
-					// 4. Create default session so user can start working immediately
+					// 5. Create default session so user can start working immediately
 					const session = yield* storage.sessions.create({
 						worktreeId: worktree.id,
 						title: "Session 1",
