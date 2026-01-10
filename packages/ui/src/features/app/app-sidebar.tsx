@@ -116,6 +116,10 @@ export function AppSidebar() {
 		return map;
 	}, [worktrees]);
 
+	const handleWorkspacesClick = () => {
+		navigate("/");
+	};
+
 	const handleOpenProject = () => {
 		setIsNewProjectOpen(true);
 	};
@@ -201,6 +205,7 @@ export function AppSidebar() {
 						<Sidebar
 							repositories={[...repositories]}
 							worktreesByRepo={worktreesByRepo}
+							onWorkspacesClick={handleWorkspacesClick}
 							onOpenProject={handleOpenProject}
 							onCloneFromGit={handleCloneFromGit}
 							onRepositoryPin={handleRepositoryPin}
@@ -219,6 +224,7 @@ export function AppSidebar() {
 						<Sidebar
 							repositories={[...repositories]}
 							worktreesByRepo={worktreesByRepo}
+							onWorkspacesClick={handleWorkspacesClick}
 							onOpenProject={handleOpenProject}
 							onCloneFromGit={handleCloneFromGit}
 							onRepositoryPin={handleRepositoryPin}
@@ -237,6 +243,7 @@ export function AppSidebar() {
 						<Sidebar
 							repositories={[...repositories]}
 							worktreesByRepo={worktreesByRepo}
+							onWorkspacesClick={handleWorkspacesClick}
 							onOpenProject={handleOpenProject}
 							onCloneFromGit={handleCloneFromGit}
 							onRepositoryPin={handleRepositoryPin}
@@ -254,6 +261,7 @@ export function AppSidebar() {
 					<Sidebar
 						repositories={[...repositories]}
 						worktreesByRepo={worktreesByRepo}
+						onWorkspacesClick={handleWorkspacesClick}
 						onOpenProject={handleOpenProject}
 						onCloneFromGit={handleCloneFromGit}
 						onRepositoryPin={handleRepositoryPin}
