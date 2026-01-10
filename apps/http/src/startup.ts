@@ -15,7 +15,7 @@ const startupSync = Effect.gen(function* () {
       Effect.tap(result =>
         Effect.log(`Worktree sync complete: ${result.removedIds.length} orphaned records removed`)
       ),
-      Effect.catchAll(error => Effect.logWarning(`Worktree sync failed: ${error._tag}`))
+      Effect.catchAll(error => Effect.logWarning(`Worktree sync failed: ${error}`))
     )
   );
 });

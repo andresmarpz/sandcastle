@@ -6,6 +6,7 @@ import { Data, Effect, Layer } from "effect";
 
 import { petname } from "@sandcastle/petname";
 import {
+  CreateWorktreeResponse,
   DatabaseRpcError,
   ForeignKeyViolationRpcError,
   GitOperationRpcError,
@@ -319,7 +320,16 @@ export const WorktreeRpcHandlers = WorktreeRpc.toLayer(
             baseBranch
           });
 
-          return toWorktree(worktree);
+          // 4. Create default session so user can start working immediately
+          const session = yield* storage.sessions.create({
+            worktreeId: worktree.id,
+            title: "Session 1"
+          });
+
+          return new CreateWorktreeResponse({
+            worktree: toWorktree(worktree),
+            initialSessionId: session.id
+          });
         }).pipe(Effect.mapError(mapWorktreeCreateError)),
 
       "worktree.delete": params =>

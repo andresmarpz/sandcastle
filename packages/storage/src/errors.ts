@@ -37,6 +37,10 @@ export class AgentNotFoundError extends Data.TaggedError("AgentNotFoundError")<{
   id: string;
 }> {}
 
+export class ChatMessageNotFoundError extends Data.TaggedError("ChatMessageNotFoundError")<{
+  id: string;
+}> {}
+
 // ─── Constraint Errors ────────────────────────────────────────
 
 export class RepositoryPathExistsError extends Data.TaggedError("RepositoryPathExistsError")<{

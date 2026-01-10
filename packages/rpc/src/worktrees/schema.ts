@@ -18,6 +18,13 @@ export const CreateWorktreeRequestSchema = Schema.Struct({
   repositoryId: Schema.String
 });
 
+export class CreateWorktreeResponse extends Schema.Class<CreateWorktreeResponse>(
+  "CreateWorktreeResponse"
+)({
+  worktree: Worktree,
+  initialSessionId: Schema.String
+}) {}
+
 export class WorktreeRpc extends RpcGroup.make(
   Rpc.make("worktree.list", {
     payload: {},
@@ -45,7 +52,7 @@ export class WorktreeRpc extends RpcGroup.make(
 
   Rpc.make("worktree.create", {
     payload: CreateWorktreeRequestSchema,
-    success: Worktree,
+    success: CreateWorktreeResponse,
     error: Schema.Union(
       WorktreePathExistsRpcError,
       ForeignKeyViolationRpcError,

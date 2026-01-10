@@ -1,3 +1,4 @@
+import { Atom } from "@effect-atom/atom-react";
 import type {
   CreateSessionInput,
   Session,
@@ -11,44 +12,64 @@ export type { CreateSessionInput, Session, UpdateSessionInput };
 // Re-export the client and key for direct use
 export { SessionClient, SESSION_LIST_KEY };
 
-/**
- * Creates a query atom for fetching the list of all sessions.
- * Uses reactivity keys for automatic cache invalidation.
- *
- * Note: Server handlers for sessions are not yet implemented.
- */
-export const sessionListQuery = () =>
-  SessionClient.query(
-    "session.list",
-    {},
-    {
-      reactivityKeys: [SESSION_LIST_KEY],
-    },
-  );
+// ─── Stable Query Atoms ─────────────────────────────────────────
+// These use Atom.family for proper caching and reactivity
 
 /**
- * Creates a query atom for fetching sessions belonging to a specific worktree.
+ * Stable atom for the full session list.
  */
-export const sessionListByWorktreeQuery = (worktreeId: string) =>
+const _sessionListAtom = SessionClient.query(
+  "session.list",
+  {},
+  {
+    reactivityKeys: [SESSION_LIST_KEY],
+  },
+);
+
+export const sessionListAtom = _sessionListAtom;
+
+/**
+ * Family of atoms for sessions by worktree.
+ */
+export const sessionListByWorktreeAtomFamily = Atom.family((worktreeId: string) =>
   SessionClient.query(
     "session.listByWorktree",
     { worktreeId },
     {
       reactivityKeys: [SESSION_LIST_KEY, `sessions:worktree:${worktreeId}`],
     },
-  );
+  )
+);
 
 /**
- * Creates a query atom for fetching a single session by ID.
+ * Family of atoms for single session by ID.
  */
-export const sessionQuery = (id: string) =>
+export const sessionAtomFamily = Atom.family((id: string) =>
   SessionClient.query(
     "session.get",
     { id },
     {
       reactivityKeys: [`session:${id}`],
     },
-  );
+  )
+);
+
+/**
+ * Returns the stable session list atom.
+ * @deprecated Use `sessionListAtom` directly
+ */
+export const sessionListQuery = () => sessionListAtom;
+
+/**
+ * Returns the session list atom for a specific worktree.
+ */
+export const sessionListByWorktreeQuery = (worktreeId: string) =>
+  sessionListByWorktreeAtomFamily(worktreeId);
+
+/**
+ * Returns the atom for fetching a single session by ID.
+ */
+export const sessionQuery = (id: string) => sessionAtomFamily(id);
 
 /**
  * Mutation atom for creating a new session.

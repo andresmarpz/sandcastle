@@ -18,5 +18,8 @@
       "Bash(git commit:*)",
       "Bash(gh pr:*)"
     ]
+  },
+  "enabledPlugins": {
+    "code-simplifier@claude-plugins-official": true
   }
 }

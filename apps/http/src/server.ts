@@ -3,9 +3,14 @@ import { BunHttpServer, BunRuntime } from "@effect/platform-bun";
 import { RpcSerialization, RpcServer } from "@effect/rpc";
 import { Effect, Layer } from "effect";
 
-import { RepositoryRpc, WorktreeRpc } from "@sandcastle/rpc";
+import { ChatRpc, RepositoryRpc, SessionRpc, WorktreeRpc } from "@sandcastle/rpc";
 
-import { RepositoryRpcHandlersLive, WorktreeRpcHandlersLive } from "./handlers";
+import {
+  ChatRpcHandlersLive,
+  RepositoryRpcHandlersLive,
+  SessionRpcHandlersLive,
+  WorktreeRpcHandlersLive
+} from "./handlers";
 import { StartupTasksLive } from "./startup";
 
 const CorsMiddleware = HttpMiddleware.cors({
@@ -27,9 +32,14 @@ const CorsMiddleware = HttpMiddleware.cors({
 
 // ─── RPC Layers ──────────────────────────────────────────────
 
-const SandcastleRpc = RepositoryRpc.merge(WorktreeRpc);
+const SandcastleRpc = RepositoryRpc.merge(WorktreeRpc).merge(SessionRpc).merge(ChatRpc);
 
-const RpcHandlersLive = Layer.mergeAll(RepositoryRpcHandlersLive, WorktreeRpcHandlersLive);
+const RpcHandlersLive = Layer.mergeAll(
+  RepositoryRpcHandlersLive,
+  WorktreeRpcHandlersLive,
+  SessionRpcHandlersLive,
+  ChatRpcHandlersLive
+);
 
 const RpcLayer = RpcServer.layer(SandcastleRpc).pipe(Layer.provide(RpcHandlersLive));
 

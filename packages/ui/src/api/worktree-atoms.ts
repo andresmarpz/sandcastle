@@ -1,68 +1,120 @@
+import { Atom, Result } from "@effect-atom/atom-react";
 import type {
   CreateWorktreeRequest,
+  CreateWorktreeResponse,
   UpdateWorktreeInput,
   Worktree,
 } from "@sandcastle/rpc";
 import { WorktreeClient, WORKTREE_LIST_KEY } from "./worktree-client";
 
-// Re-export types for consumers
-export type { CreateWorktreeRequest, UpdateWorktreeInput, Worktree };
-
-// Re-export the client and key for direct use
-export { WorktreeClient, WORKTREE_LIST_KEY };
+/**
+ * Atom for the worktree list.
+ * Use with `useAtomValue` to read and `useAtomRefresh` to manually refresh.
+ */
+export const worktreeListAtom = WorktreeClient.query(
+  "worktree.list",
+  {},
+  {
+    reactivityKeys: [WORKTREE_LIST_KEY],
+    timeToLive: 300000,
+  }
+);
 
 /**
- * Creates a query atom for fetching the list of all worktrees.
- * Uses reactivity keys for automatic cache invalidation.
+ * Optimistic wrapper around the worktree list atom.
+ * Enables optimistic updates with automatic rollback on failure.
  */
-export const worktreeListQuery = () =>
-  WorktreeClient.query(
-    "worktree.list",
-    {},
-    {
-      reactivityKeys: [WORKTREE_LIST_KEY],
-      timeToLive: 300000,
+export const optimisticWorktreeListAtom = worktreeListAtom.pipe(
+  Atom.optimistic
+);
+
+/**
+ * Optimistic mutation for creating a worktree.
+ * Shows a temporary worktree immediately, then syncs with server.
+ * Automatically rolls back on failure.
+ */
+export const createWorktreeOptimisticMutation = optimisticWorktreeListAtom.pipe(
+  Atom.optimisticFn({
+    reducer: (
+      currentResult: Result.Result<readonly Worktree[], unknown>,
+      arg: {
+        payload: { repositoryId: string };
+        reactivityKeys?: readonly unknown[];
+      }
+    ) => {
+      // Extract current worktrees from Result, default to empty array
+      const currentWorktrees = Result.isSuccess(currentResult)
+        ? currentResult.value
+        : [];
+
+      const tempWorktree: Worktree = {
+        id: `temp-${Date.now()}`,
+        repositoryId: arg.payload.repositoryId,
+        path: "",
+        branch: "pending",
+        name: "Creating...",
+        baseBranch: "main",
+        status: "active",
+        createdAt: new Date().toISOString(),
+        lastAccessedAt: new Date().toISOString(),
+      };
+      // Prepend to array since list is ordered by most recently created first
+      return Result.success([tempWorktree, ...currentWorktrees]);
     },
-  );
+    fn: WorktreeClient.mutation("worktree.create"),
+  })
+);
 
 /**
- * Creates a query atom for fetching worktrees belonging to a specific repository.
+ * Family of atoms for worktrees by repository.
+ * Keyed by repositoryId for proper caching.
  */
-export const worktreeListByRepositoryQuery = (repositoryId: string) =>
-  WorktreeClient.query(
-    "worktree.listByRepository",
-    { repositoryId },
-    {
-      reactivityKeys: [WORKTREE_LIST_KEY, `worktrees:repo:${repositoryId}`],
-      timeToLive: 300000,
-    },
-  );
+export const worktreeListByRepositoryAtomFamily = Atom.family(
+  (repositoryId: string) =>
+    WorktreeClient.query(
+      "worktree.listByRepository",
+      { repositoryId },
+      {
+        reactivityKeys: [WORKTREE_LIST_KEY, `worktrees:repo:${repositoryId}`],
+        timeToLive: 300000,
+      }
+    )
+);
 
 /**
- * Creates a query atom for fetching a single worktree by ID.
+ * Family of atoms for single worktree by ID.
  */
-export const worktreeQuery = (id: string) =>
+export const worktreeAtomFamily = Atom.family((id: string) =>
   WorktreeClient.query(
     "worktree.get",
     { id },
     {
       reactivityKeys: [`worktree:${id}`],
       timeToLive: 300000,
-    },
-  );
+    }
+  )
+);
 
 /**
- * Creates a query atom for fetching a worktree by its filesystem path.
+ * Family of atoms for worktree by path.
  */
-export const worktreeQueryByPath = (path: string) =>
+export const worktreeByPathAtomFamily = Atom.family((path: string) =>
   WorktreeClient.query(
     "worktree.getByPath",
     { path },
     {
       reactivityKeys: [`worktree:path:${path}`],
       timeToLive: 300000,
-    },
-  );
+    }
+  )
+);
+
+export type {
+  CreateWorktreeRequest,
+  CreateWorktreeResponse,
+  UpdateWorktreeInput,
+  Worktree,
+};
 
 /**
  * Mutation atom for creating a new worktree.

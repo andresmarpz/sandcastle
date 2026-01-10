@@ -3,11 +3,21 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 
-import { Effect, Layer } from "effect";
+import { Effect, Layer, Schema } from "effect";
 
-import { Agent, Repository, Session, Worktree } from "./entities";
+import {
+  Agent,
+  ChatMessage,
+  MessageContent,
+  Repository,
+  Session,
+  Worktree,
+  type MessageContentType,
+  type MessageRole
+} from "./entities";
 import {
   AgentNotFoundError,
+  ChatMessageNotFoundError,
   DatabaseConnectionError,
   DatabaseError,
   ForeignKeyViolationError,
@@ -70,6 +80,11 @@ const rowToSession = (row: Record<string, unknown>): Session =>
     title: row["title"] as string,
     description: (row["description"] as string) ?? null,
     status: row["status"] as "created" | "active" | "paused" | "completed" | "failed",
+    claudeSessionId: (row["claude_session_id"] as string) ?? null,
+    model: (row["model"] as string) ?? null,
+    totalCostUsd: (row["total_cost_usd"] as number) ?? 0,
+    inputTokens: (row["input_tokens"] as number) ?? 0,
+    outputTokens: (row["output_tokens"] as number) ?? 0,
     createdAt: row["created_at"] as string,
     lastActivityAt: row["last_activity_at"] as string
   });
@@ -84,6 +99,24 @@ const rowToAgent = (row: Record<string, unknown>): Agent =>
     stoppedAt: (row["stopped_at"] as string) ?? null,
     exitCode: (row["exit_code"] as number) ?? null
   });
+
+const rowToChatMessage = (row: Record<string, unknown>): ChatMessage => {
+  const contentJson = row["content"] as string;
+  const contentParsed = JSON.parse(contentJson);
+  const content = Schema.decodeUnknownSync(MessageContent)(contentParsed);
+
+  return new ChatMessage({
+    id: row["id"] as string,
+    sessionId: row["session_id"] as string,
+    sequenceNumber: row["sequence_number"] as number,
+    role: row["role"] as MessageRole,
+    contentType: row["content_type"] as MessageContentType,
+    content,
+    parentToolUseId: (row["parent_tool_use_id"] as string) ?? null,
+    uuid: (row["uuid"] as string) ?? null,
+    createdAt: row["created_at"] as string
+  });
+};
 
 // ─── Configuration ────────────────────────────────────────────
 
@@ -128,6 +161,16 @@ export const makeStorageService = (
     // Enable WAL mode and foreign keys
     db.run("PRAGMA journal_mode = WAL");
     db.run("PRAGMA foreign_keys = ON");
+
+    // Run migrations automatically on service creation
+    yield* runMigrations(db).pipe(
+      Effect.mapError(migrationError =>
+        new DatabaseConnectionError({
+          path: dbPath,
+          message: `Migration failed: ${migrationError.message}`
+        })
+      )
+    );
 
     // Build the service implementation
     const service: typeof StorageService.Service = {
@@ -495,9 +538,9 @@ export const makeStorageService = (
 
             yield* tryDb("sessions.create", () =>
               db.run(
-                `INSERT INTO sessions (id, worktree_id, title, description, status, created_at, last_activity_at)
-                 VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                [id, input.worktreeId, input.title, description, status, now, now]
+                `INSERT INTO sessions (id, worktree_id, title, description, status, claude_session_id, model, total_cost_usd, input_tokens, output_tokens, created_at, last_activity_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [id, input.worktreeId, input.title, description, status, null, null, 0, 0, 0, now, now]
               )
             );
 
@@ -507,6 +550,11 @@ export const makeStorageService = (
               title: input.title,
               description,
               status,
+              claudeSessionId: null,
+              model: null,
+              totalCostUsd: 0,
+              inputTokens: 0,
+              outputTokens: 0,
               createdAt: now,
               lastActivityAt: now
             });
@@ -531,6 +579,26 @@ export const makeStorageService = (
               updates.push("status = ?");
               values.push(input.status);
             }
+            if (input.claudeSessionId !== undefined) {
+              updates.push("claude_session_id = ?");
+              values.push(input.claudeSessionId);
+            }
+            if (input.model !== undefined) {
+              updates.push("model = ?");
+              values.push(input.model);
+            }
+            if (input.totalCostUsd !== undefined) {
+              updates.push("total_cost_usd = ?");
+              values.push(input.totalCostUsd);
+            }
+            if (input.inputTokens !== undefined) {
+              updates.push("input_tokens = ?");
+              values.push(input.inputTokens);
+            }
+            if (input.outputTokens !== undefined) {
+              updates.push("output_tokens = ?");
+              values.push(input.outputTokens);
+            }
             if (input.lastActivityAt !== undefined) {
               updates.push("last_activity_at = ?");
               values.push(input.lastActivityAt);
@@ -550,6 +618,14 @@ export const makeStorageService = (
               description:
                 input.description !== undefined ? input.description : existing.description,
               status: input.status ?? existing.status,
+              claudeSessionId:
+                input.claudeSessionId !== undefined
+                  ? input.claudeSessionId
+                  : existing.claudeSessionId,
+              model: input.model !== undefined ? input.model : existing.model,
+              totalCostUsd: input.totalCostUsd ?? existing.totalCostUsd,
+              inputTokens: input.inputTokens ?? existing.inputTokens,
+              outputTokens: input.outputTokens ?? existing.outputTokens,
               lastActivityAt: input.lastActivityAt ?? existing.lastActivityAt
             });
           }),
@@ -694,6 +770,121 @@ export const makeStorageService = (
           Effect.gen(function* () {
             yield* service.agents.get(id);
             yield* tryDb("agents.delete", () => db.run("DELETE FROM agents WHERE id = ?", [id]));
+          })
+      },
+
+      // ─── Chat Messages ───────────────────────────────────
+
+      chatMessages: {
+        listBySession: sessionId =>
+          tryDb("chatMessages.listBySession", () =>
+            db
+              .query<
+                Record<string, unknown>,
+                [string]
+              >("SELECT * FROM chat_messages WHERE session_id = ? ORDER BY sequence_number ASC")
+              .all(sessionId)
+              .map(rowToChatMessage)
+          ),
+
+        get: id =>
+          Effect.gen(function* () {
+            const row = yield* tryDb("chatMessages.get", () =>
+              db
+                .query<Record<string, unknown>, [string]>("SELECT * FROM chat_messages WHERE id = ?")
+                .get(id)
+            );
+            if (!row) {
+              return yield* Effect.fail(new ChatMessageNotFoundError({ id }));
+            }
+            return rowToChatMessage(row);
+          }),
+
+        create: input =>
+          Effect.gen(function* () {
+            const now = nowIso();
+            const id = generateId();
+            const parentToolUseId = input.parentToolUseId ?? null;
+            const uuid = input.uuid ?? null;
+
+            // Check if session exists
+            const existingSession = yield* tryDb("chatMessages.create.checkSession", () =>
+              db
+                .query<Record<string, unknown>, [string]>("SELECT id FROM sessions WHERE id = ?")
+                .get(input.sessionId)
+            );
+
+            if (!existingSession) {
+              return yield* Effect.fail(
+                new ForeignKeyViolationError({
+                  entity: "ChatMessage",
+                  foreignKey: "sessionId",
+                  foreignId: input.sessionId
+                })
+              );
+            }
+
+            // Get next sequence number
+            const sequenceNumber = yield* service.chatMessages.getNextSequenceNumber(
+              input.sessionId
+            );
+
+            // Serialize content to JSON
+            const contentJson = JSON.stringify(input.content);
+
+            yield* tryDb("chatMessages.create", () =>
+              db.run(
+                `INSERT INTO chat_messages (id, session_id, sequence_number, role, content_type, content, parent_tool_use_id, uuid, created_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [
+                  id,
+                  input.sessionId,
+                  sequenceNumber,
+                  input.role,
+                  input.contentType,
+                  contentJson,
+                  parentToolUseId,
+                  uuid,
+                  now
+                ]
+              )
+            );
+
+            return new ChatMessage({
+              id,
+              sessionId: input.sessionId,
+              sequenceNumber,
+              role: input.role,
+              contentType: input.contentType,
+              content: input.content,
+              parentToolUseId,
+              uuid,
+              createdAt: now
+            });
+          }),
+
+        delete: id =>
+          Effect.gen(function* () {
+            yield* service.chatMessages.get(id);
+            yield* tryDb("chatMessages.delete", () =>
+              db.run("DELETE FROM chat_messages WHERE id = ?", [id])
+            );
+          }),
+
+        deleteBySession: sessionId =>
+          tryDb("chatMessages.deleteBySession", () =>
+            db.run("DELETE FROM chat_messages WHERE session_id = ?", [sessionId])
+          ),
+
+        getNextSequenceNumber: sessionId =>
+          tryDb("chatMessages.getNextSequenceNumber", () => {
+            const result = db
+              .query<
+                { max_seq: number | null },
+                [string]
+              >("SELECT MAX(sequence_number) as max_seq FROM chat_messages WHERE session_id = ?")
+              .get(sessionId);
+            return (result?.max_seq ?? -1) + 1;
           })
       }
     };

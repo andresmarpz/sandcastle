@@ -80,6 +80,16 @@ export class Session extends Schema.Class<Session>("Session")({
   title: Schema.String,
   description: Schema.NullOr(Schema.String),
   status: SessionStatus,
+  /** Claude Code session ID for resume capability */
+  claudeSessionId: Schema.NullOr(Schema.String),
+  /** Model used for this session */
+  model: Schema.NullOr(Schema.String),
+  /** Total cost in USD */
+  totalCostUsd: Schema.Number,
+  /** Input tokens used */
+  inputTokens: Schema.Number,
+  /** Output tokens used */
+  outputTokens: Schema.Number,
   /** ISO 8601 timestamp */
   createdAt: Schema.String,
   /** ISO 8601 timestamp */
@@ -97,6 +107,11 @@ export class UpdateSessionInput extends Schema.Class<UpdateSessionInput>("Update
   title: Schema.optional(Schema.String),
   description: Schema.optional(Schema.NullOr(Schema.String)),
   status: Schema.optional(SessionStatus),
+  claudeSessionId: Schema.optional(Schema.NullOr(Schema.String)),
+  model: Schema.optional(Schema.NullOr(Schema.String)),
+  totalCostUsd: Schema.optional(Schema.Number),
+  inputTokens: Schema.optional(Schema.Number),
+  outputTokens: Schema.optional(Schema.Number),
   /** ISO 8601 timestamp */
   lastActivityAt: Schema.optional(Schema.String)
 }) {}
@@ -127,4 +142,106 @@ export class UpdateAgentInput extends Schema.Class<UpdateAgentInput>("UpdateAgen
   /** ISO 8601 timestamp */
   stoppedAt: Schema.optional(Schema.NullOr(Schema.String)),
   exitCode: Schema.optional(Schema.NullOr(Schema.Number))
+}) {}
+
+// ─── Chat Message ────────────────────────────────────────────
+
+export const MessageRole = Schema.Literal("user", "assistant", "system");
+export type MessageRole = typeof MessageRole.Type;
+
+export const MessageContentType = Schema.Literal(
+  "text",
+  "tool_use",
+  "tool_result",
+  "thinking",
+  "error",
+  "ask_user"
+);
+export type MessageContentType = typeof MessageContentType.Type;
+
+// Content type variants (stored as JSON in content column)
+export class TextContent extends Schema.Class<TextContent>("TextContent")({
+  type: Schema.Literal("text"),
+  text: Schema.String
+}) {}
+
+export class ToolUseContent extends Schema.Class<ToolUseContent>("ToolUseContent")({
+  type: Schema.Literal("tool_use"),
+  toolUseId: Schema.String,
+  toolName: Schema.String,
+  input: Schema.Unknown
+}) {}
+
+export class ToolResultContent extends Schema.Class<ToolResultContent>("ToolResultContent")({
+  type: Schema.Literal("tool_result"),
+  toolUseId: Schema.String,
+  toolName: Schema.String,
+  output: Schema.Unknown,
+  isError: Schema.optional(Schema.Boolean)
+}) {}
+
+export class ThinkingContent extends Schema.Class<ThinkingContent>("ThinkingContent")({
+  type: Schema.Literal("thinking"),
+  text: Schema.String
+}) {}
+
+export class ErrorContent extends Schema.Class<ErrorContent>("ErrorContent")({
+  type: Schema.Literal("error"),
+  error: Schema.String,
+  code: Schema.optional(Schema.String)
+}) {}
+
+export class AskUserQuestionOption extends Schema.Class<AskUserQuestionOption>(
+  "AskUserQuestionOption"
+)({
+  label: Schema.String,
+  description: Schema.String
+}) {}
+
+export class AskUserQuestionItem extends Schema.Class<AskUserQuestionItem>("AskUserQuestionItem")({
+  question: Schema.String,
+  header: Schema.String,
+  options: Schema.Array(AskUserQuestionOption),
+  multiSelect: Schema.Boolean
+}) {}
+
+export class AskUserContent extends Schema.Class<AskUserContent>("AskUserContent")({
+  type: Schema.Literal("ask_user"),
+  toolUseId: Schema.String,
+  questions: Schema.Array(AskUserQuestionItem),
+  answers: Schema.NullOr(Schema.Record({ key: Schema.String, value: Schema.String }))
+}) {}
+
+export const MessageContent = Schema.Union(
+  TextContent,
+  ToolUseContent,
+  ToolResultContent,
+  ThinkingContent,
+  ErrorContent,
+  AskUserContent
+);
+export type MessageContent = typeof MessageContent.Type;
+
+export class ChatMessage extends Schema.Class<ChatMessage>("ChatMessage")({
+  id: Schema.String,
+  sessionId: Schema.String,
+  sequenceNumber: Schema.Number,
+  role: MessageRole,
+  contentType: MessageContentType,
+  content: MessageContent,
+  parentToolUseId: Schema.NullOr(Schema.String),
+  uuid: Schema.NullOr(Schema.String),
+  /** ISO 8601 timestamp */
+  createdAt: Schema.String
+}) {}
+
+export class CreateChatMessageInput extends Schema.Class<CreateChatMessageInput>(
+  "CreateChatMessageInput"
+)({
+  sessionId: Schema.String,
+  role: MessageRole,
+  contentType: MessageContentType,
+  content: MessageContent,
+  parentToolUseId: Schema.optional(Schema.NullOr(Schema.String)),
+  uuid: Schema.optional(Schema.NullOr(Schema.String))
 }) {}
