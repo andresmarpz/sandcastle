@@ -1,18 +1,18 @@
 .pixel-spinner {
-  --pixel-size: 3.5px;
-  --active-color: var(--color-primary);
-  --inactive-color: var(--color-foreground);
-  aspect-ratio: 1/1;
-  width: calc(var(--pixel-size) * 3 + 2px);
+	--pixel-size: 3.5px;
+	--active-color: var(--color-primary);
+	--inactive-color: var(--color-foreground);
+	aspect-ratio: 1 / 1;
+	width: calc(var(--pixel-size) * 3 + 2px);
 }
 
 .pixel-spinner .pixel,
 .pixel-spinner .pixel-center {
-  width: var(--pixel-size);
-  height: var(--pixel-size);
-  border-radius: 0.5px;
+	width: var(--pixel-size);
+	height: var(--pixel-size);
+	border-radius: 0.5px;
 }
 
 .pixel-spinner .pixel-center {
-  background-color: transparent;
+	background-color: transparent;
 }

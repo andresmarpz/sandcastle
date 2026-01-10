@@ -1,10 +1,10 @@
 import { Atom } from "@effect-atom/atom-react";
 import type {
-  CreateRepositoryInput,
-  Repository,
-  UpdateRepositoryInput,
+	CreateRepositoryInput,
+	Repository,
+	UpdateRepositoryInput,
 } from "@sandcastle/rpc";
-import { RepositoryClient, REPOSITORY_LIST_KEY } from "./repository-client";
+import { REPOSITORY_LIST_KEY, RepositoryClient } from "./repository-client";
 
 // Re-export types for consumers
 export type { CreateRepositoryInput, Repository, UpdateRepositoryInput };
@@ -16,12 +16,12 @@ export { RepositoryClient, REPOSITORY_LIST_KEY };
 // These are created once and reused, ensuring reactivity works properly
 
 const _repositoryListAtom = RepositoryClient.query(
-  "repository.list",
-  {},
-  {
-    reactivityKeys: [REPOSITORY_LIST_KEY],
-    timeToLive: 300000,
-  },
+	"repository.list",
+	{},
+	{
+		reactivityKeys: [REPOSITORY_LIST_KEY],
+		timeToLive: 300000,
+	},
 );
 
 /**
@@ -34,28 +34,28 @@ export const repositoryListAtom = _repositoryListAtom;
  * Family of atoms for single repository by ID.
  */
 export const repositoryAtomFamily = Atom.family((id: string) =>
-  RepositoryClient.query(
-    "repository.get",
-    { id },
-    {
-      reactivityKeys: [`repository:${id}`],
-      timeToLive: 300000,
-    },
-  )
+	RepositoryClient.query(
+		"repository.get",
+		{ id },
+		{
+			reactivityKeys: [`repository:${id}`],
+			timeToLive: 300000,
+		},
+	),
 );
 
 /**
  * Family of atoms for repository by path.
  */
 export const repositoryByPathAtomFamily = Atom.family((directoryPath: string) =>
-  RepositoryClient.query(
-    "repository.getByPath",
-    { directoryPath },
-    {
-      reactivityKeys: [`repository:path:${directoryPath}`],
-      timeToLive: 300000,
-    },
-  )
+	RepositoryClient.query(
+		"repository.getByPath",
+		{ directoryPath },
+		{
+			reactivityKeys: [`repository:path:${directoryPath}`],
+			timeToLive: 300000,
+		},
+	),
 );
 
 /**
@@ -73,25 +73,25 @@ export const repositoryQuery = (id: string) => repositoryAtomFamily(id);
  * Returns the atom for fetching a repository by its directory path.
  */
 export const repositoryQueryByPath = (directoryPath: string) =>
-  repositoryByPathAtomFamily(directoryPath);
+	repositoryByPathAtomFamily(directoryPath);
 
 /**
  * Mutation atom for creating a new repository.
  * Call with payload and reactivityKeys to invalidate the list after creation.
  */
 export const createRepositoryMutation =
-  RepositoryClient.mutation("repository.create");
+	RepositoryClient.mutation("repository.create");
 
 /**
  * Mutation atom for updating a repository.
  * Call with payload and reactivityKeys to invalidate the list after update.
  */
 export const updateRepositoryMutation =
-  RepositoryClient.mutation("repository.update");
+	RepositoryClient.mutation("repository.update");
 
 /**
  * Mutation atom for deleting a repository.
  * Call with payload and reactivityKeys to invalidate the list after deletion.
  */
 export const deleteRepositoryMutation =
-  RepositoryClient.mutation("repository.delete");
+	RepositoryClient.mutation("repository.delete");

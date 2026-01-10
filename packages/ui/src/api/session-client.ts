@@ -1,8 +1,8 @@
-import { AtomRpc } from "@effect-atom/atom-react";
 import { FetchHttpClient } from "@effect/platform";
 import { RpcClient, RpcSerialization } from "@effect/rpc";
-import { Layer } from "effect";
+import { AtomRpc } from "@effect-atom/atom-react";
 import { SessionRpc } from "@sandcastle/rpc";
+import { Layer } from "effect";
 import { RPC_URL } from "./config";
 
 /**
@@ -13,14 +13,14 @@ import { RPC_URL } from "./config";
  * This client is ready for when the server-side implementation is complete.
  */
 export class SessionClient extends AtomRpc.Tag<SessionClient>()(
-  "SessionClient",
-  {
-    group: SessionRpc,
-    protocol: RpcClient.layerProtocolHttp({ url: RPC_URL }).pipe(
-      Layer.provide(RpcSerialization.layerNdjson),
-      Layer.provide(FetchHttpClient.layer),
-    ),
-  },
+	"SessionClient",
+	{
+		group: SessionRpc,
+		protocol: RpcClient.layerProtocolHttp({ url: RPC_URL }).pipe(
+			Layer.provide(RpcSerialization.layerNdjson),
+			Layer.provide(FetchHttpClient.layer),
+		),
+	},
 ) {}
 
 /** Reactivity key for the session list - used for cache invalidation */

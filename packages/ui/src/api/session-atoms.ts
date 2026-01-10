@@ -1,10 +1,10 @@
 import { Atom } from "@effect-atom/atom-react";
 import type {
-  CreateSessionInput,
-  Session,
-  UpdateSessionInput,
+	CreateSessionInput,
+	Session,
+	UpdateSessionInput,
 } from "@sandcastle/rpc";
-import { SessionClient, SESSION_LIST_KEY } from "./session-client";
+import { SESSION_LIST_KEY, SessionClient } from "./session-client";
 
 // Re-export types for consumers
 export type { CreateSessionInput, Session, UpdateSessionInput };
@@ -19,11 +19,11 @@ export { SessionClient, SESSION_LIST_KEY };
  * Stable atom for the full session list.
  */
 const _sessionListAtom = SessionClient.query(
-  "session.list",
-  {},
-  {
-    reactivityKeys: [SESSION_LIST_KEY],
-  }
+	"session.list",
+	{},
+	{
+		reactivityKeys: [SESSION_LIST_KEY],
+	},
 );
 
 export const sessionListAtom = _sessionListAtom;
@@ -32,28 +32,28 @@ export const sessionListAtom = _sessionListAtom;
  * Family of atoms for sessions by worktree.
  */
 export const sessionListByWorktreeAtomFamily = Atom.family(
-  (worktreeId: string) =>
-    SessionClient.query(
-      "session.listByWorktree",
-      { worktreeId },
-      {
-        reactivityKeys: [SESSION_LIST_KEY, `sessions:worktree:${worktreeId}`],
-      }
-    )
+	(worktreeId: string) =>
+		SessionClient.query(
+			"session.listByWorktree",
+			{ worktreeId },
+			{
+				reactivityKeys: [SESSION_LIST_KEY, `sessions:worktree:${worktreeId}`],
+			},
+		),
 );
 
 /**
  * Family of atoms for single session by ID.
  */
 export const sessionAtomFamily = Atom.family((id: string) =>
-  SessionClient.query(
-    "session.get",
-    { id },
-    {
-      reactivityKeys: [`session:${id}`],
-      timeToLive: 3 * 60 * 1000,
-    }
-  )
+	SessionClient.query(
+		"session.get",
+		{ id },
+		{
+			reactivityKeys: [`session:${id}`],
+			timeToLive: 3 * 60 * 1000,
+		},
+	),
 );
 
 /**
@@ -66,7 +66,7 @@ export const sessionListQuery = () => sessionListAtom;
  * Returns the session list atom for a specific worktree.
  */
 export const sessionListByWorktreeQuery = (worktreeId: string) =>
-  sessionListByWorktreeAtomFamily(worktreeId);
+	sessionListByWorktreeAtomFamily(worktreeId);
 
 /**
  * Returns the atom for fetching a single session by ID.

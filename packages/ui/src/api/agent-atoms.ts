@@ -1,9 +1,9 @@
 import type {
-  Agent,
-  CreateAgentInput,
-  UpdateAgentInput,
+	Agent,
+	CreateAgentInput,
+	UpdateAgentInput,
 } from "@sandcastle/rpc";
-import { AgentClient, AGENT_LIST_KEY } from "./agent-client";
+import { AGENT_LIST_KEY, AgentClient } from "./agent-client";
 
 // Re-export types for consumers
 export type { Agent, CreateAgentInput, UpdateAgentInput };
@@ -18,37 +18,37 @@ export { AgentClient, AGENT_LIST_KEY };
  * Note: Server handlers for agents are not yet implemented.
  */
 export const agentListQuery = () =>
-  AgentClient.query(
-    "agent.list",
-    {},
-    {
-      reactivityKeys: [AGENT_LIST_KEY],
-    },
-  );
+	AgentClient.query(
+		"agent.list",
+		{},
+		{
+			reactivityKeys: [AGENT_LIST_KEY],
+		},
+	);
 
 /**
  * Creates a query atom for fetching agents belonging to a specific session.
  */
 export const agentListBySessionQuery = (sessionId: string) =>
-  AgentClient.query(
-    "agent.listBySession",
-    { sessionId },
-    {
-      reactivityKeys: [AGENT_LIST_KEY, `agents:session:${sessionId}`],
-    },
-  );
+	AgentClient.query(
+		"agent.listBySession",
+		{ sessionId },
+		{
+			reactivityKeys: [AGENT_LIST_KEY, `agents:session:${sessionId}`],
+		},
+	);
 
 /**
  * Creates a query atom for fetching a single agent by ID.
  */
 export const agentQuery = (id: string) =>
-  AgentClient.query(
-    "agent.get",
-    { id },
-    {
-      reactivityKeys: [`agent:${id}`],
-    },
-  );
+	AgentClient.query(
+		"agent.get",
+		{ id },
+		{
+			reactivityKeys: [`agent:${id}`],
+		},
+	);
 
 /**
  * Mutation atom for creating a new agent.
