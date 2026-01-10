@@ -8,7 +8,14 @@ import {
 	XIcon,
 } from "lucide-react";
 import type { ComponentProps, HTMLAttributes, ReactElement } from "react";
-import { createContext, memo, useContext, useEffect, useState } from "react";
+import {
+	createContext,
+	memo,
+	useContext,
+	useEffect,
+	useMemo,
+	useState,
+} from "react";
 import { Streamdown } from "streamdown";
 import { Button } from "@/components/button";
 import { ButtonGroup, ButtonGroupText } from "@/components/button-group";
@@ -81,8 +88,7 @@ export const MessageAction = ({
 	...props
 }: MessageActionProps) => {
 	const button = (
-		// @ts-ignore
-		<Button size={size} type="button" variant={variant} {...props}>
+		<Button size={size} variant={variant} {...props}>
 			{children}
 			<span className="sr-only">{label || tooltip}</span>
 		</Button>
@@ -186,7 +192,10 @@ export const MessageBranchContent = ({
 	...props
 }: MessageBranchContentProps) => {
 	const { currentBranch, setBranches, branches } = useMessageBranch();
-	const childrenArray = Array.isArray(children) ? children : [children];
+	const childrenArray = useMemo(
+		() => (Array.isArray(children) ? children : [children]),
+		[children],
+	);
 
 	// Use useEffect to update branches when they change
 	useEffect(() => {
@@ -214,8 +223,8 @@ export type MessageBranchSelectorProps = HTMLAttributes<HTMLDivElement> & {
 };
 
 export const MessageBranchSelector = ({
-	className,
-	from,
+	className: _className,
+	from: _from,
 	...props
 }: MessageBranchSelectorProps) => {
 	const { totalBranches } = useMessageBranch();
@@ -248,8 +257,6 @@ export const MessageBranchPrevious = ({
 			disabled={totalBranches <= 1}
 			onClick={goToPrevious}
 			size="icon-sm"
-			// @ts-ignore
-			type="button"
 			variant="ghost"
 			{...props}
 		>
@@ -262,7 +269,7 @@ export type MessageBranchNextProps = ComponentProps<typeof Button>;
 
 export const MessageBranchNext = ({
 	children,
-	className,
+	className: _className,
 	...props
 }: MessageBranchNextProps) => {
 	const { goToNext, totalBranches } = useMessageBranch();
@@ -273,8 +280,6 @@ export const MessageBranchNext = ({
 			disabled={totalBranches <= 1}
 			onClick={goToNext}
 			size="icon-sm"
-			// @ts-ignore
-			type="button"
 			variant="ghost"
 			{...props}
 		>
@@ -379,7 +384,7 @@ export function MessageAttachment({
 							render={
 								<div className="flex size-full shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground" />
 							}
-							// @ts-ignore
+							// @ts-expect-error - type prop conflicts with Button's type
 							nativeButton={false}
 						>
 							<PaperclipIcon className="size-4" />

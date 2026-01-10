@@ -475,7 +475,7 @@ export const PromptInput = ({
 
 	// ----- Local attachments (only used when no provider)
 	const [items, setItems] = useState<(FileUIPart & { id: string })[]>([]);
-	const files = usingProvider ? controller.attachments.files : items;
+	const files = controller ? controller.attachments.files : items;
 
 	// Keep a ref to files for cleanup on unmount (avoids stale closure)
 	const filesRef = useRef(files);
@@ -583,18 +583,18 @@ export const PromptInput = ({
 		[],
 	);
 
-	const add = usingProvider ? controller.attachments.add : addLocal;
-	const remove = usingProvider ? controller.attachments.remove : removeLocal;
-	const clear = usingProvider ? controller.attachments.clear : clearLocal;
-	const openFileDialog = usingProvider
+	const add = controller ? controller.attachments.add : addLocal;
+	const remove = controller ? controller.attachments.remove : removeLocal;
+	const clear = controller ? controller.attachments.clear : clearLocal;
+	const openFileDialog = controller
 		? controller.attachments.openFileDialog
 		: openFileDialogLocal;
 
 	// Let provider know about our hidden file input so external menus can call openFileDialog()
 	useEffect(() => {
-		if (!usingProvider) return;
+		if (!controller) return;
 		controller.__registerFileInput(inputRef, () => inputRef.current?.click());
-	}, [usingProvider, controller]);
+	}, [controller]);
 
 	// Note: File input cannot be programmatically set for security reasons
 	// The syncHiddenInput prop is no longer functional
@@ -708,7 +708,7 @@ export const PromptInput = ({
 		event.preventDefault();
 
 		const form = event.currentTarget;
-		const text = usingProvider
+		const text = controller
 			? controller.textInput.value
 			: (() => {
 					const formData = new FormData(form);
@@ -717,13 +717,13 @@ export const PromptInput = ({
 
 		// Reset form immediately after capturing text to avoid race condition
 		// where user input during async blob conversion would be lost
-		if (!usingProvider) {
+		if (!controller) {
 			form.reset();
 		}
 
 		// Convert blob URLs to data URLs asynchronously
 		Promise.all(
-			files.map(async ({ id, ...item }) => {
+			files.map(async ({ id: _id, ...item }) => {
 				if (item.url && item.url.startsWith("blob:")) {
 					const dataUrl = await convertBlobUrlToDataUrl(item.url);
 					// If conversion failed, keep the original blob URL
@@ -744,9 +744,7 @@ export const PromptInput = ({
 						result
 							.then(() => {
 								clear();
-								if (usingProvider) {
-									controller.textInput.clear();
-								}
+								controller?.textInput.clear();
 							})
 							.catch(() => {
 								// Don't clear on error - user may want to retry
@@ -754,9 +752,7 @@ export const PromptInput = ({
 					} else {
 						// Sync function completed without throwing, clear attachments
 						clear();
-						if (usingProvider) {
-							controller.textInput.clear();
-						}
+						controller?.textInput.clear();
 					}
 				} catch {
 					// Don't clear on error - user may want to retry
@@ -852,7 +848,6 @@ export const PromptInputTextarea = ({
 			attachments.files.length > 0
 		) {
 			e.preventDefault();
-			// @ts-ignore
 			const lastAttachment = attachments.files.at(-1);
 			if (lastAttachment) {
 				attachments.remove(lastAttachment.id);
@@ -1059,13 +1054,13 @@ interface SpeechRecognition extends EventTarget {
 	lang: string;
 	start(): void;
 	stop(): void;
-	onstart: ((this: SpeechRecognition, ev: Event) => any) | null;
-	onend: ((this: SpeechRecognition, ev: Event) => any) | null;
+	onstart: ((this: SpeechRecognition, ev: Event) => void) | null;
+	onend: ((this: SpeechRecognition, ev: Event) => void) | null;
 	onresult:
-		| ((this: SpeechRecognition, ev: SpeechRecognitionEvent) => any)
+		| ((this: SpeechRecognition, ev: SpeechRecognitionEvent) => void)
 		| null;
 	onerror:
-		| ((this: SpeechRecognition, ev: SpeechRecognitionErrorEvent) => any)
+		| ((this: SpeechRecognition, ev: SpeechRecognitionErrorEvent) => void)
 		| null;
 }
 

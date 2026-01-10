@@ -288,8 +288,6 @@ export function startChatStream(
 	onError?: (error: unknown) => void,
 	onComplete?: () => void,
 ): { abort: () => void } {
-	console.log("[startChatStream] Called with params:", params);
-
 	const makeRpcClientLayer = () =>
 		RpcClient.layerProtocolHttp({ url: RPC_URL }).pipe(
 			Layer.provide(RpcSerialization.layerNdjson),
@@ -297,18 +295,11 @@ export function startChatStream(
 		);
 
 	const program = Effect.gen(function* () {
-		console.log("[startChatStream] Creating RPC client...");
 		const client = yield* RpcClient.make(ChatRpc);
-		console.log("[startChatStream] RPC client created:", client);
 
 		// Get the stream from the RPC - use type assertion due to complex RPC types
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const clientAny = client as any;
-		console.log("[startChatStream] Client methods:", Object.keys(clientAny));
-		console.log(
-			"[startChatStream] Chat methods:",
-			Object.keys(clientAny.chat || {}),
-		);
 
 		const stream = clientAny.chat.stream({
 			sessionId: params.sessionId,
@@ -316,17 +307,13 @@ export function startChatStream(
 			prompt: params.prompt,
 			claudeSessionId: params.claudeSessionId ?? undefined,
 		}) as Stream.Stream<ChatStreamEvent, unknown>;
-		console.log("[startChatStream] Stream created:", stream);
 
 		// Run the stream, processing each event
-		console.log("[startChatStream] Running stream...");
 		yield* Stream.runForEach(stream, (event: ChatStreamEvent) =>
 			Effect.sync(() => {
-				console.log("[startChatStream] Event received:", event);
 				onEvent(event);
 			}),
 		);
-		console.log("[startChatStream] Stream finished");
 	}).pipe(
 		Effect.scoped,
 		Effect.provide(makeRpcClientLayer()),
@@ -338,22 +325,18 @@ export function startChatStream(
 		}),
 		Effect.ensuring(
 			Effect.sync(() => {
-				console.log("[startChatStream] Ensuring/cleanup called");
 				if (onComplete) onComplete();
 			}),
 		),
 		Effect.interruptible,
 	);
 
-	console.log("[startChatStream] Forking program...");
 	// Run the program - use type assertion to bypass strict type checking
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const fiber = Effect.runFork(program as any);
-	console.log("[startChatStream] Program forked, fiber:", fiber);
 
 	return {
 		abort: () => {
-			console.log("[startChatStream] Aborting...");
 			// Interrupt the fiber to cancel the streaming
 			Effect.runFork(fiber.interruptAsFork(fiber.id()));
 		},

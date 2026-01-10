@@ -53,8 +53,6 @@ export const ArtifactClose = ({
 			className,
 		)}
 		size={size}
-		// @ts-ignore
-		type="button"
 		variant={variant}
 		{...props}
 	>
@@ -113,7 +111,7 @@ export const ArtifactAction = ({
 				className,
 			)}
 			size={size}
-			// @ts-ignore
+			// @ts-expect-error - type prop conflicts with Button's type
 			type="button"
 			variant={variant}
 			{...props}
