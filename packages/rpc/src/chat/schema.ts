@@ -120,6 +120,8 @@ export class ChatStreamInput extends Schema.Class<ChatStreamInput>(
 	prompt: Schema.String,
 	/** Optional: Claude session ID for resume */
 	claudeSessionId: Schema.optional(Schema.NullOr(Schema.String)),
+	/** Optional: Enable autonomous mode with extended system prompt */
+	autonomous: Schema.optional(Schema.Boolean),
 }) {}
 
 /**

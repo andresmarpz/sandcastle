@@ -266,6 +266,7 @@ export interface StartChatStreamParams {
 	worktreeId: string;
 	prompt: string;
 	claudeSessionId?: string | null;
+	autonomous?: boolean;
 }
 
 /**
@@ -306,6 +307,7 @@ export function startChatStream(
 			worktreeId: params.worktreeId,
 			prompt: params.prompt,
 			claudeSessionId: params.claudeSessionId ?? undefined,
+			autonomous: params.autonomous,
 		}) as Stream.Stream<ChatStreamEvent, unknown>;
 
 		// Run the stream, processing each event

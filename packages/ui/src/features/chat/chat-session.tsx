@@ -74,7 +74,7 @@ export function ChatSession({ sessionId, worktreeId }: ChatSessionProps) {
 	}, [sessionId, setActiveSessions]);
 
 	const handleSend = useCallback(
-		(prompt: string) => {
+		(prompt: string, autonomous: boolean) => {
 			if (!session) return;
 
 			// Create and add user message immediately for instant feedback
@@ -98,6 +98,7 @@ export function ChatSession({ sessionId, worktreeId }: ChatSessionProps) {
 				prompt,
 				claudeSessionId:
 					sessionState?.claudeSessionId ?? session.claudeSessionId,
+				autonomous,
 			};
 
 			const subscription = startChatStream(
