@@ -43,12 +43,20 @@ interface ActiveSession {
 
 // ─── Service Interface ───────────────────────────────────────
 
+// ─── Autonomous Mode System Prompt ────────────────────────────
+
+const AUTONOMOUS_SYSTEM_PROMPT = `You are in autonomous mode working on a new worktree of this project. First of all read @project.md to understand the project. The user requested a task that you must try to complete to the best of your ability. Use your best judgment at all times. Ensure high quality, pragmatic and clean delivery. You will continue working indefinitely until you have exhausted all your attempts at solving the problem, or successfully completed it. If you completed, run 'bun check' in the root of the repository which runs tooling like linting, formatting.
+
+After you are done working, commit your changes and push to git. Create a PR using 'gh' cli.
+Do not ask questions to the user or self-doubt. Choose the best options to comply with the task.`;
+
 export interface ClaudeAgentServiceInterface {
 	readonly startChat: (params: {
 		sessionId: string;
 		worktreePath: string;
 		prompt: string;
 		claudeSessionId?: string | null;
+		autonomous?: boolean;
 		onMessage?: (
 			input: CreateChatMessageInput,
 		) => Effect.Effect<ChatMessage, unknown>;
@@ -150,7 +158,13 @@ export const makeClaudeAgentService = Effect.gen(function* () {
 									prompt: params.prompt,
 									options: {
 										cwd: params.worktreePath,
-										systemPrompt: { type: "preset", preset: "claude_code" },
+										systemPrompt: params.autonomous
+											? {
+													type: "preset",
+													preset: "claude_code",
+													append: AUTONOMOUS_SYSTEM_PROMPT,
+												}
+											: { type: "preset", preset: "claude_code" },
 										permissionMode: "bypassPermissions",
 										abortController,
 										allowDangerouslySkipPermissions: true,

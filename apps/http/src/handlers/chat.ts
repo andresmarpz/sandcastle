@@ -83,6 +83,7 @@ export const ChatRpcHandlers = ChatRpc.toLayer(
 							worktreePath: worktree.path,
 							prompt: params.prompt,
 							claudeSessionId: params.claudeSessionId ?? undefined,
+							autonomous: params.autonomous,
 							// Callback to persist messages
 							onMessage: (input) => storage.chatMessages.create(input),
 						});
