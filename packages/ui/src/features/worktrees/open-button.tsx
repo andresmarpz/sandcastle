@@ -13,9 +13,10 @@ import { FinderIcon, CursorIcon, CopyIcon, ChevronDownIcon } from "./icons";
 
 interface OpenButtonProps {
   worktree: Worktree;
+  size?: "default" | "sm" | "lg" | "icon" | "icon-xs";
 }
 
-export function OpenButton({ worktree }: OpenButtonProps) {
+export function OpenButton({ worktree, size = "sm" }: OpenButtonProps) {
   const { openInFileManager, openInEditor, copyToClipboard } = usePlatform();
 
   // If no platform actions are available, don't render the button
@@ -37,7 +38,7 @@ export function OpenButton({ worktree }: OpenButtonProps) {
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button variant="outline" size="sm" className="gap-1">
+          <Button variant="outline" size={size} className="gap-1">
             Open
             <ChevronDownIcon className="size-3" />
           </Button>

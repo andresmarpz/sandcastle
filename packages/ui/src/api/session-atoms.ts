@@ -23,7 +23,7 @@ const _sessionListAtom = SessionClient.query(
   {},
   {
     reactivityKeys: [SESSION_LIST_KEY],
-  },
+  }
 );
 
 export const sessionListAtom = _sessionListAtom;
@@ -31,14 +31,15 @@ export const sessionListAtom = _sessionListAtom;
 /**
  * Family of atoms for sessions by worktree.
  */
-export const sessionListByWorktreeAtomFamily = Atom.family((worktreeId: string) =>
-  SessionClient.query(
-    "session.listByWorktree",
-    { worktreeId },
-    {
-      reactivityKeys: [SESSION_LIST_KEY, `sessions:worktree:${worktreeId}`],
-    },
-  )
+export const sessionListByWorktreeAtomFamily = Atom.family(
+  (worktreeId: string) =>
+    SessionClient.query(
+      "session.listByWorktree",
+      { worktreeId },
+      {
+        reactivityKeys: [SESSION_LIST_KEY, `sessions:worktree:${worktreeId}`],
+      }
+    )
 );
 
 /**
@@ -50,7 +51,8 @@ export const sessionAtomFamily = Atom.family((id: string) =>
     { id },
     {
       reactivityKeys: [`session:${id}`],
-    },
+      timeToLive: 3 * 60 * 1000,
+    }
   )
 );
 
@@ -75,22 +77,19 @@ export const sessionQuery = (id: string) => sessionAtomFamily(id);
  * Mutation atom for creating a new session.
  * Call with payload and reactivityKeys to invalidate the list after creation.
  */
-export const createSessionMutation =
-  SessionClient.mutation("session.create");
+export const createSessionMutation = SessionClient.mutation("session.create");
 
 /**
  * Mutation atom for updating a session.
  * Call with payload and reactivityKeys to invalidate the list after update.
  */
-export const updateSessionMutation =
-  SessionClient.mutation("session.update");
+export const updateSessionMutation = SessionClient.mutation("session.update");
 
 /**
  * Mutation atom for deleting a session.
  * Call with payload and reactivityKeys to invalidate the list after deletion.
  */
-export const deleteSessionMutation =
-  SessionClient.mutation("session.delete");
+export const deleteSessionMutation = SessionClient.mutation("session.delete");
 
 /**
  * Mutation atom for touching a session (updating lastActivityAt timestamp).

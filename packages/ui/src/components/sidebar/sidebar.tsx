@@ -78,8 +78,11 @@ export function Sidebar({
         className={cn("flex flex-1 flex-col overflow-hidden", contentClassName)}
       >
         {/* Header with Add button */}
-        <div className="border-border flex shrink-0 items-center justify-between border-b p-3">
-          <span className="text-foreground text-sm font-medium">Projects</span>
+        <div
+          data-tauri-drag-region
+          className="border-border flex shrink-0 items-center justify-between border-b p-3"
+        >
+          <span />
           <DropdownMenu>
             <DropdownMenuTrigger
               render={<Button variant="ghost" size="icon-xs" />}
