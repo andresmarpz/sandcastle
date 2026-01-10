@@ -4,9 +4,9 @@ import { useState, useCallback } from "react";
 import { useAtom } from "@effect-atom/atom-react";
 
 import type { AskUserQuestionItem } from "@sandcastle/rpc";
-import { chatRespondMutation } from "@sandcastle/ui/api/chat-atoms";
-import { Button } from "@sandcastle/ui/components/button";
-import { cn } from "@sandcastle/ui/lib/utils";
+import { chatRespondMutation } from "../../api/chat-atoms";
+import { Button } from "../../components/button";
+import { cn } from "../../lib/utils";
 
 interface AskUserModalProps {
   sessionId: string;
