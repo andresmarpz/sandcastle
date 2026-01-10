@@ -17,4 +17,5 @@ import type { SandcastleConfig } from "./types.ts";
  * })
  * ```
  */
-export const defineConfig = (config: SandcastleConfig): SandcastleConfig => config;
+export const defineConfig = (config: SandcastleConfig): SandcastleConfig =>
+	config;

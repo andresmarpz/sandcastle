@@ -11,8 +11,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --fix",
     "lint:check": "eslint .",
-    "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format": "biome check --write --formatter-enabled=true --linter-enabled=false src",
+    "format:check": "biome check --formatter-enabled=true --linter-enabled=false src"
   },
   "dependencies": {
     "@base-ui/react": "^1.0.0",

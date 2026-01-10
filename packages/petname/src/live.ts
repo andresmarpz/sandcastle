@@ -12,16 +12,16 @@ const DEFAULT_SEPARATOR = "-";
  * Get a cryptographically random integer in range [0, max)
  */
 function randomInt(max: number): number {
-  const array = new Uint32Array(1);
-  crypto.getRandomValues(array);
-  return array[0]! % max;
+	const array = new Uint32Array(1);
+	crypto.getRandomValues(array);
+	return array[0]! % max;
 }
 
 /**
  * Pick a random element from an array
  */
 function randomElement<T>(arr: readonly T[]): T {
-  return arr[randomInt(arr.length)]!;
+	return arr[randomInt(arr.length)]!;
 }
 
 /**
@@ -33,38 +33,38 @@ function randomElement<T>(arr: readonly T[]): T {
  * - n words: (n-1) adjectives + noun
  */
 function generateWords(count: number): string[] {
-  if (count === 1) {
-    return [randomElement(nouns)];
-  }
+	if (count === 1) {
+		return [randomElement(nouns)];
+	}
 
-  const words: string[] = [];
-  for (let i = 0; i < count - 1; i++) {
-    words.push(randomElement(adjectives));
-  }
-  words.push(randomElement(nouns));
-  return words;
+	const words: string[] = [];
+	for (let i = 0; i < count - 1; i++) {
+		words.push(randomElement(adjectives));
+	}
+	words.push(randomElement(nouns));
+	return words;
 }
 
 const make = PetnameService.of({
-  generate: (options?: GenerateOptions) =>
-    Effect.gen(function* () {
-      const wordCount = options?.wordCount ?? DEFAULT_WORD_COUNT;
-      const separator = options?.separator ?? DEFAULT_SEPARATOR;
+	generate: (options?: GenerateOptions) =>
+		Effect.gen(function* () {
+			const wordCount = options?.wordCount ?? DEFAULT_WORD_COUNT;
+			const separator = options?.separator ?? DEFAULT_SEPARATOR;
 
-      if (wordCount < 1) {
-        return yield* Effect.fail(
-          new InvalidWordCountError({
-            wordCount,
-            message: `Word count must be at least 1, got ${wordCount}`
-          })
-        );
-      }
+			if (wordCount < 1) {
+				return yield* Effect.fail(
+					new InvalidWordCountError({
+						wordCount,
+						message: `Word count must be at least 1, got ${wordCount}`,
+					}),
+				);
+			}
 
-      const words = generateWords(wordCount);
-      const name = words.join(separator);
+			const words = generateWords(wordCount);
+			const name = words.join(separator);
 
-      return { name, words } satisfies Petname;
-    })
+			return { name, words } satisfies Petname;
+		}),
 });
 
 /**
@@ -89,17 +89,17 @@ export const PetnameServiceLive = Layer.succeed(PetnameService, make);
  * ```
  */
 export function generate(options?: GenerateOptions): Petname {
-  const wordCount = options?.wordCount ?? DEFAULT_WORD_COUNT;
-  const separator = options?.separator ?? DEFAULT_SEPARATOR;
+	const wordCount = options?.wordCount ?? DEFAULT_WORD_COUNT;
+	const separator = options?.separator ?? DEFAULT_SEPARATOR;
 
-  if (wordCount < 1) {
-    throw new Error(`Word count must be at least 1, got ${wordCount}`);
-  }
+	if (wordCount < 1) {
+		throw new Error(`Word count must be at least 1, got ${wordCount}`);
+	}
 
-  const words = generateWords(wordCount);
-  const name = words.join(separator);
+	const words = generateWords(wordCount);
+	const name = words.join(separator);
 
-  return { name, words };
+	return { name, words };
 }
 
 /**
@@ -117,5 +117,5 @@ export function generate(options?: GenerateOptions): Petname {
  * ```
  */
 export function petname(options?: GenerateOptions): string {
-  return generate(options).name;
+	return generate(options).name;
 }
