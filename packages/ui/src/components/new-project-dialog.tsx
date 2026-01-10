@@ -2,9 +2,9 @@
 
 import * as React from "react";
 import { IconFolderOpen } from "@tabler/icons-react";
-import { useAtom } from "@effect-atom/atom-react";
+import { useAtom, useAtomRefresh } from "@effect-atom/atom-react";
 
-import { createRepositoryMutation, REPOSITORY_LIST_KEY } from "@/api/repository-atoms";
+import { createRepositoryMutation, repositoryListAtom, REPOSITORY_LIST_KEY } from "@/api/repository-atoms";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,6 +41,7 @@ export function NewProjectDialog({ open, onOpenChange }: NewProjectDialogProps) 
   const [, createRepository] = useAtom(createRepositoryMutation, {
     mode: "promiseExit",
   });
+  const refreshRepositories = useAtomRefresh(repositoryListAtom);
   const [directoryPath, setDirectoryPath] = React.useState("");
   const [label, setLabel] = React.useState("");
   const [defaultBranch, setDefaultBranch] = React.useState("");
@@ -121,6 +122,8 @@ export function NewProjectDialog({ open, onOpenChange }: NewProjectDialogProps) 
         return;
       }
 
+      // Refresh the repository list after successful creation
+      refreshRepositories();
       onOpenChange(false);
     } catch (submitError) {
       console.error(submitError);

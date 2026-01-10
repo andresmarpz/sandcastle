@@ -11,7 +11,8 @@
     "./repositories": "./src/repositories/index.ts",
     "./worktrees": "./src/worktrees/index.ts",
     "./sessions": "./src/sessions/index.ts",
-    "./agents": "./src/agents/index.ts"
+    "./agents": "./src/agents/index.ts",
+    "./chat": "./src/chat/index.ts"
   },
   "scripts": {
     "test": "bun test",

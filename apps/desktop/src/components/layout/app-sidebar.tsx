@@ -1,24 +1,29 @@
 "use client";
 
 import * as React from "react";
-import { Result, useAtomValue, useAtom } from "@effect-atom/atom-react";
+import {
+  Result,
+  useAtomValue,
+  useAtom,
+  useAtomRefresh,
+} from "@effect-atom/atom-react";
 import * as Option from "effect/Option";
 import { Sidebar } from "@sandcastle/ui/components/sidebar";
 import { NewProjectDialog } from "@sandcastle/ui/components/new-project-dialog";
 import {
-  repositoryListQuery,
+  repositoryListAtom,
   updateRepositoryMutation,
   deleteRepositoryMutation,
   REPOSITORY_LIST_KEY,
 } from "@sandcastle/ui/api/repository-atoms";
 import {
-  createWorktreeMutation,
+  createWorktreeOptimisticMutation,
+  optimisticWorktreeListAtom,
   deleteWorktreeMutation,
   syncWorktreesMutation,
-  worktreeListQuery,
-  WORKTREE_LIST_KEY,
 } from "@sandcastle/ui/api/worktree-atoms";
 import type { Repository, Worktree } from "@sandcastle/rpc";
+import { WORKTREE_LIST_KEY } from "@/api/worktree-client";
 
 interface AppSidebarProps {
   selectedWorktree: Worktree | null;
@@ -38,15 +43,23 @@ export function AppSidebar({
   const [deletingWorktreeId, setDeletingWorktreeId] = React.useState<
     string | null
   >(null);
-  const repositoriesResult = useAtomValue(repositoryListQuery());
-  const worktreesResult = useAtomValue(worktreeListQuery());
+
+  // Use stable atoms directly for proper caching
+  const repositoriesResult = useAtomValue(repositoryListAtom);
+  // Use optimistic atom for automatic optimistic updates with rollback
+  const worktreesResult = useAtomValue(optimisticWorktreeListAtom);
+
+  // Refresh hooks for manual cache invalidation after mutations
+  const refreshRepositories = useAtomRefresh(repositoryListAtom);
+  const refreshWorktrees = useAtomRefresh(optimisticWorktreeListAtom);
+
   const [, updateRepository] = useAtom(updateRepositoryMutation, {
     mode: "promiseExit",
   });
   const [, deleteRepository] = useAtom(deleteRepositoryMutation, {
     mode: "promiseExit",
   });
-  const [, createWorktree] = useAtom(createWorktreeMutation, {
+  const [, createWorktree] = useAtom(createWorktreeOptimisticMutation, {
     mode: "promiseExit",
   });
   const [, deleteWorktree] = useAtom(deleteWorktreeMutation, {
@@ -64,6 +77,7 @@ export function AppSidebar({
           payload: {},
           reactivityKeys: [WORKTREE_LIST_KEY],
         });
+        refreshWorktrees();
         // If the selected worktree was removed, deselect it
         if (
           selectedWorktree &&
@@ -83,12 +97,13 @@ export function AppSidebar({
 
   const repositories = React.useMemo(
     () => Option.getOrElse(Result.value(repositoriesResult), () => []),
-    [repositoriesResult],
+    [repositoriesResult]
   );
 
+  // Worktrees from the optimistic atom (includes optimistic updates automatically)
   const worktrees = React.useMemo(
     () => Option.getOrElse(Result.value(worktreesResult), () => []),
-    [worktreesResult],
+    [worktreesResult]
   );
 
   // Group worktrees by repository ID
@@ -119,6 +134,7 @@ export function AppSidebar({
       payload: { id, input: { pinned } },
       reactivityKeys: [REPOSITORY_LIST_KEY, `repository:${id}`],
     });
+    refreshRepositories();
   };
 
   const handleRepositoryDelete = async (id: string) => {
@@ -126,6 +142,8 @@ export function AppSidebar({
       payload: { id },
       reactivityKeys: [REPOSITORY_LIST_KEY, `repository:${id}`],
     });
+    refreshRepositories();
+    refreshWorktrees(); // Worktrees may be cascade-deleted
   };
 
   const handleWorktreeSelect = (worktree: Worktree) => {
@@ -142,6 +160,7 @@ export function AppSidebar({
           `worktrees:repo:${worktree.repositoryId}`,
         ],
       });
+      refreshWorktrees();
       // Deselect if the deleted worktree was selected
       if (selectedWorktree?.id === worktree.id) {
         onWorktreeDeselect();
@@ -154,10 +173,18 @@ export function AppSidebar({
   const handleCreateWorktree = async (repository: Repository) => {
     setCreatingWorktreeId(repository.id);
     try {
-      await createWorktree({
+      // The optimistic mutation shows a temp worktree immediately
+      // and automatically rolls back on failure
+      const result = await createWorktree({
         payload: { repositoryId: repository.id },
         reactivityKeys: [WORKTREE_LIST_KEY, `worktrees:repo:${repository.id}`],
       });
+
+      // Select the new worktree after server confirms
+      if (result._tag === "Success") {
+        onWorktreeSelect(result.value.worktree);
+      }
+      // No need for manual refresh - reactivityKeys handles it
     } finally {
       setCreatingWorktreeId(null);
     }

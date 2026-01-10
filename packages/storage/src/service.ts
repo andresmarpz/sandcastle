@@ -2,7 +2,9 @@ import { Context, type Effect } from "effect";
 
 import type {
   Agent,
+  ChatMessage,
   CreateAgentInput,
+  CreateChatMessageInput,
   CreateRepositoryInput,
   CreateSessionInput,
   CreateWorktreeInput,
@@ -16,6 +18,7 @@ import type {
 } from "./entities";
 import type {
   AgentNotFoundError,
+  ChatMessageNotFoundError,
   DatabaseError,
   ForeignKeyViolationError,
   MigrationError,
@@ -132,6 +135,25 @@ export class StorageService extends Context.Tag("StorageService")<
       ) => Effect.Effect<Agent, AgentNotFoundError | DatabaseError>;
 
       delete: (id: string) => Effect.Effect<void, AgentNotFoundError | DatabaseError>;
+    };
+
+    // ─── Chat Message CRUD ────────────────────────────────────
+
+    chatMessages: {
+      listBySession: (sessionId: string) => Effect.Effect<ChatMessage[], DatabaseError>;
+
+      get: (id: string) => Effect.Effect<ChatMessage, ChatMessageNotFoundError | DatabaseError>;
+
+      create: (
+        input: CreateChatMessageInput
+      ) => Effect.Effect<ChatMessage, ForeignKeyViolationError | DatabaseError>;
+
+      delete: (id: string) => Effect.Effect<void, ChatMessageNotFoundError | DatabaseError>;
+
+      deleteBySession: (sessionId: string) => Effect.Effect<void, DatabaseError>;
+
+      /** Get the next sequence number for a session */
+      getNextSequenceNumber: (sessionId: string) => Effect.Effect<number, DatabaseError>;
     };
   }
 >() {}

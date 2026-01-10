@@ -1,3 +1,4 @@
+import { Atom } from "@effect-atom/atom-react";
 import type {
   CreateRepositoryInput,
   Repository,
@@ -11,24 +12,28 @@ export type { CreateRepositoryInput, Repository, UpdateRepositoryInput };
 // Re-export the client and key for direct use
 export { RepositoryClient, REPOSITORY_LIST_KEY };
 
-/**
- * Creates a query atom for fetching the list of repositories.
- * Uses reactivity keys for automatic cache invalidation.
- */
-export const repositoryListQuery = () =>
-  RepositoryClient.query(
-    "repository.list",
-    {},
-    {
-      reactivityKeys: [REPOSITORY_LIST_KEY],
-      timeToLive: 300000,
-    },
-  );
+// ─── Stable Query Atoms ─────────────────────────────────────────
+// These are created once and reused, ensuring reactivity works properly
+
+const _repositoryListAtom = RepositoryClient.query(
+  "repository.list",
+  {},
+  {
+    reactivityKeys: [REPOSITORY_LIST_KEY],
+    timeToLive: 300000,
+  },
+);
 
 /**
- * Creates a query atom for fetching a single repository by ID.
+ * Stable atom for the repository list.
+ * Use this for `useAtomRefresh` to manually refresh after mutations.
  */
-export const repositoryQuery = (id: string) =>
+export const repositoryListAtom = _repositoryListAtom;
+
+/**
+ * Family of atoms for single repository by ID.
+ */
+export const repositoryAtomFamily = Atom.family((id: string) =>
   RepositoryClient.query(
     "repository.get",
     { id },
@@ -36,12 +41,13 @@ export const repositoryQuery = (id: string) =>
       reactivityKeys: [`repository:${id}`],
       timeToLive: 300000,
     },
-  );
+  )
+);
 
 /**
- * Creates a query atom for fetching a repository by its directory path.
+ * Family of atoms for repository by path.
  */
-export const repositoryQueryByPath = (directoryPath: string) =>
+export const repositoryByPathAtomFamily = Atom.family((directoryPath: string) =>
   RepositoryClient.query(
     "repository.getByPath",
     { directoryPath },
@@ -49,7 +55,25 @@ export const repositoryQueryByPath = (directoryPath: string) =>
       reactivityKeys: [`repository:path:${directoryPath}`],
       timeToLive: 300000,
     },
-  );
+  )
+);
+
+/**
+ * Returns the stable repository list atom.
+ * @deprecated Use `repositoryListAtom` directly with `useAtomValue` and `useAtomRefresh`
+ */
+export const repositoryListQuery = () => repositoryListAtom;
+
+/**
+ * Returns the atom for fetching a single repository by ID.
+ */
+export const repositoryQuery = (id: string) => repositoryAtomFamily(id);
+
+/**
+ * Returns the atom for fetching a repository by its directory path.
+ */
+export const repositoryQueryByPath = (directoryPath: string) =>
+  repositoryByPathAtomFamily(directoryPath);
 
 /**
  * Mutation atom for creating a new repository.

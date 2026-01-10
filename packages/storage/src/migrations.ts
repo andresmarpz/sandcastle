@@ -65,6 +65,38 @@ const migrations: Migration[] = [
     version: 2,
     description: "Add pinned field to repositories",
     up: `ALTER TABLE repositories ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0;`
+  },
+  {
+    version: 3,
+    description: "Add chat messages table",
+    up: `
+      CREATE TABLE IF NOT EXISTS chat_messages (
+        id TEXT PRIMARY KEY,
+        session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+        sequence_number INTEGER NOT NULL,
+        role TEXT NOT NULL CHECK(role IN ('user', 'assistant', 'system')),
+        content_type TEXT NOT NULL CHECK(content_type IN (
+          'text', 'tool_use', 'tool_result', 'thinking', 'error', 'ask_user'
+        )),
+        content TEXT NOT NULL,
+        parent_tool_use_id TEXT,
+        uuid TEXT,
+        created_at TEXT NOT NULL,
+        UNIQUE(session_id, sequence_number)
+      );
+      CREATE INDEX IF NOT EXISTS idx_chat_messages_session ON chat_messages(session_id, sequence_number);
+    `
+  },
+  {
+    version: 4,
+    description: "Add Claude-specific session fields",
+    up: `
+      ALTER TABLE sessions ADD COLUMN claude_session_id TEXT;
+      ALTER TABLE sessions ADD COLUMN model TEXT DEFAULT 'claude-sonnet-4-5-20250929';
+      ALTER TABLE sessions ADD COLUMN total_cost_usd REAL DEFAULT 0;
+      ALTER TABLE sessions ADD COLUMN input_tokens INTEGER DEFAULT 0;
+      ALTER TABLE sessions ADD COLUMN output_tokens INTEGER DEFAULT 0;
+    `
   }
 ];
 

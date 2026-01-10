@@ -21,14 +21,12 @@ export function RootLayout() {
           onWorktreeSelect={setSelectedWorktree}
           onWorktreeDeselect={handleDeselectWorktree}
         />
-        <main className="flex-1 overflow-y-auto p-6 pt-13">
+        <main className="flex-1 overflow-hidden">
           {selectedWorktree ? (
             <WorktreePanel worktreeId={selectedWorktree.id} />
           ) : (
-            <div className="text-muted-foreground flex h-full items-center justify-center">
-              <p className="text-sm">
-                Select a project or worktree to get started
-              </p>
+            <div className="flex items-center justify-center h-full text-muted-foreground">
+              Select a worktree to start chatting
             </div>
           )}
         </main>
