@@ -20,8 +20,8 @@ import { sessionListAtom } from "@/api/session-atoms";
 import { worktreeAtomFamily, worktreeListAtom } from "@/api/worktree-atoms";
 import { Badge } from "@/components/badge";
 import { Button } from "@/components/button";
-import { Skeleton } from "@/components/skeleton";
 import { useSidebar } from "@/components/sidebar";
+import { Skeleton } from "@/components/skeleton";
 import { cn } from "@/lib/utils";
 
 function formatRelativeTime(iso: string) {
@@ -84,7 +84,7 @@ function SessionCard({
 			onClick={onClick}
 			className={cn(
 				"flex flex-col gap-2 p-3 rounded-lg border border-border bg-card text-left transition-all",
-				"hover:border-border/80 hover:bg-muted/30 group"
+				"hover:border-border/80 hover:bg-muted/30 group",
 			)}
 		>
 			<div className="flex items-center justify-between gap-2">
@@ -159,21 +159,21 @@ function WorktreeCard({
 			onClick={onClick}
 			className={cn(
 				"flex flex-col gap-1.5 p-3 rounded-lg border border-border bg-card text-left transition-all",
-				"hover:border-border/80 hover:bg-muted/30 group"
+				"hover:border-border/80 hover:bg-muted/30 group",
 			)}
 		>
 			<div className="flex items-center justify-between gap-2">
 				<div className="flex items-center gap-2 min-w-0">
 					<IconGitBranch className="size-4 text-muted-foreground shrink-0" />
-					<span className="font-medium text-sm truncate">{worktree.branch}</span>
+					<span className="font-medium text-sm truncate">
+						{worktree.branch}
+					</span>
 				</div>
 				<IconChevronRight className="size-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
 			</div>
 
 			<div className="flex items-center gap-2 text-xs text-muted-foreground">
-				{repositoryLabel && (
-					<span className="truncate">{repositoryLabel}</span>
-				)}
+				{repositoryLabel && <span className="truncate">{repositoryLabel}</span>}
 				{repositoryLabel && sessionCount > 0 && <span>·</span>}
 				{sessionCount > 0 && (
 					<span className="shrink-0">
@@ -201,7 +201,7 @@ function WorktreeWithRepository({
 }) {
 	const repositoryAtom = useMemo(
 		() => repositoryAtomFamily(worktree.repositoryId),
-		[worktree.repositoryId]
+		[worktree.repositoryId],
 	);
 	const repositoryResult = useAtomValue(repositoryAtom);
 
@@ -231,7 +231,7 @@ function SessionRepositoryLabel({
 }) {
 	const repositoryAtom = useMemo(
 		() => repositoryAtomFamily(repositoryId),
-		[repositoryId]
+		[repositoryId],
 	);
 	const repositoryResult = useAtomValue(repositoryAtom);
 
@@ -259,10 +259,12 @@ function SessionWithWorktreeCard({
 }) {
 	const worktreeAtom = useMemo(
 		() => worktreeAtomFamily(session.worktreeId),
-		[session.worktreeId]
+		[session.worktreeId],
 	);
 	const worktreeResult = useAtomValue(worktreeAtom);
-	const [repositoryLabel, setRepositoryLabel] = React.useState<string | undefined>();
+	const [repositoryLabel, setRepositoryLabel] = React.useState<
+		string | undefined
+	>();
 
 	const worktree = Result.matchWithWaiting(worktreeResult, {
 		onWaiting: (result) => Option.getOrNull(Result.value(result)),
@@ -271,9 +273,12 @@ function SessionWithWorktreeCard({
 		onSuccess: (success) => success.value,
 	});
 
-	const handleRepositoryLabel = React.useCallback((label: string | undefined) => {
-		setRepositoryLabel(label);
-	}, []);
+	const handleRepositoryLabel = React.useCallback(
+		(label: string | undefined) => {
+			setRepositoryLabel(label);
+		},
+		[],
+	);
 
 	return (
 		<>
@@ -354,7 +359,7 @@ export function WorktreesDashboard() {
 			.sort(
 				(a, b) =>
 					new Date(b.lastAccessedAt).getTime() -
-					new Date(a.lastAccessedAt).getTime()
+					new Date(a.lastAccessedAt).getTime(),
 			)
 			.slice(0, 6);
 	}, [worktrees]);
@@ -374,7 +379,7 @@ export function WorktreesDashboard() {
 			.sort(
 				(a, b) =>
 					new Date(b.lastActivityAt).getTime() -
-					new Date(a.lastActivityAt).getTime()
+					new Date(a.lastActivityAt).getTime(),
 			)
 			.slice(0, 5);
 	}, [sessions]);
@@ -384,7 +389,7 @@ export function WorktreesDashboard() {
 		const totalSessions = sessions.length;
 		const totalTokens = sessions.reduce(
 			(sum, s) => sum + s.inputTokens + s.outputTokens,
-			0
+			0,
 		);
 		const totalCost = sessions.reduce((sum, s) => sum + s.totalCostUsd, 0);
 
