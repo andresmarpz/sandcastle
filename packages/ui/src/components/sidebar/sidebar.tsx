@@ -100,7 +100,7 @@ export function Sidebar({
       </SidebarHeader>
 
       {/* Repository list */}
-      <SidebarContent>
+      <SidebarContent className="pt-2">
         {sortedRepos.length === 0 ? (
           <p className="text-muted-foreground px-2 py-4 text-center text-sm">
             No projects yet
