@@ -102,7 +102,7 @@ export function SidebarWorktreeItem({
 							<Button
 								variant="ghost"
 								size="icon-xs"
-								className="absolute right-1 top-1/2 shrink-0 -translate-y-1/2 opacity-0 group-hover:opacity-100"
+								className="absolute right-1 top-1/2 shrink-0 -translate-y-1/2 opacity-100"
 								onClick={(event) => event.stopPropagation()}
 								aria-label="Worktree actions"
 							>
