@@ -11,6 +11,7 @@ import type {
 import { ChatRpc } from "@sandcastle/rpc";
 
 import { ChatClient, CHAT_HISTORY_KEY } from "./chat-client";
+import { RPC_URL } from "./config";
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -273,8 +274,6 @@ export function startChatStream(
   onComplete?: () => void
 ): { abort: () => void } {
   console.log("[startChatStream] Called with params:", params);
-
-  const RPC_URL = "http://localhost:3000/api/rpc";
 
   const makeRpcClientLayer = () =>
     RpcClient.layerProtocolHttp({ url: RPC_URL }).pipe(
