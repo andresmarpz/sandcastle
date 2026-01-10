@@ -3,8 +3,7 @@ import { FetchHttpClient } from "@effect/platform";
 import { RpcClient, RpcSerialization } from "@effect/rpc";
 import { Layer } from "effect";
 import { WorktreeRpc } from "@sandcastle/rpc";
-
-const RPC_URL = "http://localhost:3000/api/rpc";
+import { RPC_URL } from "./config";
 
 /**
  * AtomRpc client for WorktreeRpc operations.
