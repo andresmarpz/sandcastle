@@ -1,7 +1,12 @@
 "use client";
 
 import type { Repository, Worktree } from "@sandcastle/rpc";
-import { IconBrandGit, IconFolderOpen, IconPlus } from "@tabler/icons-react";
+import {
+	IconBrandGit,
+	IconFolderOpen,
+	IconLayoutDashboard,
+	IconPlus,
+} from "@tabler/icons-react";
 import * as React from "react";
 
 import { Button } from "@/components/button";
@@ -15,6 +20,9 @@ import { Separator } from "@/components/separator";
 import {
 	SidebarContent,
 	SidebarHeader,
+	SidebarMenu,
+	SidebarMenuButton,
+	SidebarMenuItem,
 	Sidebar as SidebarPrimitive,
 	SidebarRail,
 } from "@/components/sidebar";
@@ -23,6 +31,7 @@ import { SidebarRepositoryItem } from "./sidebar-repository-item";
 interface SidebarProps {
 	repositories: Repository[];
 	worktreesByRepo: Map<string, Worktree[]>;
+	onWorkspacesClick: () => void;
 	onOpenProject: () => void;
 	onCloneFromGit: () => void;
 	onRepositoryPin: (id: string, pinned: boolean) => void;
@@ -37,6 +46,7 @@ interface SidebarProps {
 export function Sidebar({
 	repositories,
 	worktreesByRepo,
+	onWorkspacesClick,
 	onOpenProject,
 	onCloneFromGit,
 	onRepositoryPin,
@@ -101,6 +111,15 @@ export function Sidebar({
 
 			{/* Repository list */}
 			<SidebarContent className="pt-2">
+				<SidebarMenu className="px-2">
+					<SidebarMenuItem>
+						<SidebarMenuButton onClick={onWorkspacesClick}>
+							<IconLayoutDashboard className="size-4" />
+							<span>Workspaces</span>
+						</SidebarMenuButton>
+					</SidebarMenuItem>
+				</SidebarMenu>
+
 				{sortedRepos.length === 0 ? (
 					<p className="text-muted-foreground px-2 py-4 text-center text-sm">
 						No projects yet
