@@ -34,7 +34,34 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true
+      "recommended": true,
+      "style": {
+        "noNonNullAssertion": "warn"
+      },
+      "security": {
+        "noDangerouslySetInnerHtml": "off"
+      },
+      "complexity": {
+        "noImportantStyles": "off"
+      },
+      "suspicious": {
+        "noExplicitAny": "warn",
+        "noArrayIndexKey": "warn",
+        "noDocumentCookie": "warn"
+      },
+      "a11y": {
+        "useAnchorContent": "warn",
+        "noSvgWithoutTitle": "warn",
+        "useSemanticElements": "warn",
+        "useKeyWithClickEvents": "warn",
+        "noLabelWithoutControl": "warn",
+        "noNoninteractiveElementInteractions": "warn",
+        "noStaticElementInteractions": "warn"
+      },
+      "correctness": {
+        "noInvalidPositionAtImportRule": "off",
+        "useExhaustiveDependencies": "warn"
+      }
     }
   },
   "css": {

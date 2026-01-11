@@ -4,27 +4,14 @@
 	"description": "Shared tooling configurations for Sandcastle packages",
 	"type": "module",
 	"private": true,
-	"exports": {
-		"./prettier": "./prettier.config.ts",
-		"./eslint": "./eslint.config.ts"
-	},
 	"scripts": {
-		"lint": "eslint . --fix",
-		"lint:check": "eslint .",
-		"format": "biome check --write --formatter-enabled=true --linter-enabled=false .",
-		"format:check": "biome check --formatter-enabled=true --linter-enabled=false ."
+		"biome": "biome check --write .",
+		"biome:check": "biome check ."
 	},
-	"dependencies": {
-		"@eslint/js": "^9.39.2",
-		"@ianvs/prettier-plugin-sort-imports": "^4.4.1",
-		"eslint-plugin-react": "^7.37.5",
-		"eslint-plugin-react-hooks": "^5.2.0",
-		"globals": "^17.0.0",
-		"prettier": "^3.4.2",
-		"typescript-eslint": "^8.52.0"
+	"devDependencies": {
+		"@types/bun": "latest"
 	},
 	"peerDependencies": {
-		"eslint": "^9.0.0",
 		"typescript": "^5.0.0"
 	}
 }

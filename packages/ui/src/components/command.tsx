@@ -1,6 +1,6 @@
 import { IconCheck, IconSearch } from "@tabler/icons-react";
 import { Command as CommandPrimitive } from "cmdk";
-import * as React from "react";
+import type * as React from "react";
 import {
 	Dialog,
 	DialogContent,

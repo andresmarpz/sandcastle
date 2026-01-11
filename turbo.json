@@ -10,10 +10,8 @@
       "persistent": true
     },
     "typecheck": {},
-    "lint": {},
-    "lint:check": {},
-    "format": {},
-    "format:check": {},
+    "biome": {},
+    "biome:check": {},
     "clean": {
       "cache": false
     }

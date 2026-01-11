@@ -36,7 +36,9 @@ function formatRelativeTime(iso: string) {
 	if (Number.isNaN(timestamp)) {
 		return "unknown";
 	}
-	return formatDistanceToNow(timestamp, { addSuffix: true });
+	return formatDistanceToNow(timestamp, {
+		addSuffix: true,
+	});
 }
 
 export function SidebarWorktreeItem({
@@ -74,9 +76,9 @@ export function SidebarWorktreeItem({
 							</span>
 						</div>
 						<div className="text-muted-foreground flex items-center gap-2 text-xs">
-							<span className="truncate">{worktree.name}</span>
+							<span>{worktree.name}</span>
 							<span aria-hidden="true">·</span>
-							<span>{createdAtLabel}</span>
+							<span className="truncate">{createdAtLabel}</span>
 						</div>
 					</div>
 				</Button>

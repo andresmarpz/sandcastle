@@ -110,8 +110,8 @@ export function Sidebar({
 			</SidebarHeader>
 
 			{/* Repository list */}
-			<SidebarContent className="pt-2">
-				<SidebarMenu className="px-2">
+			<SidebarContent className="pt-2 px-2">
+				<SidebarMenu>
 					<SidebarMenuItem>
 						<SidebarMenuButton onClick={onWorkspacesClick}>
 							<IconLayoutDashboard className="size-4" />
@@ -120,34 +120,36 @@ export function Sidebar({
 					</SidebarMenuItem>
 				</SidebarMenu>
 
-				{sortedRepos.length === 0 ? (
-					<p className="text-muted-foreground px-2 py-4 text-center text-sm">
-						No projects yet
-					</p>
-				) : (
-					sortedRepos.map((repo, index) => {
-						const worktrees = worktreesByRepo.get(repo.id) ?? [];
-						const showSeparator =
-							hasBothSections && repo.pinned && index === pinnedCount - 1;
+				<SidebarMenu>
+					{sortedRepos.length === 0 ? (
+						<p className="text-muted-foreground px-2 py-4 text-center text-sm">
+							No projects yet
+						</p>
+					) : (
+						sortedRepos.map((repo, index) => {
+							const worktrees = worktreesByRepo.get(repo.id) ?? [];
+							const showSeparator =
+								hasBothSections && repo.pinned && index === pinnedCount - 1;
 
-						return (
-							<React.Fragment key={repo.id}>
-								<SidebarRepositoryItem
-									repository={repo}
-									worktrees={worktrees}
-									onPin={() => onRepositoryPin(repo.id, !repo.pinned)}
-									onDelete={() => onRepositoryDelete(repo.id)}
-									onCreateWorktree={() => onCreateWorktree(repo)}
-									isCreatingWorktree={creatingWorktreeId === repo.id}
-									onWorktreeSelect={onWorktreeSelect}
-									onWorktreeDelete={onWorktreeDelete}
-									deletingWorktreeId={deletingWorktreeId}
-								/>
-								{showSeparator && <Separator className="my-2" />}
-							</React.Fragment>
-						);
-					})
-				)}
+							return (
+								<React.Fragment key={repo.id}>
+									<SidebarRepositoryItem
+										repository={repo}
+										worktrees={worktrees}
+										onPin={() => onRepositoryPin(repo.id, !repo.pinned)}
+										onDelete={() => onRepositoryDelete(repo.id)}
+										onCreateWorktree={() => onCreateWorktree(repo)}
+										isCreatingWorktree={creatingWorktreeId === repo.id}
+										onWorktreeSelect={onWorktreeSelect}
+										onWorktreeDelete={onWorktreeDelete}
+										deletingWorktreeId={deletingWorktreeId}
+									/>
+									{showSeparator && <Separator className="my-2" />}
+								</React.Fragment>
+							);
+						})
+					)}
+				</SidebarMenu>
 			</SidebarContent>
 
 			{/* Resize rail */}
