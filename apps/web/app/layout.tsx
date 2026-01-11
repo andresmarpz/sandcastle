@@ -5,8 +5,8 @@ import "@sandcastle/ui/globals.css";
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
-  title: "Sandcastle",
-  description: "AI-powered coding assistant",
+	title: "Sandcastle",
+	description: "AI-powered coding assistant",
 };
 
 // Inline loading screen styles for instant display
@@ -81,33 +81,33 @@ const themeScript = `
 `;
 
 export default function RootLayout({
-  children,
+	children,
 }: Readonly<{
-  children: React.ReactNode;
+	children: React.ReactNode;
 }>) {
-  return (
-    <html lang="en" className={inter.variable} suppressHydrationWarning>
-      <head>
-        <style dangerouslySetInnerHTML={{ __html: loadingScreenStyles }} />
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-      </head>
-      <body className="antialiased">
-        <div id="loading-screen">
-          <h1>Sandcastle</h1>
-          <div className="loading-spinner">
-            <span className="pixel" />
-            <span className="pixel" />
-            <span className="pixel" />
-            <span className="pixel" />
-            <span className="pixel-center" />
-            <span className="pixel" />
-            <span className="pixel" />
-            <span className="pixel" />
-            <span className="pixel" />
-          </div>
-        </div>
-        {children}
-      </body>
-    </html>
-  );
+	return (
+		<html lang="en" className={inter.variable} suppressHydrationWarning>
+			<head>
+				<style dangerouslySetInnerHTML={{ __html: loadingScreenStyles }} />
+				<script dangerouslySetInnerHTML={{ __html: themeScript }} />
+			</head>
+			<body className="antialiased">
+				<div id="loading-screen">
+					<h1>Sandcastle</h1>
+					<div className="loading-spinner">
+						<span className="pixel" />
+						<span className="pixel" />
+						<span className="pixel" />
+						<span className="pixel" />
+						<span className="pixel-center" />
+						<span className="pixel" />
+						<span className="pixel" />
+						<span className="pixel" />
+						<span className="pixel" />
+					</div>
+				</div>
+				{children}
+			</body>
+		</html>
+	);
 }

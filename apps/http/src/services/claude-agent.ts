@@ -141,13 +141,14 @@ export const makeClaudeAgentService = Effect.gen(function* () {
 									};
 									await Effect.runPromise(
 										params.onMessage(userMessageInput).pipe(
-											Effect.map((msg) => {
+											Effect.tap((msg) => {
 												emit.single(
 													new ChatStreamEvent({
 														type: "message",
 														message: msg,
 													}),
 												);
+												return Effect.void;
 											}),
 											Effect.catchAll(() => Effect.void),
 										),
@@ -327,10 +328,11 @@ async function handleSDKMessage(
 					};
 					await Effect.runPromise(
 						params.onMessage(textInput).pipe(
-							Effect.map((msg) => {
+							Effect.tap((msg) => {
 								emit.single(
 									new ChatStreamEvent({ type: "message", message: msg }),
 								);
+								return Effect.void;
 							}),
 							Effect.catchAll(() => Effect.void),
 						),
@@ -360,10 +362,11 @@ async function handleSDKMessage(
 					};
 					await Effect.runPromise(
 						params.onMessage(toolUseInput).pipe(
-							Effect.map((msg) => {
+							Effect.tap((msg) => {
 								emit.single(
 									new ChatStreamEvent({ type: "message", message: msg }),
 								);
+								return Effect.void;
 							}),
 							Effect.catchAll(() => Effect.void),
 						),

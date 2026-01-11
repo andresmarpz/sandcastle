@@ -32,7 +32,6 @@ const parseWorktreeList = (output: string): WorktreeInfo[] => {
 			} else if (line.startsWith("branch ")) {
 				branch = line.slice(7).replace("refs/heads/", "");
 			} else if (line === "bare") {
-				continue;
 			}
 		}
 
