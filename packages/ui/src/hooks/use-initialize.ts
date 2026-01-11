@@ -6,8 +6,8 @@ import {
 } from "@/api/worktree-atoms";
 import { WORKTREE_LIST_KEY } from "@/api/worktree-client";
 
-function useInitialize() {
-	const [done, setDone] = useState(false);
+export function useInitialize() {
+	const [done, _setDone] = useState(false);
 
 	const [, syncWorktrees] = useAtom(syncWorktreesMutation, {
 		mode: "promiseExit",
@@ -32,5 +32,5 @@ function useInitialize() {
 		runSync();
 	}, [syncWorktrees, refreshWorktrees]);
 
-	return;
+	return done;
 }
