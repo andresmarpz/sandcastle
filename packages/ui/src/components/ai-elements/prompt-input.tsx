@@ -824,21 +824,23 @@ export const PromptInputTextarea = ({
 			if (isComposing || e.nativeEvent.isComposing) {
 				return;
 			}
-			if (e.shiftKey) {
-				return;
-			}
-			e.preventDefault();
+			// Only submit on Cmd+Enter (Mac) or Ctrl+Enter (Windows/Linux)
+			// Regular Enter inserts a newline (default behavior)
+			if (e.metaKey || e.ctrlKey) {
+				e.preventDefault();
 
-			// Check if the submit button is disabled before submitting
-			const form = e.currentTarget.form;
-			const submitButton = form?.querySelector(
-				'button[type="submit"]',
-			) as HTMLButtonElement | null;
-			if (submitButton?.disabled) {
-				return;
-			}
+				// Check if the submit button is disabled before submitting
+				const form = e.currentTarget.form;
+				const submitButton = form?.querySelector(
+					'button[type="submit"]',
+				) as HTMLButtonElement | null;
+				if (submitButton?.disabled) {
+					return;
+				}
 
-			form?.requestSubmit();
+				form?.requestSubmit();
+			}
+			// Regular Enter (without modifiers) will insert a newline by default
 		}
 
 		// Remove last attachment when Backspace is pressed and textarea is empty
