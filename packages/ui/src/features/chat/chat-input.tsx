@@ -48,7 +48,7 @@ function ChatInputInner({
 			<PromptInput onSubmit={handleSubmit}>
 				<PromptInputTextarea
 					disabled={disabled || isStreaming}
-					placeholder="Type a message... (Enter to send)"
+					placeholder="Type a message..."
 				/>
 				<PromptInputFooter>
 					<PromptInputButton
