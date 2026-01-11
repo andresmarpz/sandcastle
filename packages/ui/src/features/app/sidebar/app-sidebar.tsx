@@ -20,7 +20,6 @@ import {
 	createWorktreeOptimisticMutation,
 	deleteWorktreeMutation,
 	optimisticWorktreeListAtom,
-	syncWorktreesMutation,
 } from "@/api/worktree-atoms";
 import { WORKTREE_LIST_KEY } from "@/api/worktree-client";
 import { NewProjectDialog } from "@/components/new-project-dialog";
