@@ -8,7 +8,7 @@ import {
 	IconPlus,
 } from "@tabler/icons-react";
 import * as React from "react";
-
+import { useLocation } from "react-router";
 import { Button } from "@/components/button";
 import {
 	DropdownMenu,
@@ -57,6 +57,9 @@ export function Sidebar({
 	onWorktreeDelete,
 	deletingWorktreeId = null,
 }: SidebarProps) {
+	const location = useLocation();
+	const isActive = location.pathname === "/";
+
 	// Sort: pinned first (by createdAt DESC), then unpinned (by createdAt DESC)
 	const sortedRepos = React.useMemo(() => {
 		const pinned = repositories
@@ -113,7 +116,7 @@ export function Sidebar({
 			<SidebarContent className="pt-2 px-2">
 				<SidebarMenu>
 					<SidebarMenuItem>
-						<SidebarMenuButton onClick={onWorkspacesClick}>
+						<SidebarMenuButton isActive={isActive} onClick={onWorkspacesClick}>
 							<IconLayoutDashboard className="size-4" />
 							<span>Workspaces</span>
 						</SidebarMenuButton>

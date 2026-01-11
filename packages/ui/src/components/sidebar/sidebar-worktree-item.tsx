@@ -4,6 +4,7 @@ import type { Worktree } from "@sandcastle/rpc";
 import { IconDots, IconGitBranch, IconTrash } from "@tabler/icons-react";
 import { formatDistanceToNow } from "date-fns";
 import * as React from "react";
+import { useLocation } from "react-router";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -21,6 +22,7 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/dropdown-menu";
+import { SidebarMenuButton, SidebarMenuItem } from "@/components/sidebar";
 import { cn } from "@/lib/utils";
 
 interface SidebarWorktreeItemProps {
@@ -48,6 +50,8 @@ export function SidebarWorktreeItem({
 	isDeleting = false,
 	className,
 }: SidebarWorktreeItemProps) {
+	const location = useLocation();
+
 	const [isDialogOpen, setIsDialogOpen] = React.useState(false);
 	const createdAtLabel = React.useMemo(
 		() => formatRelativeTime(worktree.createdAt),
@@ -59,14 +63,15 @@ export function SidebarWorktreeItem({
 		setIsDialogOpen(false);
 	};
 
+	const isActive = location.pathname.startsWith(`/worktrees/${worktree.id}`);
+
 	return (
 		<>
-			<div className={cn("group relative", className)}>
-				<Button
-					variant="ghost"
-					size="sm"
+			<SidebarMenuItem className={cn("group relative", className)}>
+				<SidebarMenuButton
 					className="h-auto w-full items-start gap-2 px-2 py-2 pr-8 text-left"
 					onClick={() => onSelect(worktree)}
+					isActive={isActive}
 				>
 					<div className="flex w-full flex-col gap-1">
 						<div className="flex items-center gap-2">
@@ -76,12 +81,12 @@ export function SidebarWorktreeItem({
 							</span>
 						</div>
 						<div className="text-muted-foreground flex items-center gap-2 text-xs">
-							<span>{worktree.name}</span>
+							<span className="whitespace-nowrap">{worktree.name}</span>
 							<span aria-hidden="true">·</span>
 							<span className="truncate">{createdAtLabel}</span>
 						</div>
 					</div>
-				</Button>
+				</SidebarMenuButton>
 
 				<DropdownMenu>
 					<DropdownMenuTrigger
@@ -111,7 +116,7 @@ export function SidebarWorktreeItem({
 						</DropdownMenuItem>
 					</DropdownMenuContent>
 				</DropdownMenu>
-			</div>
+			</SidebarMenuItem>
 
 			<AlertDialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
 				<AlertDialogContent>

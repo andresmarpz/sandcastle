@@ -57,6 +57,7 @@ export function SidebarRepositoryItem({
 		<Collapsible open={isOpen} onOpenChange={setIsOpen}>
 			<div className="group relative">
 				<CollapsibleTrigger
+					nativeButton={false}
 					render={
 						<SidebarMenuItem>
 							<SidebarMenuButton className="aria-expanded:bg-transparent w-full justify-start gap-2 px-2 pr-7">
@@ -117,11 +118,9 @@ export function SidebarRepositoryItem({
 				</DropdownMenu>
 			</div>
 
-			<CollapsiblePanel>
-				<div className="ml-4 pl-2 space-y-0.5 py-1 border-l">
-					<Button
-						variant="ghost"
-						size="sm"
+			<CollapsiblePanel className="ml-4 pl-2 space-y-0.5 py-1 border-l">
+				<SidebarMenuItem>
+					<SidebarMenuButton
 						className="w-full justify-start gap-2 px-2 text-muted-foreground"
 						onClick={onCreateWorktree}
 						disabled={isCreatingWorktree}
@@ -133,19 +132,19 @@ export function SidebarRepositoryItem({
 						{isCreatingWorktree ? (
 							<Spinner className="ml-auto size-3.5" />
 						) : null}
-					</Button>
-					{worktrees.length === 0
-						? null
-						: worktrees.map((worktree) => (
-								<SidebarWorktreeItem
-									key={worktree.id}
-									worktree={worktree}
-									onSelect={onWorktreeSelect}
-									onDelete={onWorktreeDelete}
-									isDeleting={deletingWorktreeId === worktree.id}
-								/>
-							))}
-				</div>
+					</SidebarMenuButton>
+				</SidebarMenuItem>
+				{worktrees.length === 0
+					? null
+					: worktrees.map((worktree) => (
+							<SidebarWorktreeItem
+								key={worktree.id}
+								worktree={worktree}
+								onSelect={onWorktreeSelect}
+								onDelete={onWorktreeDelete}
+								isDeleting={deletingWorktreeId === worktree.id}
+							/>
+						))}
 			</CollapsiblePanel>
 		</Collapsible>
 	);
