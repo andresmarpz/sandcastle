@@ -424,7 +424,7 @@ export function WorktreesDashboard() {
 		<div className="flex flex-col h-full">
 			<div
 				data-tauri-drag-region
-				className="shrink-0 px-3 py-2 border-b border-border bg-background flex items-center justify-between"
+				className="shrink-0 px-3 py-2 border-b border-border bg-background flex items-center justify-between h-12"
 			>
 				<span className="font-medium text-sm">Dashboard</span>
 				{stats.totalSessions > 0 && (

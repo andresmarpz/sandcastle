@@ -8,7 +8,7 @@ import {
 	SidebarTrigger,
 } from "@/components/sidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { AppSidebar } from "./app-sidebar";
+import { AppSidebar } from "./sidebar/app-sidebar";
 
 export function ShellLayout() {
 	const isMobile = useIsMobile();
