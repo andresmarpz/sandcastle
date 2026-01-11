@@ -85,7 +85,7 @@ export function Sidebar({
 			{/* Header with Add button */}
 			<SidebarHeader
 				data-tauri-drag-region
-				className="border-border flex-row items-center justify-between border-b"
+				className="border-border flex-row items-center justify-between border-b h-12"
 			>
 				<span />
 				<DropdownMenu>

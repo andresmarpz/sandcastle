@@ -61,35 +61,6 @@ export function AppSidebar() {
 	const [, deleteWorktree] = useAtom(deleteWorktreeMutation, {
 		mode: "promiseExit",
 	});
-	const [, syncWorktrees] = useAtom(syncWorktreesMutation, {
-		mode: "promiseExit",
-	});
-
-	// Sync worktrees on mount to clean up orphaned DB records
-	React.useEffect(() => {
-		const runSync = async () => {
-			try {
-				const result = await syncWorktrees({
-					payload: {},
-					reactivityKeys: [WORKTREE_LIST_KEY],
-				});
-				refreshWorktrees();
-				// If the selected worktree was removed, navigate home
-				if (
-					selectedWorktreeId &&
-					result._tag === "Success" &&
-					result.value.removedIds.includes(selectedWorktreeId)
-				) {
-					navigate("/");
-				}
-			} catch {
-				// Sync failures are non-critical, just log
-				console.warn("Worktree sync failed");
-			}
-		};
-		runSync();
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, []); // Only run once on mount
 
 	const repositories = React.useMemo(
 		() => Option.getOrElse(Result.value(repositoriesResult), () => []),

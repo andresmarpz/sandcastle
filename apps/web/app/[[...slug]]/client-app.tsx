@@ -5,6 +5,7 @@ import { PlatformProvider } from "@sandcastle/ui/context/platform-context";
 import { ThemeProvider } from "@sandcastle/ui/context/theme-context";
 import { lazy, Suspense, useEffect } from "react";
 import { BrowserRouter } from "react-router";
+import { LoadingScreen } from "@/features/app/loading-screen";
 
 // Lazy load the main app to defer heavy dependencies
 const RootLayout = lazy(() =>
@@ -43,7 +44,7 @@ export default function ClientApp() {
 					copyToClipboard={copyToClipboard}
 				>
 					<RegistryProvider>
-						<Suspense fallback={null}>
+						<Suspense fallback={<LoadingScreen />}>
 							<AppReady>
 								<RootLayout />
 							</AppReady>

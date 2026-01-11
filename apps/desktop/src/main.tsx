@@ -10,6 +10,7 @@ import { BrowserRouter } from "react-router";
 import "@sandcastle/ui/globals.css";
 import "@fontsource-variable/inter";
 import "./tauri.css";
+import { LoadingScreen } from "@/features/app/loading-screen";
 
 // Lazy load the main app to defer heavy dependencies
 const RootLayout = lazy(() =>
@@ -65,7 +66,7 @@ function App() {
 					copyToClipboard={copyToClipboard}
 				>
 					<RegistryProvider>
-						<Suspense fallback={null}>
+						<Suspense fallback={<LoadingScreen />}>
 							<AppReady>
 								<RootLayout />
 							</AppReady>
