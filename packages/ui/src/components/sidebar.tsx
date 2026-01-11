@@ -237,8 +237,9 @@ function Sidebar({
 					data-sidebar="sidebar"
 					data-slot="sidebar"
 					data-mobile="true"
-					className="bg-sidebar text-sidebar-foreground w-full max-w-full p-0"
+					className="bg-sidebar text-sidebar-foreground w-[--sidebar-width] max-w-full p-0"
 					side={side}
+					showCloseButton={false}
 				>
 					<SheetHeader className="sr-only">
 						<SheetTitle>Sidebar</SheetTitle>
