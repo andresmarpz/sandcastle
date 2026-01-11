@@ -237,7 +237,7 @@ function Sidebar({
 					data-sidebar="sidebar"
 					data-slot="sidebar"
 					data-mobile="true"
-					className="bg-sidebar text-sidebar-foreground w-full max-w-full p-0"
+					className="bg-sidebar text-sidebar-foreground h-dvh w-full max-w-full p-0 pb-[env(safe-area-inset-bottom)]"
 					side={side}
 				>
 					<SheetHeader className="sr-only">
