@@ -1,8 +1,4 @@
-// Service
-
-// Entities
 export * from "./src/entities";
-// Errors
 export * from "./src/errors";
 export {
 	makeStorageService,
