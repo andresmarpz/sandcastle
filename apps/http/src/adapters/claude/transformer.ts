@@ -80,7 +80,6 @@ interface AssistantMessageLike {
  */
 export function transformAssistantMessage(
 	message: AssistantMessageLike,
-	config: AdapterConfig,
 ): UIMessage {
 	const parts = transformContentBlocks(message.message.content);
 

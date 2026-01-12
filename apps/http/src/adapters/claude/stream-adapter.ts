@@ -101,7 +101,7 @@ function processMessage(
 		}
 
 		case "user": {
-			const result = processUserMessage(message, newState, config);
+			const result = processUserMessage(message, newState);
 			chunks.push(...result.chunks);
 			newState = result.newState;
 			break;
@@ -190,7 +190,6 @@ function processAssistantMessage(
 function processUserMessage(
 	message: SDKUserMessage,
 	state: StreamState,
-	config: AdapterConfig,
 ): ProcessResult {
 	const chunks: UIMessageChunk[] = [];
 	let newState = state;
