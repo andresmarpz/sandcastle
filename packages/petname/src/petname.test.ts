@@ -56,15 +56,22 @@ describe("generate()", () => {
 
 	test("uses words from word lists", () => {
 		const result = generate({ wordCount: 2 });
-		const [adjective, noun] = result.words;
-		expect((adjectives as readonly string[]).includes(adjective!)).toBe(true);
-		expect((nouns as readonly string[]).includes(noun!)).toBe(true);
+		const adjective = result.words[0];
+		const noun = result.words[1];
+		expect(adjective).toBeDefined();
+		expect(noun).toBeDefined();
+		expect(
+			(adjectives as readonly string[]).includes(adjective as string),
+		).toBe(true);
+		expect((nouns as readonly string[]).includes(noun as string)).toBe(true);
 	});
 
 	test("single word returns a noun", () => {
 		const result = generate({ wordCount: 1 });
 		expect(result.words).toHaveLength(1);
-		expect((nouns as readonly string[]).includes(result.words[0]!)).toBe(true);
+		const word = result.words[0];
+		expect(word).toBeDefined();
+		expect((nouns as readonly string[]).includes(word as string)).toBe(true);
 	});
 
 	test("multiple words follow adj-adj-...-noun pattern", () => {
@@ -72,10 +79,20 @@ describe("generate()", () => {
 		const adjs = adjectives as readonly string[];
 		const ns = nouns as readonly string[];
 
-		expect(adjs.includes(result.words[0]!)).toBe(true);
-		expect(adjs.includes(result.words[1]!)).toBe(true);
-		expect(adjs.includes(result.words[2]!)).toBe(true);
-		expect(ns.includes(result.words[3]!)).toBe(true);
+		const word0 = result.words[0];
+		const word1 = result.words[1];
+		const word2 = result.words[2];
+		const word3 = result.words[3];
+
+		expect(word0).toBeDefined();
+		expect(word1).toBeDefined();
+		expect(word2).toBeDefined();
+		expect(word3).toBeDefined();
+
+		expect(adjs.includes(word0 as string)).toBe(true);
+		expect(adjs.includes(word1 as string)).toBe(true);
+		expect(adjs.includes(word2 as string)).toBe(true);
+		expect(ns.includes(word3 as string)).toBe(true);
 	});
 });
 
