@@ -1,7 +1,7 @@
 "use client";
 
 import type { ChatStatus } from "ai";
-import { SquareIcon } from "lucide-react";
+import { BotIcon, SquareIcon } from "lucide-react";
 import {
 	PromptInput,
 	PromptInputButton,
@@ -9,14 +9,23 @@ import {
 	PromptInputSubmit,
 	PromptInputTextarea,
 } from "@/components/ai-elements/prompt-input";
+import { cn } from "@/lib/utils";
 
 interface ChatInputProps {
 	onSend: (text: string) => void;
 	onStop: () => void;
 	status: ChatStatus;
+	autonomous: boolean;
+	onAutonomousChange: (autonomous: boolean) => void;
 }
 
-export function ChatInput({ onSend, onStop, status }: ChatInputProps) {
+export function ChatInput({
+	onSend,
+	onStop,
+	status,
+	autonomous,
+	onAutonomousChange,
+}: ChatInputProps) {
 	const isStreaming = status === "streaming";
 	const isSubmitted = status === "submitted";
 	const isDisabled = isStreaming || isSubmitted;
@@ -35,7 +44,16 @@ export function ChatInput({ onSend, onStop, status }: ChatInputProps) {
 					disabled={isDisabled}
 				/>
 				<PromptInputFooter>
-					<div /> {/* Spacer */}
+					<PromptInputButton
+						onClick={() => onAutonomousChange(!autonomous)}
+						className={cn(
+							autonomous && "bg-primary text-primary-foreground hover:bg-primary/90",
+						)}
+						title={autonomous ? "Autonomous mode ON" : "Autonomous mode OFF"}
+					>
+						<BotIcon className="h-4 w-4" />
+						Autonomous
+					</PromptInputButton>
 					{isStreaming ? (
 						<PromptInputButton onClick={onStop} variant="destructive">
 							<SquareIcon className="h-4 w-4" />

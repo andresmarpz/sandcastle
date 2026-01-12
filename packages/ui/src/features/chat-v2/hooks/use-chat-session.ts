@@ -25,13 +25,20 @@ export interface UseChatSessionReturn {
 	claudeSessionId: string | null;
 }
 
+export interface UseChatSessionOptions {
+	/** Override autonomous mode from context */
+	autonomous?: boolean;
+}
+
 /**
  * Hook that wraps useChat with session management.
  * Gets sessionId/worktreeId from ChatSessionContext.
  *
  * Must be used within a ChatSessionProvider.
  */
-export function useChatSession(): UseChatSessionReturn {
+export function useChatSession(
+	options?: UseChatSessionOptions,
+): UseChatSessionReturn {
 	const config = useChatSessionContext();
 
 	const [sessionMetadata, setSessionMetadata] =
@@ -43,6 +50,9 @@ export function useChatSession(): UseChatSessionReturn {
 		config.claudeSessionId ?? null,
 	);
 
+	// Use options.autonomous if provided, otherwise fall back to context
+	const autonomous = options?.autonomous ?? config.autonomous;
+
 	// Create transport with callbacks
 	const transport = useMemo(() => {
 		return createRpcTransport(
@@ -51,7 +61,7 @@ export function useChatSession(): UseChatSessionReturn {
 				worktreeId: config.worktreeId,
 				claudeSessionId,
 				rpcUrl: config.rpcUrl,
-				autonomous: config.autonomous,
+				autonomous,
 			},
 			{
 				onSessionStart: setClaudeSessionId,
@@ -64,7 +74,7 @@ export function useChatSession(): UseChatSessionReturn {
 		config.worktreeId,
 		claudeSessionId,
 		config.rpcUrl,
-		config.autonomous,
+		autonomous,
 	]);
 
 	const { messages, sendMessage, status, error, stop, setMessages } = useChat({
