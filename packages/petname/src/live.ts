@@ -14,14 +14,22 @@ const DEFAULT_SEPARATOR = "-";
 function randomInt(max: number): number {
 	const array = new Uint32Array(1);
 	crypto.getRandomValues(array);
-	return array[0]! % max;
+	const value = array[0];
+	if (value === undefined) {
+		throw new Error("Failed to generate random value");
+	}
+	return value % max;
 }
 
 /**
  * Pick a random element from an array
  */
 function randomElement<T>(arr: readonly T[]): T {
-	return arr[randomInt(arr.length)]!;
+	const element = arr[randomInt(arr.length)];
+	if (element === undefined) {
+		throw new Error("Array is empty");
+	}
+	return element;
 }
 
 /**
