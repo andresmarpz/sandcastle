@@ -1,9 +1,5 @@
 export { adaptSDKStreamToEvents } from "./effect-stream-adapter";
 export {
-	createClaudeToAISDKAdapter,
-	isAdapterError,
-} from "./stream-adapter";
-export {
 	completeToolCall,
 	createStreamState,
 	getToolCall,
@@ -11,6 +7,10 @@ export {
 	setMessageId,
 	setSessionId,
 } from "./state-tracker";
+export {
+	createClaudeToAISDKAdapter,
+	isAdapterError,
+} from "./stream-adapter";
 export {
 	mapFinishReason,
 	transformAssistantMessage,
