@@ -28,13 +28,10 @@ import {
 import { runMigrations } from "./migrations";
 import { StorageService } from "./service";
 
-// ─── Helpers ──────────────────────────────────────────────────
-
 const generateId = () => crypto.randomUUID();
 
 const nowIso = () => new Date().toISOString();
 
-// Generic database operation wrapper
 const tryDb = <T>(
 	operation: string,
 	fn: () => T,
@@ -52,83 +49,83 @@ const tryDb = <T>(
 // Row mappers
 const rowToRepository = (row: Record<string, unknown>): Repository =>
 	new Repository({
-		id: row["id"] as string,
-		label: row["label"] as string,
-		directoryPath: row["directory_path"] as string,
-		defaultBranch: row["default_branch"] as string,
-		pinned: Boolean(row["pinned"]),
-		createdAt: row["created_at"] as string,
-		updatedAt: row["updated_at"] as string,
+		id: row.id as string,
+		label: row.label as string,
+		directoryPath: row.directory_path as string,
+		defaultBranch: row.default_branch as string,
+		pinned: Boolean(row.pinned),
+		createdAt: row.created_at as string,
+		updatedAt: row.updated_at as string,
 	});
 
 const rowToWorktree = (row: Record<string, unknown>): Worktree =>
 	new Worktree({
-		id: row["id"] as string,
-		repositoryId: row["repository_id"] as string,
-		path: row["path"] as string,
-		branch: row["branch"] as string,
-		name: row["name"] as string,
-		baseBranch: row["base_branch"] as string,
-		status: row["status"] as "active" | "stale" | "archived",
-		createdAt: row["created_at"] as string,
-		lastAccessedAt: row["last_accessed_at"] as string,
+		id: row.id as string,
+		repositoryId: row.repository_id as string,
+		path: row.path as string,
+		branch: row.branch as string,
+		name: row.name as string,
+		baseBranch: row.base_branch as string,
+		status: row.status as "active" | "stale" | "archived",
+		createdAt: row.created_at as string,
+		lastAccessedAt: row.last_accessed_at as string,
 	});
 
 const rowToSession = (row: Record<string, unknown>): Session =>
 	new Session({
-		id: row["id"] as string,
-		worktreeId: row["worktree_id"] as string,
-		title: row["title"] as string,
-		description: (row["description"] as string) ?? null,
-		status: row["status"] as
+		id: row.id as string,
+		worktreeId: row.worktree_id as string,
+		title: row.title as string,
+		description: (row.description as string) ?? null,
+		status: row.status as
 			| "created"
 			| "active"
 			| "paused"
 			| "completed"
 			| "failed",
-		claudeSessionId: (row["claude_session_id"] as string) ?? null,
-		model: (row["model"] as string) ?? null,
-		totalCostUsd: (row["total_cost_usd"] as number) ?? 0,
-		inputTokens: (row["input_tokens"] as number) ?? 0,
-		outputTokens: (row["output_tokens"] as number) ?? 0,
-		createdAt: row["created_at"] as string,
-		lastActivityAt: row["last_activity_at"] as string,
+		claudeSessionId: (row.claude_session_id as string) ?? null,
+		model: (row.model as string) ?? null,
+		totalCostUsd: (row.total_cost_usd as number) ?? 0,
+		inputTokens: (row.input_tokens as number) ?? 0,
+		outputTokens: (row.output_tokens as number) ?? 0,
+		createdAt: row.created_at as string,
+		lastActivityAt: row.last_activity_at as string,
 	});
 
 const rowToAgent = (row: Record<string, unknown>): Agent =>
 	new Agent({
-		id: row["id"] as string,
-		sessionId: row["session_id"] as string,
-		processId: (row["process_id"] as number) ?? null,
-		status: row["status"] as
+		id: row.id as string,
+		sessionId: row.session_id as string,
+		processId: (row.process_id as number) ?? null,
+		status: row.status as
 			| "starting"
 			| "running"
 			| "idle"
 			| "stopped"
 			| "crashed",
-		startedAt: row["started_at"] as string,
-		stoppedAt: (row["stopped_at"] as string) ?? null,
-		exitCode: (row["exit_code"] as number) ?? null,
+		startedAt: row.started_at as string,
+		stoppedAt: (row.stopped_at as string) ?? null,
+		exitCode: (row.exit_code as number) ?? null,
 	});
 
 const rowToChatMessage = (row: Record<string, unknown>): ChatMessage => {
 	// Parse parts from JSON
-	const partsJson = row["parts"] as string;
+	const partsJson = row.parts as string;
 	const partsParsed = JSON.parse(partsJson);
 	const parts = Schema.decodeUnknownSync(Schema.Array(MessagePart))(
 		partsParsed,
 	);
 
 	// Parse optional metadata
-	const metadataJson = row["metadata"] as string | null;
+	const metadataJson = row.metadata as string | null;
 	const metadata = metadataJson ? JSON.parse(metadataJson) : undefined;
 
 	return new ChatMessage({
-		id: row["id"] as string,
-		sessionId: row["session_id"] as string,
-		role: row["role"] as MessageRole,
+		id: row.id as string,
+		sessionId: row.session_id as string,
+		role: row.role as MessageRole,
 		parts,
-		createdAt: row["created_at"] as string,
+		createdAt: row.created_at as string,
 		metadata,
 	});
 };
