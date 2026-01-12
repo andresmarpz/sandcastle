@@ -1,5 +1,6 @@
 import type { UIMessage } from "ai";
 import { BashPart } from "./bash-part";
+import { ReadPart } from "./read-part";
 import { ReasoningPart } from "./reasoning-part";
 import { TextPart } from "./text-part";
 import { TodoWritePart } from "./todo-write-part";
@@ -37,6 +38,14 @@ export function PartRenderer({ part }: PartRendererProps) {
 			(part.type === "dynamic-tool" && toolPart.toolName === "TodoWrite")
 		) {
 			return <TodoWritePart part={toolPart} />;
+		}
+
+		// Use dedicated component for Read
+		if (
+			part.type === "tool-Read" ||
+			(part.type === "dynamic-tool" && toolPart.toolName === "Read")
+		) {
+			return <ReadPart part={toolPart} />;
 		}
 
 		// Use dedicated component for Write
