@@ -1,7 +1,5 @@
 import { Data } from "effect";
 
-// ─── Database Errors ──────────────────────────────────────────
-
 export class DatabaseError extends Data.TaggedError("DatabaseError")<{
 	operation: string;
 	message: string;
@@ -20,8 +18,6 @@ export class MigrationError extends Data.TaggedError("MigrationError")<{
 	message: string;
 	cause?: unknown;
 }> {}
-
-// ─── Entity Not Found Errors ──────────────────────────────────
 
 export class RepositoryNotFoundError extends Data.TaggedError(
 	"RepositoryNotFoundError",
@@ -50,8 +46,6 @@ export class ChatMessageNotFoundError extends Data.TaggedError(
 )<{
 	id: string;
 }> {}
-
-// ─── Constraint Errors ────────────────────────────────────────
 
 export class RepositoryPathExistsError extends Data.TaggedError(
 	"RepositoryPathExistsError",
