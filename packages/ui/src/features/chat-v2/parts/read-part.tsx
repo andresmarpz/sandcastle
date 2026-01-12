@@ -1,5 +1,5 @@
+import { CheckCircleIcon, FileTextIcon, LoaderIcon } from "lucide-react";
 import type { BundledLanguage } from "shiki";
-import { FileTextIcon, CheckCircleIcon, LoaderIcon } from "lucide-react";
 import { CodeBlock } from "@/components/ai-elements/code-block";
 import type { ToolCallPart } from "./index";
 
@@ -121,9 +121,7 @@ export function ReadPart({ part }: ReadPartProps) {
 					{isComplete && (
 						<CheckCircleIcon className="size-3.5 text-green-600" />
 					)}
-					{hasError && (
-						<span className="text-xs text-destructive">Error</span>
-					)}
+					{hasError && <span className="text-xs text-destructive">Error</span>}
 				</div>
 			</div>
 
