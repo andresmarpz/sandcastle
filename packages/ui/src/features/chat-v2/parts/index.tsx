@@ -1,5 +1,7 @@
 import type { UIMessage } from "ai";
 import { BashPart } from "./bash-part";
+import { GlobPart } from "./glob-part";
+import { GrepPart } from "./grep-part";
 import { ReadPart } from "./read-part";
 import { ReasoningPart } from "./reasoning-part";
 import { TextPart } from "./text-part";
@@ -62,6 +64,22 @@ export function PartRenderer({ part }: PartRendererProps) {
 			(part.type === "dynamic-tool" && toolPart.toolName === "Bash")
 		) {
 			return <BashPart part={toolPart} />;
+		}
+
+		// Use dedicated component for Glob
+		if (
+			part.type === "tool-Glob" ||
+			(part.type === "dynamic-tool" && toolPart.toolName === "Glob")
+		) {
+			return <GlobPart part={toolPart} />;
+		}
+
+		// Use dedicated component for Grep
+		if (
+			part.type === "tool-Grep" ||
+			(part.type === "dynamic-tool" && toolPart.toolName === "Grep")
+		) {
+			return <GrepPart part={toolPart} />;
 		}
 
 		return <ToolPart part={toolPart} />;
