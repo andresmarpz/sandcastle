@@ -117,6 +117,9 @@ For more information, read the Bun API docs in `node_modules/bun-types/docs/**.m
 Topics include: services and layers, data modeling, error handling, configuration, testing, HTTP clients, CLIs, observability, and project structure.
 
 **Effect Source Code Reference:** `~/.local/share/effect-solutions/effect`
-**Effect Atom Source Code Reference:** `~/.local/share/effect-solutions/effect-atom` (frontend library)
 
 Search the real source code to figure out how the library works. Use an Explore subagent for this. Never look into `node_modules`, look at the real source code instead.
+
+### Effect Atom (effect-atom) library
+
+Prefer reading the existing doc first at 'docs/effect-atom-guide.md'. If you need further investigation the source code is at `~/.local/share/effect-solutions/effect-atom`.

@@ -7,6 +7,7 @@ import {
 	useAtomValue,
 } from "@effect-atom/atom-react";
 import { useCallback, useEffect, useMemo } from "react";
+import { chatHistoryAtomFamily } from "@/api/chat-atoms";
 import {
 	createSessionMutation,
 	SESSION_LIST_KEY,
@@ -14,9 +15,40 @@ import {
 } from "@/api/session-atoms";
 import type { Worktree } from "@/api/worktree-atoms";
 import { Button } from "@/components/button";
-import { ChatSession } from "../chat/chat-session";
-import { SessionTabs } from "../chat/session-tabs";
+import { Chat, ChatSessionProvider, SessionTabs } from "../chat-v2";
+import { convertChatHistory } from "../chat-v2/lib/message-converter";
 import { OpenButton } from "./open-button";
+
+/**
+ * Inner component that handles chat session with history fetching.
+ * Separated to ensure hooks are always called unconditionally.
+ */
+function ChatWithHistory(props: {
+	sessionId: string;
+	worktreeId: string;
+	claudeSessionId?: string;
+}) {
+	// Fetch chat history for the selected session
+	const chatHistoryAtom = useMemo(
+		() => chatHistoryAtomFamily(props.sessionId),
+		[props.sessionId],
+	);
+	const chatHistoryResult = useAtomValue(chatHistoryAtom);
+
+	// Convert chat history to UI messages format
+	const initialMessages = useMemo(() => {
+		if (chatHistoryResult._tag !== "Success") {
+			return undefined;
+		}
+		return convertChatHistory(chatHistoryResult.value);
+	}, [chatHistoryResult]);
+
+	return (
+		<ChatSessionProvider {...props} initialMessages={initialMessages}>
+			<Chat />
+		</ChatSessionProvider>
+	);
+}
 
 interface WorktreeContentProps {
 	worktree: Worktree;
@@ -77,8 +109,17 @@ export function WorktreeContent({
 		onSuccess: (success) => success.value.length > 0,
 	});
 
+	const currentSession = useMemo(() => {
+		if (!sessionId) return null;
+
+		if (sessionsResult._tag === "Success") {
+			const sessions = sessionsResult.value;
+			return sessions.find((sess) => sess.id === sessionId);
+		}
+	}, [sessionsResult, sessionId]);
+
 	return (
-		<div className="flex flex-col h-full">
+		<div className="flex flex-col h-full min-w-0">
 			{/* Header with worktree info and actions */}
 			<div
 				data-tauri-drag-region
@@ -106,7 +147,11 @@ export function WorktreeContent({
 			{/* Chat session or empty state */}
 			<div className="flex-1 min-h-0 overflow-hidden">
 				{sessionId ? (
-					<ChatSession sessionId={sessionId} worktreeId={worktree.id} />
+					<ChatWithHistory
+						sessionId={sessionId}
+						claudeSessionId={currentSession?.claudeSessionId || undefined}
+						worktreeId={worktree.id}
+					/>
 				) : hasSessions ? // Sessions exist but none selected - auto-redirect is pending, show nothing
 				null : (
 					<div className="flex-1 flex flex-col items-center justify-center text-muted-foreground text-sm gap-3 p-4">

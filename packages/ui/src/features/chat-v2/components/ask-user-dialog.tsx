@@ -1,18 +1,11 @@
 "use client";
 
-import { useAtom } from "@effect-atom/atom-react";
 import type { AskUserQuestionItem } from "@sandcastle/rpc";
 import { useCallback, useState } from "react";
-import { chatRespondMutation } from "../../api/chat-atoms";
-import { Button } from "../../components/button";
-import { cn } from "../../lib/utils";
 
-interface AskUserModalProps {
-	sessionId: string;
-	toolUseId: string;
-	questions: readonly AskUserQuestionItem[];
-	onClose: () => void;
-}
+import { Button } from "../../../components/button";
+import { cn } from "../../../lib/utils";
+import type { AskUserEvent } from "../lib/transport-types";
 
 interface QuestionCardProps {
 	question: AskUserQuestionItem;
@@ -42,7 +35,7 @@ function QuestionCard({
 	return (
 		<div className="space-y-3">
 			<div>
-				<div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
+				<div className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
 					{question.header}
 				</div>
 				<div className="text-sm font-medium">{question.question}</div>
@@ -54,7 +47,7 @@ function QuestionCard({
 						type="button"
 						onClick={() => handleOptionClick(option.label)}
 						className={cn(
-							"w-full text-left p-3 rounded-lg border transition-colors",
+							"w-full rounded-lg border p-3 text-left transition-colors",
 							selectedValues.includes(option.label)
 								? "border-primary bg-primary/5"
 								: "border-border hover:border-muted-foreground/30",
@@ -63,7 +56,7 @@ function QuestionCard({
 						<div className="flex items-start gap-3">
 							<div
 								className={cn(
-									"mt-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0",
+									"mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center border-2",
 									question.multiSelect ? "rounded" : "rounded-full",
 									selectedValues.includes(option.label)
 										? "border-primary bg-primary"
@@ -72,7 +65,7 @@ function QuestionCard({
 							>
 								{selectedValues.includes(option.label) && (
 									<svg
-										className="w-2.5 h-2.5 text-primary-foreground"
+										className="h-2.5 w-2.5 text-primary-foreground"
 										viewBox="0 0 16 16"
 										fill="currentColor"
 									>
@@ -94,21 +87,25 @@ function QuestionCard({
 	);
 }
 
-export function AskUserModal({
-	sessionId,
-	toolUseId,
-	questions,
-	onClose,
-}: AskUserModalProps) {
-	const [, respond] = useAtom(chatRespondMutation, { mode: "promiseExit" });
+export interface AskUserDialogProps {
+	event: AskUserEvent;
+	onRespond: (answers: Record<string, string>) => Promise<void>;
+	onClose?: () => void;
+}
+
+/**
+ * Dialog component for AskUser events.
+ * Renders questions and collects user responses.
+ */
+export function AskUserDialog({ event, onRespond, onClose }: AskUserDialogProps) {
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
 	// Track answers for each question by header
 	const [answers, setAnswers] = useState<Record<string, string[]>>(() => {
 		const initial: Record<string, string[]> = {};
-		questions.forEach((q) => {
+		for (const q of event.questions) {
 			initial[q.header] = [];
-		});
+		}
 		return initial;
 	});
 
@@ -121,7 +118,7 @@ export function AskUserModal({
 
 	const handleSubmit = useCallback(async () => {
 		// Validate that all questions have at least one answer
-		const allAnswered = questions.every((q) => {
+		const allAnswered = event.questions.every((q) => {
 			const selected = answers[q.header];
 			return selected && selected.length > 0;
 		});
@@ -132,32 +129,24 @@ export function AskUserModal({
 		try {
 			// Convert answers to the expected format (comma-separated for multi-select)
 			const formattedAnswers: Record<string, string> = {};
-			questions.forEach((q) => {
+			for (const q of event.questions) {
 				const selected = answers[q.header];
 				if (selected) {
 					formattedAnswers[q.header] = selected.join(", ");
 				}
-			});
+			}
 
-			await respond({
-				payload: {
-					sessionId,
-					toolUseId,
-					answers: formattedAnswers,
-				},
-				reactivityKeys: [],
-			});
-
-			onClose();
+			await onRespond(formattedAnswers);
+			onClose?.();
 		} catch (error) {
 			console.error("Failed to respond to question:", error);
 		} finally {
 			setIsSubmitting(false);
 		}
-	}, [questions, answers, sessionId, toolUseId, respond, onClose]);
+	}, [event.questions, answers, onRespond, onClose]);
 
 	// Check if all questions are answered
-	const allAnswered = questions.every((q) => {
+	const allAnswered = event.questions.every((q) => {
 		const selected = answers[q.header];
 		return selected && selected.length > 0;
 	});
@@ -168,22 +157,23 @@ export function AskUserModal({
 			<div
 				className="absolute inset-0 bg-background/80 backdrop-blur-sm"
 				onClick={onClose}
+				onKeyDown={(e) => e.key === "Escape" && onClose?.()}
 			/>
 
 			{/* Modal */}
-			<div className="relative z-10 w-full max-w-lg mx-4 bg-card rounded-xl border border-border shadow-lg overflow-hidden">
+			<div className="relative z-10 mx-4 w-full max-w-lg overflow-hidden rounded-xl border border-border bg-card shadow-lg">
 				{/* Header */}
-				<div className="px-6 py-4 border-b border-border">
+				<div className="border-b border-border px-6 py-4">
 					<h2 className="text-lg font-semibold">Claude needs your input</h2>
-					<p className="text-sm text-muted-foreground mt-1">
+					<p className="mt-1 text-sm text-muted-foreground">
 						Please answer the following questions to continue.
 					</p>
 				</div>
 
 				{/* Content */}
-				<div className="px-6 py-4 max-h-[60vh] overflow-y-auto">
+				<div className="max-h-[60vh] overflow-y-auto px-6 py-4">
 					<div className="space-y-6">
-						{questions.map((question, index) => (
+						{event.questions.map((question, index) => (
 							<QuestionCard
 								key={`${question.header}-${index}`}
 								question={question}
@@ -197,10 +187,12 @@ export function AskUserModal({
 				</div>
 
 				{/* Footer */}
-				<div className="px-6 py-4 border-t border-border flex justify-end gap-3">
-					<Button variant="outline" onClick={onClose} disabled={isSubmitting}>
-						Cancel
-					</Button>
+				<div className="flex justify-end gap-3 border-t border-border px-6 py-4">
+					{onClose && (
+						<Button variant="outline" onClick={onClose} disabled={isSubmitting}>
+							Cancel
+						</Button>
+					)}
 					<Button
 						onClick={handleSubmit}
 						disabled={!allAnswered || isSubmitting}

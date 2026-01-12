@@ -168,59 +168,60 @@ export class UpdateAgentInput extends Schema.Class<UpdateAgentInput>(
 	exitCode: Schema.optional(Schema.NullOr(Schema.Number)),
 }) {}
 
-// ─── Chat Message ────────────────────────────────────────────
+// ─── Chat Message (AI SDK v6 Compatible) ─────────────────────
 
 export const MessageRole = Schema.Literal("user", "assistant", "system");
 export type MessageRole = typeof MessageRole.Type;
 
-export const MessageContentType = Schema.Literal(
-	"text",
-	"tool_use",
-	"tool_result",
-	"thinking",
-	"error",
-	"ask_user",
-);
-export type MessageContentType = typeof MessageContentType.Type;
+// ─── Message Part Types (AI SDK v6 Compatible) ───────────────
 
-// Content type variants (stored as JSON in content column)
-export class TextContent extends Schema.Class<TextContent>("TextContent")({
+/**
+ * Text part - simple text content
+ */
+export class TextPart extends Schema.Class<TextPart>("TextPart")({
 	type: Schema.Literal("text"),
 	text: Schema.String,
 }) {}
 
-export class ToolUseContent extends Schema.Class<ToolUseContent>(
-	"ToolUseContent",
-)({
-	type: Schema.Literal("tool_use"),
-	toolUseId: Schema.String,
+/**
+ * Tool call state - tracks the lifecycle of a tool invocation
+ * Aligned with AI SDK v6 UIToolInvocation states
+ */
+export const ToolCallState = Schema.Literal(
+	"partial",
+	"input-available",
+	"output-available",
+	"error",
+);
+export type ToolCallState = typeof ToolCallState.Type;
+
+/**
+ * Tool call part - represents a tool invocation
+ * Type is dynamic: `tool-${toolName}` (e.g., "tool-Read", "tool-Bash")
+ * Field names aligned with AI SDK v6 UIToolInvocation
+ */
+export class ToolCallPart extends Schema.Class<ToolCallPart>("ToolCallPart")({
+	type: Schema.String, // "tool-{toolName}" pattern
+	toolCallId: Schema.String,
 	toolName: Schema.String,
 	input: Schema.Unknown,
+	state: ToolCallState,
+	output: Schema.optional(Schema.Unknown),
 }) {}
 
-export class ToolResultContent extends Schema.Class<ToolResultContent>(
-	"ToolResultContent",
-)({
-	type: Schema.Literal("tool_result"),
-	toolUseId: Schema.String,
-	toolName: Schema.String,
-	output: Schema.Unknown,
-	isError: Schema.optional(Schema.Boolean),
-}) {}
+/**
+ * Reasoning part - for Claude's thinking/reasoning output
+ */
+export class ReasoningPart extends Schema.Class<ReasoningPart>("ReasoningPart")(
+	{
+		type: Schema.Literal("reasoning"),
+		reasoning: Schema.String,
+	},
+) {}
 
-export class ThinkingContent extends Schema.Class<ThinkingContent>(
-	"ThinkingContent",
-)({
-	type: Schema.Literal("thinking"),
-	text: Schema.String,
-}) {}
-
-export class ErrorContent extends Schema.Class<ErrorContent>("ErrorContent")({
-	type: Schema.Literal("error"),
-	error: Schema.String,
-	code: Schema.optional(Schema.String),
-}) {}
-
+/**
+ * AskUser question option
+ */
 export class AskUserQuestionOption extends Schema.Class<AskUserQuestionOption>(
 	"AskUserQuestionOption",
 )({
@@ -228,6 +229,9 @@ export class AskUserQuestionOption extends Schema.Class<AskUserQuestionOption>(
 	description: Schema.String,
 }) {}
 
+/**
+ * AskUser question item
+ */
 export class AskUserQuestionItem extends Schema.Class<AskUserQuestionItem>(
 	"AskUserQuestionItem",
 )({
@@ -237,47 +241,82 @@ export class AskUserQuestionItem extends Schema.Class<AskUserQuestionItem>(
 	multiSelect: Schema.Boolean,
 }) {}
 
-export class AskUserContent extends Schema.Class<AskUserContent>(
-	"AskUserContent",
-)({
-	type: Schema.Literal("ask_user"),
-	toolUseId: Schema.String,
+/**
+ * AskUser part - for interactive user questions
+ * This is a custom extension to AI SDK for Claude's AskUserQuestion tool
+ */
+export class AskUserPart extends Schema.Class<AskUserPart>("AskUserPart")({
+	type: Schema.Literal("ask-user"),
+	toolCallId: Schema.String,
 	questions: Schema.Array(AskUserQuestionItem),
-	answers: Schema.NullOr(
+	answers: Schema.optional(
 		Schema.Record({ key: Schema.String, value: Schema.String }),
 	),
 }) {}
 
-export const MessageContent = Schema.Union(
-	TextContent,
-	ToolUseContent,
-	ToolResultContent,
-	ThinkingContent,
-	ErrorContent,
-	AskUserContent,
+/**
+ * Union of all message part types
+ */
+export const MessagePart = Schema.Union(
+	TextPart,
+	ToolCallPart,
+	ReasoningPart,
+	AskUserPart,
 );
-export type MessageContent = typeof MessageContent.Type;
+export type MessagePart = typeof MessagePart.Type;
 
+// ─── Chat Message ────────────────────────────────────────────
+
+/**
+ * Message metadata - optional extra info
+ */
+export const MessageMetadata = Schema.Record({
+	key: Schema.String,
+	value: Schema.Unknown,
+});
+export type MessageMetadata = typeof MessageMetadata.Type;
+
+/**
+ * Chat message entity - AI SDK v6 UIMessage compatible
+ *
+ * Stores messages with a parts[] array, matching the AI SDK format.
+ * Messages are ordered by createdAt timestamp.
+ */
 export class ChatMessage extends Schema.Class<ChatMessage>("ChatMessage")({
 	id: Schema.String,
 	sessionId: Schema.String,
-	sequenceNumber: Schema.Number,
 	role: MessageRole,
-	contentType: MessageContentType,
-	content: MessageContent,
-	parentToolUseId: Schema.NullOr(Schema.String),
-	uuid: Schema.NullOr(Schema.String),
-	/** ISO 8601 timestamp */
+	/** Array of message parts (text, tool calls, reasoning, etc.) */
+	parts: Schema.Array(MessagePart),
+	/** ISO 8601 timestamp - used for ordering */
 	createdAt: Schema.String,
+	/** Optional metadata */
+	metadata: Schema.optional(MessageMetadata),
 }) {}
 
+/**
+ * Input for creating a new chat message
+ */
 export class CreateChatMessageInput extends Schema.Class<CreateChatMessageInput>(
 	"CreateChatMessageInput",
 )({
 	sessionId: Schema.String,
 	role: MessageRole,
-	contentType: MessageContentType,
-	content: MessageContent,
-	parentToolUseId: Schema.optional(Schema.NullOr(Schema.String)),
-	uuid: Schema.optional(Schema.NullOr(Schema.String)),
+	parts: Schema.Array(MessagePart),
+	metadata: Schema.optional(MessageMetadata),
 }) {}
+
+// ─── Legacy Types (for migration reference) ──────────────────
+// These are kept temporarily for reference during migration
+
+/** @deprecated Use MessagePart instead */
+export const MessageContentType = Schema.Literal(
+	"text",
+	"tool_use",
+	"tool_result",
+	"thinking",
+	"error",
+	"ask_user",
+);
+/** @deprecated Use MessagePart instead */
+export type MessageContentType = typeof MessageContentType.Type;

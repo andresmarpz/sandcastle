@@ -18,7 +18,8 @@
 		"biome:check": "biome check ."
 	},
 	"dependencies": {
-		"@anthropic-ai/claude-agent-sdk": "^0.2.2",
+		"@anthropic-ai/claude-agent-sdk": "^0.2.5",
+		"@anthropic-ai/sdk": "^0.71.2",
 		"@effect/platform": "^0.94.1",
 		"@effect/platform-bun": "^0.87.0",
 		"@effect/rpc": "^0.73.0",
