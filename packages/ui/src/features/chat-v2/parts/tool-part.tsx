@@ -43,7 +43,7 @@ export function ToolPart({ part }: ToolPartProps) {
 	const mappedState = mapState(part.state);
 
 	return (
-		<Tool defaultOpen>
+		<Tool>
 			<ToolHeader title={toolName} type={toolType} state={mappedState} />
 			<ToolContent>
 				<ToolInput input={part.input} />
