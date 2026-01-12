@@ -43,7 +43,7 @@ export function Chat() {
 	};
 
 	return (
-		<div className="flex h-full min-w-0 flex-col">
+		<div className="flex h-full min-w-0 flex-col max-w-5xl m-auto">
 			{error && (
 				<div className="border-b border-destructive/20 bg-destructive/10 px-4 py-2 text-sm text-destructive">
 					{error.message}
