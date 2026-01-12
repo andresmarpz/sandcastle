@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
 	Conversation,
 	ConversationContent,
@@ -24,6 +25,8 @@ import { MessageList } from "./message-list";
  * ```
  */
 export function Chat() {
+	const [autonomous, setAutonomous] = useState(false);
+
 	const {
 		messages,
 		sendMessage,
@@ -33,7 +36,7 @@ export function Chat() {
 		pendingAskUser,
 		respondToAskUser,
 		sessionMetadata,
-	} = useChatSession();
+	} = useChatSession({ autonomous });
 
 	const handleSend = (text: string) => {
 		sendMessage({ text });
@@ -61,7 +64,13 @@ export function Chat() {
 				<ConversationScrollButton />
 			</Conversation>
 
-			<ChatInput onSend={handleSend} onStop={stop} status={status} />
+			<ChatInput
+				onSend={handleSend}
+				onStop={stop}
+				status={status}
+				autonomous={autonomous}
+				onAutonomousChange={setAutonomous}
+			/>
 
 			{/* AskUser Dialog */}
 			{pendingAskUser && (
