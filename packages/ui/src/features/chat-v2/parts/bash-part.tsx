@@ -1,11 +1,7 @@
 "use client";
 
 import { TerminalIcon } from "lucide-react";
-import {
-	Tool,
-	ToolContent,
-	ToolHeader,
-} from "@/components/ai-elements/tool";
+import { Tool, ToolContent, ToolHeader } from "@/components/ai-elements/tool";
 import { cn } from "@/lib/utils";
 import type { ToolCallPart } from "./index";
 
