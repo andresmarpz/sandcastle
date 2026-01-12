@@ -23,7 +23,7 @@ export function ShellLayout() {
 						<span className="text-sm font-medium">Sandcastle</span>
 					</header>
 				)}
-				<div className="flex-1 overflow-hidden">
+				<div className="flex-1 min-w-0 overflow-hidden">
 					<Outlet />
 				</div>
 			</SidebarInset>

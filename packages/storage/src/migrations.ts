@@ -97,6 +97,25 @@ const migrations: Migration[] = [
       ALTER TABLE sessions ADD COLUMN output_tokens INTEGER DEFAULT 0;
     `,
 	},
+	{
+		version: 5,
+		description: "Update chat_messages to AI SDK v6 format with parts array",
+		up: `
+      -- Drop old chat_messages table and recreate with new schema
+      DROP TABLE IF EXISTS chat_messages;
+
+      CREATE TABLE chat_messages (
+        id TEXT PRIMARY KEY,
+        session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+        role TEXT NOT NULL CHECK(role IN ('user', 'assistant', 'system')),
+        parts TEXT NOT NULL,  -- JSON array of message parts
+        created_at TEXT NOT NULL,
+        metadata TEXT  -- Optional JSON metadata
+      );
+
+      CREATE INDEX idx_chat_messages_session ON chat_messages(session_id, created_at);
+    `,
+	},
 ];
 
 export const runMigrations = (

@@ -7,8 +7,7 @@ import { Effect, Layer, Schema } from "effect";
 import {
 	Agent,
 	ChatMessage,
-	MessageContent,
-	type MessageContentType,
+	MessagePart,
 	type MessageRole,
 	Repository,
 	Session,
@@ -113,20 +112,24 @@ const rowToAgent = (row: Record<string, unknown>): Agent =>
 	});
 
 const rowToChatMessage = (row: Record<string, unknown>): ChatMessage => {
-	const contentJson = row["content"] as string;
-	const contentParsed = JSON.parse(contentJson);
-	const content = Schema.decodeUnknownSync(MessageContent)(contentParsed);
+	// Parse parts from JSON
+	const partsJson = row["parts"] as string;
+	const partsParsed = JSON.parse(partsJson);
+	const parts = Schema.decodeUnknownSync(Schema.Array(MessagePart))(
+		partsParsed,
+	);
+
+	// Parse optional metadata
+	const metadataJson = row["metadata"] as string | null;
+	const metadata = metadataJson ? JSON.parse(metadataJson) : undefined;
 
 	return new ChatMessage({
 		id: row["id"] as string,
 		sessionId: row["session_id"] as string,
-		sequenceNumber: row["sequence_number"] as number,
 		role: row["role"] as MessageRole,
-		contentType: row["content_type"] as MessageContentType,
-		content,
-		parentToolUseId: (row["parent_tool_use_id"] as string) ?? null,
-		uuid: (row["uuid"] as string) ?? null,
+		parts,
 		createdAt: row["created_at"] as string,
+		metadata,
 	});
 };
 
@@ -873,7 +876,7 @@ export const makeStorageService = (
 					tryDb("chatMessages.listBySession", () =>
 						db
 							.query<Record<string, unknown>, [string]>(
-								"SELECT * FROM chat_messages WHERE session_id = ? ORDER BY sequence_number ASC",
+								"SELECT * FROM chat_messages WHERE session_id = ? ORDER BY created_at ASC",
 							)
 							.all(sessionId)
 							.map(rowToChatMessage),
@@ -898,8 +901,6 @@ export const makeStorageService = (
 					Effect.gen(function* () {
 						const now = nowIso();
 						const id = generateId();
-						const parentToolUseId = input.parentToolUseId ?? null;
-						const uuid = input.uuid ?? null;
 
 						// Check if session exists
 						const existingSession = yield* tryDb(
@@ -922,43 +923,27 @@ export const makeStorageService = (
 							);
 						}
 
-						// Get next sequence number
-						const sequenceNumber =
-							yield* service.chatMessages.getNextSequenceNumber(
-								input.sessionId,
-							);
-
-						// Serialize content to JSON
-						const contentJson = JSON.stringify(input.content);
+						// Serialize parts and metadata to JSON
+						const partsJson = JSON.stringify(input.parts);
+						const metadataJson = input.metadata
+							? JSON.stringify(input.metadata)
+							: null;
 
 						yield* tryDb("chatMessages.create", () =>
 							db.run(
-								`INSERT INTO chat_messages (id, session_id, sequence_number, role, content_type, content, parent_tool_use_id, uuid, created_at)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-								[
-									id,
-									input.sessionId,
-									sequenceNumber,
-									input.role,
-									input.contentType,
-									contentJson,
-									parentToolUseId,
-									uuid,
-									now,
-								],
+								`INSERT INTO chat_messages (id, session_id, role, parts, created_at, metadata)
+                 VALUES (?, ?, ?, ?, ?, ?)`,
+								[id, input.sessionId, input.role, partsJson, now, metadataJson],
 							),
 						);
 
 						return new ChatMessage({
 							id,
 							sessionId: input.sessionId,
-							sequenceNumber,
 							role: input.role,
-							contentType: input.contentType,
-							content: input.content,
-							parentToolUseId,
-							uuid,
+							parts: input.parts,
 							createdAt: now,
+							metadata: input.metadata,
 						});
 					}),
 
@@ -976,16 +961,6 @@ export const makeStorageService = (
 							sessionId,
 						]),
 					),
-
-				getNextSequenceNumber: (sessionId) =>
-					tryDb("chatMessages.getNextSequenceNumber", () => {
-						const result = db
-							.query<{ max_seq: number | null }, [string]>(
-								"SELECT MAX(sequence_number) as max_seq FROM chat_messages WHERE session_id = ?",
-							)
-							.get(sessionId);
-						return (result?.max_seq ?? -1) + 1;
-					}),
 			},
 		};
 

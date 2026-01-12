@@ -9,7 +9,6 @@ import {
 import type { Session } from "@sandcastle/rpc";
 import * as Option from "effect/Option";
 import { useCallback, useMemo, useState } from "react";
-import { isSessionStreamingFamily } from "@/api/chat-atoms";
 import {
 	createSessionMutation,
 	SESSION_LIST_KEY,
@@ -32,18 +31,10 @@ function PlusIcon({ className }: { className?: string }) {
 			fill="none"
 			stroke="currentColor"
 			strokeWidth="2"
+			aria-hidden="true"
 		>
 			<path d="M8 3v10M3 8h10" strokeLinecap="round" />
 		</svg>
-	);
-}
-
-function StreamingIndicator() {
-	return (
-		<span className="relative flex h-2 w-2">
-			<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-			<span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
-		</span>
 	);
 }
 
@@ -54,8 +45,6 @@ interface SessionTabProps {
 }
 
 function SessionTab({ session, isActive, onClick }: SessionTabProps) {
-	const isStreaming = useAtomValue(isSessionStreamingFamily(session.id));
-
 	return (
 		<button
 			type="button"
@@ -68,7 +57,6 @@ function SessionTab({ session, isActive, onClick }: SessionTabProps) {
 					: "text-muted-foreground hover:text-foreground",
 			)}
 		>
-			{isStreaming && <StreamingIndicator />}
 			<span className="truncate max-w-[120px]">
 				{session.title || "New Session"}
 			</span>

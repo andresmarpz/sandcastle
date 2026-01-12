@@ -13,6 +13,7 @@
 		"biome:check": "biome check ."
 	},
 	"dependencies": {
+		"@ai-sdk/react": "^3.0.30",
 		"@base-ui/react": "^1.0.0",
 		"@effect-atom/atom": "^0.4.11",
 		"@effect-atom/atom-react": "^0.4.4",

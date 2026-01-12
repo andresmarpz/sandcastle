@@ -1,10 +1,10 @@
 "use client";
 
 import { Route, Routes } from "react-router";
+import { WorktreePanel } from "@/features/worktrees";
 import { useInitialize } from "@/hooks/use-initialize";
 import { EmptyState } from "./empty-state";
 import { ShellLayout } from "./shell-layout";
-import { WorktreeView } from "./worktree-view";
 
 export function RootLayout() {
 	useInitialize();
@@ -16,9 +16,9 @@ export function RootLayout() {
 					<Route index element={<EmptyState />} />
 					<Route
 						path="worktrees/:worktreeId/sessions/:sessionId"
-						element={<WorktreeView />}
+						element={<WorktreePanel />}
 					/>
-					<Route path="worktrees/:worktreeId" element={<WorktreeView />} />
+					<Route path="worktrees/:worktreeId" element={<WorktreePanel />} />
 				</Route>
 			</Routes>
 		</div>

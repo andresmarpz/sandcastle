@@ -4,8 +4,6 @@ import { Schema } from "effect";
 
 import { DatabaseRpcError } from "../common/errors";
 
-// ─── Errors ──────────────────────────────────────────────────
-
 /**
  * Generic chat operation error
  */
@@ -37,72 +35,172 @@ export class NoPendingQuestionRpcError extends Schema.TaggedError<NoPendingQuest
 	},
 ) {}
 
-// ─── Stream Event Types ──────────────────────────────────────
+// ─── AI SDK v6 Compatible Stream Events ──────────────────────
+//
+// These match the Vercel AI SDK v6 UIMessageChunk protocol.
+// The frontend can use these directly with useChat's transport.
 
 /**
- * Event types emitted during chat streaming
+ * Finish reason for chat completion
  */
-export const ChatStreamEventType = Schema.Literal(
-	"init", // Session initialized with claude_session_id
-	"message", // New message (user, assistant, tool_use, tool_result)
-	"thinking", // Claude is thinking
-	"tool_start", // Tool execution started
-	"tool_end", // Tool execution completed
-	"ask_user", // AskUserQuestion - need user input
-	"progress", // Progress indicator for long operations
-	"error", // Error occurred
-	"result", // Final result with cost/token info
-	"text_delta", // Streaming text chunk
+export const FinishReason = Schema.Literal(
+	"stop",
+	"error",
+	"length",
+	"tool-calls",
+	"other",
 );
-export type ChatStreamEventType = typeof ChatStreamEventType.Type;
+export type FinishReason = typeof FinishReason.Type;
 
 /**
- * Streaming event sent from server to client during chat
+ * Message start event - begins a new assistant message
  */
-export class ChatStreamEvent extends Schema.Class<ChatStreamEvent>(
-	"ChatStreamEvent",
+export class StreamEventStart extends Schema.Class<StreamEventStart>(
+	"StreamEventStart",
 )({
-	type: ChatStreamEventType,
-
-	// For init
+	type: Schema.Literal("start"),
+	messageId: Schema.String,
+	/** Claude SDK session ID - used for resume */
 	claudeSessionId: Schema.optional(Schema.String),
-
-	// For message
-	message: Schema.optional(ChatMessage),
-
-	// For thinking
-	thinkingText: Schema.optional(Schema.String),
-
-	// For tool_start and tool_end
-	toolUseId: Schema.optional(Schema.String),
-	toolName: Schema.optional(Schema.String),
-
-	// For tool_end
-	toolOutput: Schema.optional(Schema.Unknown),
-	toolIsError: Schema.optional(Schema.Boolean),
-
-	// For ask_user
-	questions: Schema.optional(Schema.Array(AskUserQuestionItem)),
-
-	// For progress
-	progressText: Schema.optional(Schema.String),
-	elapsedSeconds: Schema.optional(Schema.Number),
-
-	// For error
-	errorMessage: Schema.optional(Schema.String),
-	errorCode: Schema.optional(Schema.String),
-
-	// For result
-	result: Schema.optional(Schema.String),
-	costUsd: Schema.optional(Schema.Number),
-	inputTokens: Schema.optional(Schema.Number),
-	outputTokens: Schema.optional(Schema.Number),
-
-	// For text_delta (streaming text chunks)
-	textDelta: Schema.optional(Schema.String),
-	contentBlockIndex: Schema.optional(Schema.Number),
-	uuid: Schema.optional(Schema.String),
 }) {}
+
+/**
+ * Text streaming events - start/delta/end pattern
+ */
+export class StreamEventTextStart extends Schema.Class<StreamEventTextStart>(
+	"StreamEventTextStart",
+)({
+	type: Schema.Literal("text-start"),
+	id: Schema.String,
+}) {}
+
+export class StreamEventTextDelta extends Schema.Class<StreamEventTextDelta>(
+	"StreamEventTextDelta",
+)({
+	type: Schema.Literal("text-delta"),
+	id: Schema.String,
+	delta: Schema.String,
+}) {}
+
+export class StreamEventTextEnd extends Schema.Class<StreamEventTextEnd>(
+	"StreamEventTextEnd",
+)({
+	type: Schema.Literal("text-end"),
+	id: Schema.String,
+}) {}
+
+/**
+ * Tool streaming events
+ */
+export class StreamEventToolInputStart extends Schema.Class<StreamEventToolInputStart>(
+	"StreamEventToolInputStart",
+)({
+	type: Schema.Literal("tool-input-start"),
+	toolCallId: Schema.String,
+	toolName: Schema.String,
+}) {}
+
+export class StreamEventToolInputAvailable extends Schema.Class<StreamEventToolInputAvailable>(
+	"StreamEventToolInputAvailable",
+)({
+	type: Schema.Literal("tool-input-available"),
+	toolCallId: Schema.String,
+	toolName: Schema.String,
+	input: Schema.Unknown,
+}) {}
+
+export class StreamEventToolOutputAvailable extends Schema.Class<StreamEventToolOutputAvailable>(
+	"StreamEventToolOutputAvailable",
+)({
+	type: Schema.Literal("tool-output-available"),
+	toolCallId: Schema.String,
+	output: Schema.Unknown,
+}) {}
+
+/**
+ * Reasoning/thinking events (for extended thinking)
+ */
+export class StreamEventReasoningStart extends Schema.Class<StreamEventReasoningStart>(
+	"StreamEventReasoningStart",
+)({
+	type: Schema.Literal("reasoning-start"),
+	id: Schema.String,
+}) {}
+
+export class StreamEventReasoningDelta extends Schema.Class<StreamEventReasoningDelta>(
+	"StreamEventReasoningDelta",
+)({
+	type: Schema.Literal("reasoning-delta"),
+	id: Schema.String,
+	delta: Schema.String,
+}) {}
+
+export class StreamEventReasoningEnd extends Schema.Class<StreamEventReasoningEnd>(
+	"StreamEventReasoningEnd",
+)({
+	type: Schema.Literal("reasoning-end"),
+	id: Schema.String,
+}) {}
+
+/**
+ * AskUser event - custom extension for interactive questions
+ */
+export class StreamEventAskUser extends Schema.Class<StreamEventAskUser>(
+	"StreamEventAskUser",
+)({
+	type: Schema.Literal("ask-user"),
+	toolCallId: Schema.String,
+	questions: Schema.Array(AskUserQuestionItem),
+}) {}
+
+/**
+ * Finish event - ends the stream
+ */
+export class StreamEventFinish extends Schema.Class<StreamEventFinish>(
+	"StreamEventFinish",
+)({
+	type: Schema.Literal("finish"),
+	finishReason: FinishReason,
+	/** Session metadata - available on finish */
+	metadata: Schema.optional(
+		Schema.Struct({
+			claudeSessionId: Schema.optional(Schema.String),
+			costUsd: Schema.optional(Schema.Number),
+			inputTokens: Schema.optional(Schema.Number),
+			outputTokens: Schema.optional(Schema.Number),
+		}),
+	),
+}) {}
+
+/**
+ * Error event
+ */
+export class StreamEventError extends Schema.Class<StreamEventError>(
+	"StreamEventError",
+)({
+	type: Schema.Literal("error"),
+	errorText: Schema.String,
+}) {}
+
+/**
+ * Union of all stream event types (AI SDK v6 compatible)
+ */
+export const ChatStreamEvent = Schema.Union(
+	StreamEventStart,
+	StreamEventTextStart,
+	StreamEventTextDelta,
+	StreamEventTextEnd,
+	StreamEventToolInputStart,
+	StreamEventToolInputAvailable,
+	StreamEventToolOutputAvailable,
+	StreamEventReasoningStart,
+	StreamEventReasoningDelta,
+	StreamEventReasoningEnd,
+	StreamEventAskUser,
+	StreamEventFinish,
+	StreamEventError,
+);
+export type ChatStreamEvent = typeof ChatStreamEvent.Type;
 
 // ─── Input Types ─────────────────────────────────────────────
 
@@ -146,7 +244,7 @@ export class ChatRespondInput extends Schema.Class<ChatRespondInput>(
 export class ChatRpc extends RpcGroup.make(
 	/**
 	 * Start or continue a streaming chat session.
-	 * Returns a stream of ChatStreamEvents.
+	 * Returns a stream of AI SDK v6 compatible events.
 	 */
 	Rpc.make("chat.stream", {
 		payload: ChatStreamInput,
@@ -156,21 +254,7 @@ export class ChatRpc extends RpcGroup.make(
 			ChatSessionNotFoundRpcError,
 			DatabaseRpcError,
 		),
-		stream: true, // Enable streaming
-	}),
-
-	/**
-	 * Respond to an AskUserQuestion event.
-	 * Resumes the paused chat stream.
-	 */
-	Rpc.make("chat.respond", {
-		payload: ChatRespondInput,
-		success: Schema.Void,
-		error: Schema.Union(
-			ChatRpcError,
-			NoPendingQuestionRpcError,
-			ChatSessionNotFoundRpcError,
-		),
+		stream: true,
 	}),
 
 	/**
@@ -185,20 +269,11 @@ export class ChatRpc extends RpcGroup.make(
 
 	/**
 	 * Get message history for a session.
-	 * Used for restoring chat state on mount.
+	 * Returns AI SDK v6 compatible UIMessages.
 	 */
 	Rpc.make("chat.history", {
 		payload: { sessionId: Schema.String },
 		success: Schema.Array(ChatMessage),
 		error: Schema.Union(ChatRpcError, DatabaseRpcError),
-	}),
-
-	/**
-	 * Check if a session is currently streaming.
-	 */
-	Rpc.make("chat.isActive", {
-		payload: { sessionId: Schema.String },
-		success: Schema.Boolean,
-		error: ChatRpcError,
 	}),
 ) {}

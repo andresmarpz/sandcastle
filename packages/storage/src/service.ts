@@ -168,6 +168,7 @@ export class StorageService extends Context.Tag("StorageService")<
 		// ─── Chat Message CRUD ────────────────────────────────────
 
 		chatMessages: {
+			/** List messages by session, ordered by createdAt */
 			listBySession: (
 				sessionId: string,
 			) => Effect.Effect<ChatMessage[], DatabaseError>;
@@ -176,6 +177,7 @@ export class StorageService extends Context.Tag("StorageService")<
 				id: string,
 			) => Effect.Effect<ChatMessage, ChatMessageNotFoundError | DatabaseError>;
 
+			/** Create a new message with parts array (AI SDK v6 compatible) */
 			create: (
 				input: CreateChatMessageInput,
 			) => Effect.Effect<ChatMessage, ForeignKeyViolationError | DatabaseError>;
@@ -187,11 +189,6 @@ export class StorageService extends Context.Tag("StorageService")<
 			deleteBySession: (
 				sessionId: string,
 			) => Effect.Effect<void, DatabaseError>;
-
-			/** Get the next sequence number for a session */
-			getNextSequenceNumber: (
-				sessionId: string,
-			) => Effect.Effect<number, DatabaseError>;
 		};
 	}
 >() {}
