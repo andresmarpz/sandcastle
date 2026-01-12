@@ -97,7 +97,11 @@ export interface AskUserDialogProps {
  * Dialog component for AskUser events.
  * Renders questions and collects user responses.
  */
-export function AskUserDialog({ event, onRespond, onClose }: AskUserDialogProps) {
+export function AskUserDialog({
+	event,
+	onRespond,
+	onClose,
+}: AskUserDialogProps) {
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
 	// Track answers for each question by header

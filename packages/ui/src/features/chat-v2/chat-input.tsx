@@ -47,7 +47,8 @@ export function ChatInput({
 					<PromptInputButton
 						onClick={() => onAutonomousChange(!autonomous)}
 						className={cn(
-							autonomous && "bg-primary text-primary-foreground hover:bg-primary/90",
+							autonomous &&
+								"bg-primary text-primary-foreground hover:bg-primary/90",
 						)}
 						title={autonomous ? "Autonomous mode ON" : "Autonomous mode OFF"}
 					>
