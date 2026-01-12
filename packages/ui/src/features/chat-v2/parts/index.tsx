@@ -1,6 +1,7 @@
 import type { UIMessage } from "ai";
 import { ReasoningPart } from "./reasoning-part";
 import { TextPart } from "./text-part";
+import { TodoWritePart } from "./todo-write-part";
 import { ToolPart } from "./tool-part";
 
 // Use the part type from UIMessage to get correct inference
@@ -27,6 +28,15 @@ export function PartRenderer({ part }: PartRendererProps) {
 	// Handle tool parts (both static tool-* and dynamic-tool types)
 	if (part.type.startsWith("tool-") || part.type === "dynamic-tool") {
 		const toolPart = part as ToolCallPart;
+
+		// Use dedicated component for TodoWrite
+		if (
+			part.type === "tool-TodoWrite" ||
+			(part.type === "dynamic-tool" && toolPart.toolName === "TodoWrite")
+		) {
+			return <TodoWritePart part={toolPart} />;
+		}
+
 		return <ToolPart part={toolPart} />;
 	}
 
