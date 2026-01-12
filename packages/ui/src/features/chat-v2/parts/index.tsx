@@ -1,9 +1,12 @@
 import type { UIMessage } from "ai";
+
 import { ReadPart } from "./read-part";
+import { BashPart } from "./bash-part";
 import { ReasoningPart } from "./reasoning-part";
 import { TextPart } from "./text-part";
 import { TodoWritePart } from "./todo-write-part";
 import { ToolPart } from "./tool-part";
+import { WritePart } from "./write-part";
 
 // Use the part type from UIMessage to get correct inference
 type MessagePart = UIMessage["parts"][number];
@@ -44,6 +47,20 @@ export function PartRenderer({ part }: PartRendererProps) {
 			(part.type === "dynamic-tool" && toolPart.toolName === "Read")
 		) {
 			return <ReadPart part={toolPart} />;
+		// Use dedicated component for Write
+		if (
+			part.type === "tool-Write" ||
+			(part.type === "dynamic-tool" && toolPart.toolName === "Write")
+		) {
+			return <WritePart part={toolPart} />;
+		}
+
+		// Use dedicated component for Bash
+		if (
+			part.type === "tool-Bash" ||
+			(part.type === "dynamic-tool" && toolPart.toolName === "Bash")
+		) {
+			return <BashPart part={toolPart} />;
 		}
 
 		return <ToolPart part={toolPart} />;

@@ -1,4 +1,8 @@
-import { CheckCircleIcon, CircleIcon, LoaderIcon } from "lucide-react";
+import {
+	IconCircle,
+	IconCircleCheck,
+	IconCircleHalf2,
+} from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import type { ToolCallPart } from "./index";
 
@@ -20,13 +24,13 @@ function TodoItem({ todo }: { todo: Todo }) {
 	return (
 		<div className="flex items-start gap-2 py-1">
 			{todo.status === "completed" && (
-				<CheckCircleIcon className="mt-0.5 size-4 shrink-0 text-green-600" />
+				<IconCircleCheck className="mt-0.5 size-4 shrink-0 text-green-600" />
 			)}
 			{todo.status === "in_progress" && (
-				<LoaderIcon className="mt-0.5 size-4 shrink-0 animate-spin text-blue-600" />
+				<IconCircleHalf2 className="mt-0.5 size-4 shrink-0 text-yellow-400 rotate-180" />
 			)}
 			{todo.status === "pending" && (
-				<CircleIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+				<IconCircle className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
 			)}
 			<span
 				className={cn(
@@ -54,7 +58,7 @@ export function TodoWritePart({ part }: TodoWritePartProps) {
 	const totalCount = todos.length;
 
 	return (
-		<div className="mb-4 rounded-md border p-3">
+		<div className="mb-4 rounded-md border p-3 bg-muted/70">
 			<div className="mb-2 flex items-center justify-between">
 				<span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
 					Tasks
