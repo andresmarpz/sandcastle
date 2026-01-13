@@ -1,10 +1,8 @@
 "use client";
 
 import { File, type FileContents } from "@pierre/diffs/react";
-import { IconFile, IconFileText } from "@tabler/icons-react";
+import { IconFileText } from "@tabler/icons-react";
 import { useMemo } from "react";
-import type { BundledLanguage } from "shiki";
-import { CodeBlock } from "@/components/ai-elements/code-block";
 import { Tool, ToolContent, ToolHeader } from "@/components/ai-elements/tool";
 import type { ToolCallPart } from "./index";
 
@@ -16,61 +14,6 @@ interface ReadInput {
 
 interface ReadPartProps {
 	part: ToolCallPart;
-}
-
-const LANGUAGE_MAP: Record<string, BundledLanguage> = {
-	ts: "typescript",
-	tsx: "tsx",
-	js: "javascript",
-	jsx: "jsx",
-	py: "python",
-	rb: "ruby",
-	go: "go",
-	rs: "rust",
-	java: "java",
-	kt: "kotlin",
-	swift: "swift",
-	c: "c",
-	cpp: "cpp",
-	h: "c",
-	hpp: "cpp",
-	cs: "csharp",
-	php: "php",
-	html: "html",
-	css: "css",
-	scss: "scss",
-	less: "less",
-	json: "json",
-	yaml: "yaml",
-	yml: "yaml",
-	xml: "xml",
-	md: "markdown",
-	sql: "sql",
-	sh: "bash",
-	bash: "bash",
-	zsh: "bash",
-	fish: "fish",
-	dockerfile: "dockerfile",
-	toml: "toml",
-	ini: "ini",
-	env: "shellscript",
-	txt: "log",
-	log: "log",
-};
-
-const DEFAULT_LANGUAGE: BundledLanguage = "log";
-
-function getFileExtension(filePath: string): string {
-	const parts = filePath.split(".");
-	if (parts.length > 1) {
-		return parts[parts.length - 1] ?? "";
-	}
-	return "";
-}
-
-function getFileName(filePath: string): string {
-	const parts = filePath.split("/");
-	return parts[parts.length - 1] ?? "";
 }
 
 // Extract relative path from absolute path
@@ -93,21 +36,11 @@ function getRelativePath(filePath: string): string {
 	return filePath.split("/").pop() ?? filePath;
 }
 
-function getLanguageFromExtension(ext: string): BundledLanguage {
-	return LANGUAGE_MAP[ext.toLowerCase()] ?? DEFAULT_LANGUAGE;
-}
-
 export function ReadPart({ part }: ReadPartProps) {
 	const input = part.input as ReadInput | undefined;
 	const filePath = input?.file_path ?? "";
-	const extension = getFileExtension(filePath);
-	const language = getLanguageFromExtension(extension);
 	const relativePath = getRelativePath(filePath);
 
-	const hasError = part.state === "output-error";
-	const isComplete = part.state === "output-available";
-
-	// Parse the output - it comes as a string with line numbers
 	const output = typeof part.output === "string" ? part.output : "";
 
 	// Clean the output to remove line number prefixes if present
@@ -120,15 +53,12 @@ export function ReadPart({ part }: ReadPartProps) {
 		})
 		.join("\n");
 
-	// Count lines in output
-	const lineCount = cleanedOutput.split("\n").filter(Boolean).length;
-
 	const file = useMemo(() => {
 		return {
 			name: relativePath,
 			contents: cleanedOutput,
 		} satisfies FileContents;
-	}, []);
+	}, [relativePath, cleanedOutput]);
 
 	const mapState = (state: ToolCallPart["state"]) => {
 		switch (state) {
