@@ -2,15 +2,15 @@ import {
 	ChatRpc,
 	ChatRpcError,
 	ChatSessionNotFoundRpcError,
+	type ChatStreamEvent,
+	DatabaseRpcError,
 	SequencedEvent,
 	SessionBusyRpcError,
 	SessionSnapshotEvent,
 	SessionStateEvent,
-	type SessionStatus,
 	StreamEventError,
+	type StreamingStatus,
 	UserMessageEvent,
-	type ChatStreamEvent,
-	DatabaseRpcError,
 } from "@sandcastle/rpc";
 import {
 	type DatabaseError,
@@ -24,7 +24,15 @@ import {
 	TextPart,
 	ToolCallPart,
 } from "@sandcastle/storage/entities";
-import { Effect, Fiber, Layer, Option, Ref, Stream } from "effect";
+import {
+	type Context,
+	Effect,
+	Fiber,
+	Layer,
+	Option,
+	Ref,
+	Stream,
+} from "effect";
 import { type AdapterConfig, adaptSDKStreamToEvents } from "../adapters/claude";
 import {
 	type ClaudeSDKError,
@@ -33,10 +41,10 @@ import {
 	type QueryOptions,
 } from "../agents/claude";
 import {
-	ActiveSessionsService,
-	ActiveSessionsServiceLive,
 	type ActiveSession,
+	ActiveSessionsService,
 	type ActiveSessionsServiceInterface,
+	ActiveSessionsServiceLive,
 } from "../services/active-sessions";
 
 // ─── Error Mapping ───────────────────────────────────────────
@@ -246,8 +254,10 @@ const buildSnapshot = (
 		const status = yield* Ref.get(session.status);
 		const latestSeq = yield* Ref.get(session.lastSeq);
 		const bufferHasGap = yield* Ref.get(session.bufferHasGap);
-		const bufferMinSeq = buffer.length ? buffer[0].seq : null;
-		const bufferMaxSeq = buffer.length ? buffer[buffer.length - 1].seq : null;
+		const firstEvent = buffer[0];
+		const lastEvent = buffer[buffer.length - 1];
+		const bufferMinSeq = firstEvent ? firstEvent.seq : null;
+		const bufferMaxSeq = lastEvent ? lastEvent.seq : null;
 		const epochMismatch = epoch !== undefined && epoch !== session.epoch;
 		const needsHistory =
 			lastSeenSeq === undefined ||
@@ -277,7 +287,7 @@ const clearBuffer = (session: ActiveSession) =>
 const cancelCleanup = (session: ActiveSession) =>
 	session.cleanupFiber
 		? Effect.gen(function* () {
-				yield* Fiber.interrupt(session.cleanupFiber).pipe(
+				yield* Fiber.interrupt(session.cleanupFiber!).pipe(
 					Effect.catchAll(() => Effect.void),
 				);
 				session.cleanupFiber = null;
@@ -317,6 +327,213 @@ const scheduleCleanup = (
 		session.cleanupFiber = fiber;
 	});
 
+// ─── Streaming Helpers ───────────────────────────────────────
+
+const AUTONOMOUS_PROMPT_APPEND = `
+
+You are in autonomous mode working on a new worktree of this project. First of all read @project.md to understand the project. The user requested a task that you must try to complete to the best of your ability. Use your best judgment at all times. Ensure high quality, pragmatic and clean delivery. You will continue working indefinitely until you have exhausted all your attempts at solving the problem, or successfully completed it. If you completed, run 'bun biome' in the packages/apps that have modified files, which runs tooling like linting, formatting.
+After you are done working, commit your changes and push to git. Create a PR using 'gh' cli.
+Do not ask questions to the user or self-doubt. Choose the best options to comply with the task.`;
+
+interface PrepareStreamingParams {
+	sessionId: string;
+	worktreeId: string;
+	prompt: string;
+	claudeSessionId?: string | null;
+	autonomous?: boolean;
+}
+
+interface SessionBusyError {
+	readonly _tag: "SessionBusy";
+	readonly previousStatus: StreamingStatus;
+}
+
+type StorageServiceType = Context.Tag.Service<typeof StorageService>;
+
+const prepareStreamingSession = (
+	params: PrepareStreamingParams,
+	storage: StorageServiceType,
+	activeSessions: ActiveSessionsServiceInterface,
+) =>
+	Effect.gen(function* () {
+		const worktree = yield* storage.worktrees.get(params.worktreeId);
+		const sessionRecord = yield* storage.sessions.get(params.sessionId);
+		const session = yield* activeSessions.getOrCreate(params.sessionId, {
+			claudeSessionId: sessionRecord.claudeSessionId ?? null,
+		});
+
+		yield* cancelCleanup(session);
+
+		// Atomically lock session for streaming
+		const previousStatus = yield* Ref.modify(session.status, (status) =>
+			status === "idle"
+				? (["idle", "streaming"] as const)
+				: ([status, status] as const),
+		);
+
+		if (previousStatus !== "idle") {
+			return yield* Effect.fail({
+				_tag: "SessionBusy",
+				previousStatus,
+			} as SessionBusyError);
+		}
+
+		yield* clearBuffer(session);
+
+		// Store user message
+		const userMessage = yield* storage.chatMessages.create({
+			sessionId: params.sessionId,
+			role: "user",
+			parts: [new TextPart({ type: "text", text: params.prompt })],
+		});
+
+		yield* publishEvent(
+			session,
+			new UserMessageEvent({
+				type: "user-message",
+				messageId: userMessage.id,
+				text: params.prompt,
+				timestamp: userMessage.createdAt,
+			}),
+		);
+
+		// Resolve Claude session ID
+		const resumeId =
+			params.claudeSessionId ??
+			session.claudeSessionId ??
+			sessionRecord.claudeSessionId ??
+			undefined;
+
+		if (resumeId && resumeId !== session.claudeSessionId) {
+			session.claudeSessionId = resumeId;
+		}
+
+		yield* publishEvent(
+			session,
+			new SessionStateEvent({
+				type: "session-state",
+				status: "streaming",
+				claudeSessionId: session.claudeSessionId,
+			}),
+		);
+
+		// Build query options
+		const abortController = new AbortController();
+		const queryOptions: QueryOptions = {
+			cwd: worktree.path,
+			abortController,
+			resume: resumeId,
+			systemPrompt: params.autonomous
+				? {
+						type: "preset",
+						preset: "claude_code",
+						append: AUTONOMOUS_PROMPT_APPEND,
+					}
+				: { type: "preset", preset: "claude_code" },
+			permissionMode: "bypassPermissions",
+			allowDangerouslySkipPermissions: true,
+		};
+
+		return { session, sessionRecord, abortController, queryOptions };
+	});
+
+const finalizeStream = (
+	session: ActiveSession,
+	sessionId: string,
+	accumulatorRef: Ref.Ref<AccumulatedMessage>,
+	storage: StorageServiceType,
+	activeSessions: ActiveSessionsServiceInterface,
+) =>
+	Effect.gen(function* () {
+		const acc = yield* Ref.get(accumulatorRef);
+
+		// Persist assistant message if we have content
+		if (acc.parts.length > 0) {
+			yield* storage.chatMessages
+				.create({
+					id: acc.messageId ?? undefined,
+					sessionId,
+					role: "assistant",
+					parts: acc.parts,
+					metadata: acc.metadata,
+				})
+				.pipe(Effect.orElse(() => Effect.void));
+		}
+
+		// Update session metadata
+		if (acc.claudeSessionId || acc.metadata.costUsd) {
+			yield* storage.sessions
+				.update(sessionId, {
+					claudeSessionId: acc.claudeSessionId,
+					status: "active",
+					lastActivityAt: new Date().toISOString(),
+					totalCostUsd: acc.metadata.costUsd,
+					inputTokens: acc.metadata.inputTokens,
+					outputTokens: acc.metadata.outputTokens,
+				})
+				.pipe(Effect.orElse(() => Effect.void));
+		}
+
+		session.queryHandle = null;
+		session.abortController = null;
+
+		// Clear buffer BEFORE publishing idle state (fixes race condition)
+		yield* clearBuffer(session);
+		yield* Ref.set(session.status, "idle");
+		yield* publishEvent(
+			session,
+			new SessionStateEvent({
+				type: "session-state",
+				status: "idle",
+				claudeSessionId: session.claudeSessionId,
+			}),
+		);
+
+		// Schedule cleanup if no subscribers (using atomic modify)
+		const count = yield* Ref.modify(session.subscriberCount, (c) => [c, c]);
+		if (count === 0) {
+			yield* scheduleCleanup(activeSessions, sessionId, session);
+		}
+	});
+
+const handleClaudeSessionIdUpdate = (
+	session: ActiveSession,
+	sessionId: string,
+	event: ChatStreamEvent,
+	activeSessions: ActiveSessionsServiceInterface,
+) => {
+	if (event.type === "start" && event.claudeSessionId) {
+		session.claudeSessionId = event.claudeSessionId;
+		return activeSessions.updateClaudeSessionId(
+			sessionId,
+			event.claudeSessionId,
+		);
+	}
+	return Effect.void;
+};
+
+const broadcastError = (session: ActiveSession, error: unknown) =>
+	publishEvent(
+		session,
+		new StreamEventError({
+			type: "error",
+			errorText: String(error),
+		}),
+	);
+
+const resetSessionOnError = (session: ActiveSession) =>
+	Effect.gen(function* () {
+		yield* Ref.set(session.status, "idle");
+		yield* publishEvent(
+			session,
+			new SessionStateEvent({
+				type: "session-state",
+				status: "idle",
+				claudeSessionId: session.claudeSessionId,
+			}),
+		);
+	});
+
 // ─── Handlers ────────────────────────────────────────────────
 
 export const ChatRpcHandlers = ChatRpc.toLayer(
@@ -332,107 +549,15 @@ export const ChatRpcHandlers = ChatRpc.toLayer(
 			"chat.stream": (params) =>
 				Stream.unwrap(
 					Effect.gen(function* () {
-						// 1. Get worktree to find working directory
-						const worktree = yield* storage.worktrees.get(params.worktreeId);
+						const { session, abortController, queryOptions } =
+							yield* prepareStreamingSession(params, storage, activeSessions);
 
-						// 2. Verify session exists
-						const sessionRecord = yield* storage.sessions.get(params.sessionId);
-
-						// 3. Get or create active session
-						const session = yield* activeSessions.getOrCreate(params.sessionId, {
-							claudeSessionId: sessionRecord.claudeSessionId ?? null,
-						});
-
-						yield* cancelCleanup(session);
-
-						// 4. Atomically lock the session for streaming
-						const previousStatus = yield* Ref.modify(session.status, (status) =>
-							status === "idle" ? ["idle", "streaming"] : [status, status],
-						);
-
-						if (previousStatus !== "idle") {
-							return yield* Effect.fail(
-								new ChatRpcError({
-									message: "Session already has an active stream",
-									code: "SESSION_ACTIVE",
-								}),
-							);
-						}
-
-						yield* clearBuffer(session);
-
-						// 5. Store user message
-						const userMessage = yield* storage.chatMessages.create({
-							sessionId: params.sessionId,
-							role: "user",
-							parts: [new TextPart({ type: "text", text: params.prompt })],
-						});
-
-						yield* publishEvent(
-							session,
-							new UserMessageEvent({
-								type: "user-message",
-								messageId: userMessage.id,
-								text: params.prompt,
-								timestamp: userMessage.createdAt,
-							}),
-						);
-
-						// 6. Create AbortController for interrupt capability
-						const abortController = new AbortController();
-
-						const resumeId =
-							params.claudeSessionId ??
-							session.claudeSessionId ??
-							sessionRecord.claudeSessionId ??
-							undefined;
-
-						if (resumeId && resumeId !== session.claudeSessionId) {
-							session.claudeSessionId = resumeId;
-						}
-
-						yield* publishEvent(
-							session,
-							new SessionStateEvent({
-								type: "session-state",
-								status: "streaming",
-								claudeSessionId: session.claudeSessionId,
-							}),
-						);
-
-						// 7. Build query options
-						const queryOptions: QueryOptions = {
-							cwd: worktree.path,
-							abortController,
-							resume: resumeId,
-							systemPrompt: params.autonomous
-								? {
-										type: "preset",
-										preset: "claude_code",
-										append: `\n\nYou are in autonomous mode working on a new worktree of this project. First of all read @project.md to understand the project. The user requested a task that you must try to complete to the best of your ability. Use your best judgment at all times. Ensure high quality, pragmatic and clean delivery. You will continue working indefinitely until you have exhausted all your attempts at solving the problem, or successfully completed it. If you completed, run 'bun biome' in the packages/apps that have modified files, which runs tooling like linting, formatting.
-After you are done working, commit your changes and push to git. Create a PR using 'gh' cli.
-Do not ask questions to the user or self-doubt. Choose the best options to comply with the task.`,
-									}
-								: { type: "preset", preset: "claude_code" },
-							permissionMode: "bypassPermissions",
-							allowDangerouslySkipPermissions: true,
-						};
-
-						// 8. Create query handle
 						const queryHandle = yield* claudeSDK
 							.query(params.prompt, queryOptions)
 							.pipe(
 								Effect.catchAll((error) =>
 									Effect.gen(function* () {
-										yield* Ref.set(session.status, "idle");
-										yield* publishEvent(
-											session,
-											new SessionStateEvent({
-												type: "session-state",
-												status: "idle",
-												claudeSessionId: session.claudeSessionId,
-											}),
-										);
+										yield* resetSessionOnError(session);
 										return yield* Effect.fail(error);
 									}),
 								),
@@ -441,133 +566,93 @@ Do not ask questions to the user or self-doubt. Choose the best options to compl
 						session.queryHandle = queryHandle;
 						session.abortController = abortController;
 
-						// 9. Create accumulator ref for message persistence
 						const accumulatorRef = yield* Ref.make(createAccumulator());
 
-						// 10. Transform and return stream
 						return adaptSDKStreamToEvents(
 							queryHandle.stream,
 							adapterConfig,
 						).pipe(
-							// Tap to accumulate parts for persistence
 							Stream.tap((event) =>
 								Ref.update(accumulatorRef, (acc) =>
 									accumulateEvent(acc, event),
 								),
 							),
-							// Update claudeSessionId in active session when we get it
-							Stream.tap((event) => {
-								if (event.type === "start" && event.claudeSessionId) {
-									session.claudeSessionId = event.claudeSessionId;
-									return activeSessions.updateClaudeSessionId(
-										params.sessionId,
-										event.claudeSessionId,
-									);
-								}
-								return Effect.void;
-							}),
-							// Publish events to subscribers
+							Stream.tap((event) =>
+								handleClaudeSessionIdUpdate(
+									session,
+									params.sessionId,
+									event,
+									activeSessions,
+								),
+							),
 							Stream.tap((event) => publishEvent(session, event)),
-							// On stream completion, persist assistant message
+							// Broadcast errors to all subscribers (consistent with chat.send)
+							Stream.tapError((error) => broadcastError(session, error)),
 							Stream.ensuring(
-								Effect.gen(function* () {
-									const acc = yield* Ref.get(accumulatorRef);
-
-									// Only persist if we have parts
-									if (acc.parts.length > 0) {
-										yield* storage.chatMessages
-											.create({
-												id: acc.messageId ?? undefined,
-												sessionId: params.sessionId,
-												role: "assistant",
-												parts: acc.parts,
-												metadata: acc.metadata,
-											})
-											.pipe(Effect.orElse(() => Effect.void));
-									}
-
-									// Update session with claudeSessionId and metadata
-									if (acc.claudeSessionId || acc.metadata.costUsd) {
-										yield* storage.sessions
-											.update(params.sessionId, {
-												claudeSessionId: acc.claudeSessionId,
-												status: "active",
-												lastActivityAt: new Date().toISOString(),
-												totalCostUsd: acc.metadata.costUsd,
-												inputTokens: acc.metadata.inputTokens,
-												outputTokens: acc.metadata.outputTokens,
-											})
-											.pipe(Effect.orElse(() => Effect.void));
-									}
-
-									session.queryHandle = null;
-									session.abortController = null;
-
-									yield* Ref.set(session.status, "idle");
-									yield* publishEvent(
-										session,
-										new SessionStateEvent({
-											type: "session-state",
-											status: "idle",
-											claudeSessionId: session.claudeSessionId,
-										}),
-									);
-									yield* clearBuffer(session);
-
-									const count = yield* Ref.get(session.subscriberCount);
-									if (count === 0) {
-										yield* scheduleCleanup(
-											activeSessions,
-											params.sessionId,
-											session,
-										);
-									}
-								}),
+								finalizeStream(
+									session,
+									params.sessionId,
+									accumulatorRef,
+									storage,
+									activeSessions,
+								),
 							),
 						);
 					}).pipe(
-						Effect.catchAll((error) =>
-							error._tag === "ChatRpcError"
-								? Effect.fail(error)
-								: Effect.gen(function* () {
-										const maybeSession = yield* activeSessions.get(
-											params.sessionId,
-										);
-										if (Option.isSome(maybeSession)) {
-											const session = maybeSession.value;
-											yield* Ref.set(session.status, "idle");
-											yield* publishEvent(
-												session,
-												new SessionStateEvent({
-													type: "session-state",
-													status: "idle",
-													claudeSessionId: session.claudeSessionId,
-												}),
-											);
-										}
-										return yield* Effect.fail(error);
-									}),
+						Effect.catchTag("SessionBusy", () =>
+							Effect.fail(
+								new ChatRpcError({
+									message: "Session already has an active stream",
+									code: "SESSION_ACTIVE",
+								}),
+							),
+						),
+						Effect.tapError((error) =>
+							Effect.gen(function* () {
+								if (
+									typeof error === "object" &&
+									error !== null &&
+									"_tag" in error &&
+									(error as { _tag: string })._tag !== "ChatRpcError" &&
+									(error as { _tag: string })._tag !== "SessionBusy"
+								) {
+									const maybeSession = yield* activeSessions.get(
+										params.sessionId,
+									);
+									if (Option.isSome(maybeSession)) {
+										yield* resetSessionOnError(maybeSession.value);
+									}
+								}
+							}),
 						),
 						Effect.mapError((error) => {
-							if (error._tag === "ClaudeSDKError") return mapClaudeError(error);
 							if (
-								error._tag === "SessionNotFoundError" ||
-								error._tag === "WorktreeNotFoundError"
+								typeof error === "object" &&
+								error !== null &&
+								"_tag" in error
 							) {
-								return mapSessionNotFoundError(error);
-							}
-							if (error._tag === "DatabaseError") {
-								return mapDatabaseError(error);
-							}
-							// ForeignKeyViolationError from chatMessages.create
-							if (error._tag === "ForeignKeyViolationError") {
-								return new ChatSessionNotFoundRpcError({
-									sessionId: params.sessionId,
-								});
-							}
-							// ChatRpcError passes through
-							if (error._tag === "ChatRpcError") {
-								return error;
+								const tagged = error as { _tag: string };
+								if (tagged._tag === "ClaudeSDKError")
+									return mapClaudeError(error as ClaudeSDKError);
+								if (
+									tagged._tag === "SessionNotFoundError" ||
+									tagged._tag === "WorktreeNotFoundError"
+								) {
+									return mapSessionNotFoundError(
+										error as SessionNotFoundError | WorktreeNotFoundError,
+									);
+								}
+								if (tagged._tag === "DatabaseError") {
+									return mapDatabaseError(error as DatabaseError);
+								}
+								if (tagged._tag === "ForeignKeyViolationError") {
+									return new ChatSessionNotFoundRpcError({
+										sessionId: params.sessionId,
+									});
+								}
+								if (tagged._tag === "ChatRpcError") {
+									return error as ChatRpcError;
+								}
 							}
 							return new ChatRpcError({
 								message: String(error),
@@ -584,9 +669,12 @@ Do not ask questions to the user or self-doubt. Choose the best options to compl
 				Stream.unwrapScoped(
 					Effect.gen(function* () {
 						const sessionRecord = yield* storage.sessions.get(params.sessionId);
-						const session = yield* activeSessions.getOrCreate(params.sessionId, {
-							claudeSessionId: sessionRecord.claudeSessionId ?? null,
-						});
+						const session = yield* activeSessions.getOrCreate(
+							params.sessionId,
+							{
+								claudeSessionId: sessionRecord.claudeSessionId ?? null,
+							},
+						);
 
 						if (!session.claudeSessionId && sessionRecord.claudeSessionId) {
 							session.claudeSessionId = sessionRecord.claudeSessionId;
@@ -595,6 +683,13 @@ Do not ask questions to the user or self-doubt. Choose the best options to compl
 						yield* cancelCleanup(session);
 						yield* Ref.update(session.subscriberCount, (count) => count + 1);
 
+						// FIX: Subscribe to PubSub FIRST to avoid gaps
+						// Events published between buffer read and subscription are captured
+						const liveStream = yield* Stream.fromPubSub(session.pubsub, {
+							scoped: true,
+						});
+
+						// THEN build snapshot and get buffer
 						const snapshot = yield* buildSnapshot(
 							session,
 							params.lastSeenSeq,
@@ -605,22 +700,29 @@ Do not ask questions to the user or self-doubt. Choose the best options to compl
 							? 0
 							: (params.lastSeenSeq ?? 0);
 						const replayEvents = replayBuffer(buffer, replayFromSeq);
-						const liveStream = yield* Stream.fromPubSub(session.pubsub, {
-							scoped: true,
-						});
+						const lastReplayEvent = replayEvents[replayEvents.length - 1];
+						const replayMaxSeq = lastReplayEvent
+							? lastReplayEvent.seq
+							: (params.lastSeenSeq ?? 0);
+						const liveAfterReplay = Stream.filter(
+							liveStream,
+							(event) => event.seq > replayMaxSeq,
+						);
 
 						return Stream.concat(
 							Stream.fromIterable([snapshot]),
-							Stream.fromIterable(replayEvents),
-							liveStream,
+							Stream.concat(Stream.fromIterable(replayEvents), liveAfterReplay),
 						).pipe(
 							Stream.ensuring(
 								Effect.gen(function* () {
-									yield* Ref.update(session.subscriberCount, (count) =>
-										Math.max(0, count - 1),
+									// FIX: Use atomic modify to decrement and get count
+									const count = yield* Ref.modify(
+										session.subscriberCount,
+										(c) => {
+											const next = Math.max(0, c - 1);
+											return [next, next];
+										},
 									);
-
-									const count = yield* Ref.get(session.subscriberCount);
 									const status = yield* Ref.get(session.status);
 
 									if (count === 0 && status === "idle") {
@@ -634,21 +736,32 @@ Do not ask questions to the user or self-doubt. Choose the best options to compl
 							),
 						);
 					}).pipe(
-						Effect.mapError((error) => {
-							if (error._tag === "SessionNotFoundError") {
-								return mapSessionNotFoundError(error);
-							}
-							if (error._tag === "DatabaseError") {
+						Effect.mapError(
+							(error): ChatRpcError | ChatSessionNotFoundRpcError => {
+								if (
+									typeof error === "object" &&
+									error !== null &&
+									"_tag" in error
+								) {
+									const tagged = error as { _tag: string };
+									if (tagged._tag === "SessionNotFoundError") {
+										return new ChatSessionNotFoundRpcError({
+											sessionId: (error as SessionNotFoundError).id,
+										});
+									}
+									if (tagged._tag === "DatabaseError") {
+										return new ChatRpcError({
+											message: (error as DatabaseError).message,
+											code: "DATABASE_ERROR",
+										});
+									}
+								}
 								return new ChatRpcError({
-									message: error.message,
-									code: "DATABASE_ERROR",
+									message: String(error),
+									code: "UNKNOWN_ERROR",
 								});
-							}
-							return new ChatRpcError({
-								message: String(error),
-								code: "UNKNOWN_ERROR",
-							});
-						}),
+							},
+						),
 					),
 				),
 
@@ -657,97 +770,15 @@ Do not ask questions to the user or self-doubt. Choose the best options to compl
 			 */
 			"chat.send": (params) =>
 				Effect.gen(function* () {
-					const worktree = yield* storage.worktrees.get(params.worktreeId);
-					const sessionRecord = yield* storage.sessions.get(params.sessionId);
-
-					const session = yield* activeSessions.getOrCreate(params.sessionId, {
-						claudeSessionId: sessionRecord.claudeSessionId ?? null,
-					});
-
-					yield* cancelCleanup(session);
-
-					const previousStatus = yield* Ref.modify(session.status, (status) =>
-						status === "idle" ? ["idle", "streaming"] : [status, status],
-					);
-
-					if (previousStatus !== "idle") {
-						return yield* Effect.fail(
-							new SessionBusyRpcError({
-								sessionId: params.sessionId,
-								currentStatus: previousStatus as SessionStatus,
-							}),
-						);
-					}
-
-					yield* clearBuffer(session);
-
-					const userMessage = yield* storage.chatMessages.create({
-						sessionId: params.sessionId,
-						role: "user",
-						parts: [new TextPart({ type: "text", text: params.prompt })],
-					});
-
-					yield* publishEvent(
-						session,
-						new UserMessageEvent({
-							type: "user-message",
-							messageId: userMessage.id,
-							text: params.prompt,
-							timestamp: userMessage.createdAt,
-						}),
-					);
-
-					const resumeId =
-						params.claudeSessionId ??
-						session.claudeSessionId ??
-						sessionRecord.claudeSessionId ??
-						undefined;
-
-					if (resumeId && resumeId !== session.claudeSessionId) {
-						session.claudeSessionId = resumeId;
-					}
-
-					yield* publishEvent(
-						session,
-						new SessionStateEvent({
-							type: "session-state",
-							status: "streaming",
-							claudeSessionId: session.claudeSessionId,
-						}),
-					);
-
-					const abortController = new AbortController();
-					const queryOptions: QueryOptions = {
-						cwd: worktree.path,
-						abortController,
-						resume: resumeId,
-						systemPrompt: params.autonomous
-							? {
-									type: "preset",
-									preset: "claude_code",
-									append: `\n\nYou are in autonomous mode working on a new worktree of this project. First of all read @project.md to understand the project. The user requested a task that you must try to complete to the best of your ability. Use your best judgment at all times. Ensure high quality, pragmatic and clean delivery. You will continue working indefinitely until you have exhausted all your attempts at solving the problem, or successfully completed it. If you completed, run 'bun biome' in the packages/apps that have modified files, which runs tooling like linting, formatting.
-After you are done working, commit your changes and push to git. Create a PR using 'gh' cli.
-Do not ask questions to the user or self-doubt. Choose the best options to comply with the task.`,
-								}
-							: { type: "preset", preset: "claude_code" },
-						permissionMode: "bypassPermissions",
-						allowDangerouslySkipPermissions: true,
-					};
+					const { session, abortController, queryOptions } =
+						yield* prepareStreamingSession(params, storage, activeSessions);
 
 					const queryHandle = yield* claudeSDK
 						.query(params.prompt, queryOptions)
 						.pipe(
 							Effect.catchAll((error) =>
 								Effect.gen(function* () {
-									yield* Ref.set(session.status, "idle");
-									yield* publishEvent(
-										session,
-										new SessionStateEvent({
-											type: "session-state",
-											status: "idle",
-											claudeSessionId: session.claudeSessionId,
-										}),
-									);
+									yield* resetSessionOnError(session);
 									return yield* Effect.fail(error);
 								}),
 							),
@@ -763,135 +794,103 @@ Do not ask questions to the user or self-doubt. Choose the best options to compl
 						adapterConfig,
 					).pipe(
 						Stream.tap((event) =>
-							Ref.update(accumulatorRef, (acc) =>
-								accumulateEvent(acc, event),
+							Ref.update(accumulatorRef, (acc) => accumulateEvent(acc, event)),
+						),
+						Stream.tap((event) =>
+							handleClaudeSessionIdUpdate(
+								session,
+								params.sessionId,
+								event,
+								activeSessions,
 							),
 						),
-						Stream.tap((event) => {
-							if (event.type === "start" && event.claudeSessionId) {
-								session.claudeSessionId = event.claudeSessionId;
-								return activeSessions.updateClaudeSessionId(
-									params.sessionId,
-									event.claudeSessionId,
-								);
-							}
-							return Effect.void;
-						}),
 						Stream.tap((event) => publishEvent(session, event)),
 						Stream.runDrain,
-						Effect.catchAll((error) =>
-							publishEvent(
-								session,
-								new StreamEventError({
-									type: "error",
-									errorText: String(error),
-								}),
-							),
-						),
+						Effect.catchAll((error) => broadcastError(session, error)),
 						Effect.ensuring(
-							Effect.gen(function* () {
-								const acc = yield* Ref.get(accumulatorRef);
-
-								if (acc.parts.length > 0) {
-									yield* storage.chatMessages
-										.create({
-											id: acc.messageId ?? undefined,
-											sessionId: params.sessionId,
-											role: "assistant",
-											parts: acc.parts,
-											metadata: acc.metadata,
-										})
-										.pipe(Effect.orElse(() => Effect.void));
-								}
-
-								if (acc.claudeSessionId || acc.metadata.costUsd) {
-									yield* storage.sessions
-										.update(params.sessionId, {
-											claudeSessionId: acc.claudeSessionId,
-											status: "active",
-											lastActivityAt: new Date().toISOString(),
-											totalCostUsd: acc.metadata.costUsd,
-											inputTokens: acc.metadata.inputTokens,
-											outputTokens: acc.metadata.outputTokens,
-										})
-										.pipe(Effect.orElse(() => Effect.void));
-								}
-
-								session.queryHandle = null;
-								session.abortController = null;
-
-								yield* Ref.set(session.status, "idle");
-								yield* publishEvent(
-									session,
-									new SessionStateEvent({
-										type: "session-state",
-										status: "idle",
-										claudeSessionId: session.claudeSessionId,
-									}),
-								);
-								yield* clearBuffer(session);
-
-								const count = yield* Ref.get(session.subscriberCount);
-								if (count === 0) {
-									yield* scheduleCleanup(
-										activeSessions,
-										params.sessionId,
-										session,
-									);
-								}
-							}),
+							finalizeStream(
+								session,
+								params.sessionId,
+								accumulatorRef,
+								storage,
+								activeSessions,
+							),
 						),
 					);
 
 					yield* Effect.fork(runStream);
 				}).pipe(
-					Effect.catchAll((error) =>
-						error._tag === "SessionBusyRpcError"
-							? Effect.fail(error)
-							: Effect.gen(function* () {
-									const maybeSession = yield* activeSessions.get(
-										params.sessionId,
-									);
-									if (Option.isSome(maybeSession)) {
-										const session = maybeSession.value;
-										yield* Ref.set(session.status, "idle");
-										yield* publishEvent(
-											session,
-											new SessionStateEvent({
-												type: "session-state",
-												status: "idle",
-												claudeSessionId: session.claudeSessionId,
-											}),
-										);
-									}
-									return yield* Effect.fail(error);
-								}),
-					),
-					Effect.mapError((error) => {
-						if (error._tag === "SessionBusyRpcError") return error;
-						if (error._tag === "ClaudeSDKError") return mapClaudeError(error);
-						if (
-							error._tag === "SessionNotFoundError" ||
-							error._tag === "WorktreeNotFoundError"
-						) {
-							return mapSessionNotFoundError(error);
-						}
-						if (error._tag === "DatabaseError") {
-							return mapDatabaseError(error);
-						}
-						if (error._tag === "ForeignKeyViolationError") {
-							return new ChatSessionNotFoundRpcError({
+					Effect.catchTag("SessionBusy", (error) =>
+						Effect.fail(
+							new SessionBusyRpcError({
 								sessionId: params.sessionId,
+								currentStatus: error.previousStatus,
+							}),
+						),
+					),
+					Effect.tapError((error) =>
+						Effect.gen(function* () {
+							if (
+								typeof error === "object" &&
+								error !== null &&
+								"_tag" in error &&
+								(error as { _tag: string })._tag !== "SessionBusyRpcError" &&
+								(error as { _tag: string })._tag !== "SessionBusy"
+							) {
+								const maybeSession = yield* activeSessions.get(
+									params.sessionId,
+								);
+								if (Option.isSome(maybeSession)) {
+									yield* resetSessionOnError(maybeSession.value);
+								}
+							}
+						}),
+					),
+					Effect.mapError(
+						(
+							error,
+						):
+							| SessionBusyRpcError
+							| ChatRpcError
+							| ChatSessionNotFoundRpcError => {
+							if (
+								typeof error === "object" &&
+								error !== null &&
+								"_tag" in error
+							) {
+								const tagged = error as { _tag: string };
+								if (tagged._tag === "SessionBusyRpcError")
+									return error as SessionBusyRpcError;
+								if (tagged._tag === "ClaudeSDKError")
+									return mapClaudeError(error as ClaudeSDKError);
+								if (
+									tagged._tag === "SessionNotFoundError" ||
+									tagged._tag === "WorktreeNotFoundError"
+								) {
+									return new ChatSessionNotFoundRpcError({
+										sessionId: (
+											error as SessionNotFoundError | WorktreeNotFoundError
+										).id,
+									});
+								}
+								if (tagged._tag === "DatabaseError") {
+									return new ChatRpcError({
+										message: (error as DatabaseError).message,
+										code: "DATABASE_ERROR",
+									});
+								}
+								if (tagged._tag === "ForeignKeyViolationError") {
+									return new ChatSessionNotFoundRpcError({
+										sessionId: params.sessionId,
+									});
+								}
+							}
+							return new ChatRpcError({
+								message: String(error),
+								code: "UNKNOWN_ERROR",
 							});
-						}
-						if (error._tag === "ChatRpcError") {
-							return error;
-						}
-						return new ChatRpcError({
-							message: String(error),
-							code: "UNKNOWN_ERROR",
-						});
-					}),
+						},
+					),
 				),
 
 			/**
@@ -914,32 +913,39 @@ Do not ask questions to the user or self-doubt. Choose the best options to compl
 					const latestSeq = yield* Ref.get(session.lastSeq);
 					const bufferHasGap = yield* Ref.get(session.bufferHasGap);
 
+					const firstBufferEvent = buffer[0];
+					const lastBufferEvent = buffer[buffer.length - 1];
+
 					return {
 						status,
 						claudeSessionId: session.claudeSessionId,
 						epoch: session.epoch,
 						subscriberCount,
-						bufferMinSeq: buffer.length ? buffer[0].seq : null,
-						bufferMaxSeq: buffer.length ? buffer[buffer.length - 1].seq : null,
+						bufferMinSeq: firstBufferEvent ? firstBufferEvent.seq : null,
+						bufferMaxSeq: lastBufferEvent ? lastBufferEvent.seq : null,
 						latestSeq,
 						bufferHasGap,
 					};
 				}).pipe(
-					Effect.mapError((error) => {
-						if (error._tag === "SessionNotFoundError") {
-							return mapSessionNotFoundError(error);
-						}
-						if (error._tag === "DatabaseError") {
+					Effect.mapError(
+						(error): ChatRpcError | ChatSessionNotFoundRpcError => {
+							if (error._tag === "SessionNotFoundError") {
+								return new ChatSessionNotFoundRpcError({
+									sessionId: error.id,
+								});
+							}
+							if (error._tag === "DatabaseError") {
+								return new ChatRpcError({
+									message: error.message,
+									code: "DATABASE_ERROR",
+								});
+							}
 							return new ChatRpcError({
-								message: error.message,
-								code: "DATABASE_ERROR",
+								message: String(error),
+								code: "UNKNOWN_ERROR",
 							});
-						}
-						return new ChatRpcError({
-							message: String(error),
-							code: "UNKNOWN_ERROR",
-						});
-					}),
+						},
+					),
 				),
 
 			/**
