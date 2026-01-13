@@ -1,8 +1,8 @@
 "use client";
 
 import type { useChat } from "@ai-sdk/react";
+import { IconRobot, IconSquare } from "@tabler/icons-react";
 import type { ChatStatus } from "ai";
-import { BotIcon, SquareIcon } from "lucide-react";
 import { type ChangeEvent, useCallback, useRef, useState } from "react";
 import {
 	PromptInput,
@@ -143,12 +143,12 @@ export function ChatInput({
 						)}
 						title={autonomous ? "Autonomous mode ON" : "Autonomous mode OFF"}
 					>
-						<BotIcon className="h-4 w-4" />
+						<IconRobot className="h-4 w-4" />
 						Autonomous
 					</PromptInputButton>
 					{isStreaming ? (
 						<PromptInputButton onClick={onStop} variant="destructive">
-							<SquareIcon className="h-4 w-4" />
+							<IconSquare className="h-4 w-4" />
 							Stop
 						</PromptInputButton>
 					) : (
