@@ -8,6 +8,7 @@ import { BunHttpServer, BunRuntime } from "@effect/platform-bun";
 import { RpcSerialization, RpcServer } from "@effect/rpc";
 import {
 	ChatRpc,
+	FilesRpc,
 	RepositoryRpc,
 	SessionRpc,
 	WorktreeRpc,
@@ -16,6 +17,7 @@ import { Effect, Layer } from "effect";
 
 import {
 	ChatRpcHandlersLive,
+	FilesRpcHandlersLive,
 	RepositoryRpcHandlersLive,
 	SessionRpcHandlersLive,
 	WorktreeRpcHandlersLive,
@@ -59,13 +61,15 @@ const LoggingMiddleware = HttpMiddleware.make((app) =>
 
 const SandcastleRpc = RepositoryRpc.merge(WorktreeRpc)
 	.merge(SessionRpc)
-	.merge(ChatRpc);
+	.merge(ChatRpc)
+	.merge(FilesRpc);
 
 const RpcHandlersLive = Layer.mergeAll(
 	RepositoryRpcHandlersLive,
 	WorktreeRpcHandlersLive,
 	SessionRpcHandlersLive,
 	ChatRpcHandlersLive,
+	FilesRpcHandlersLive,
 );
 
 const RpcLayer = RpcServer.layer(SandcastleRpc).pipe(
