@@ -117,8 +117,7 @@ export const makeActiveSessionsService = Effect.gen(function* () {
 			const lastSeq = input.lastSeq ?? (yield* Ref.make(0));
 			const bufferHasGap = input.bufferHasGap ?? (yield* Ref.make(false));
 			const subscriberCount = input.subscriberCount ?? (yield* Ref.make(0));
-			const status =
-				input.status ?? (yield* Ref.make<StreamingStatus>("idle"));
+			const status = input.status ?? (yield* Ref.make<StreamingStatus>("idle"));
 			const epoch = input.epoch ?? crypto.randomUUID();
 
 			return {
