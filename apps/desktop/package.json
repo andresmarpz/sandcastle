@@ -6,6 +6,7 @@
 	"scripts": {
 		"dev": "vite",
 		"build": "tsc && vite build",
+		"build:release": "tauri build",
 		"preview": "vite preview",
 		"tauri": "tauri",
 		"typecheck": "tsc --noEmit",
