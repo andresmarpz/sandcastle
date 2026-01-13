@@ -261,8 +261,9 @@ export const ChatRpcHandlers = ChatRpc.toLayer(
 								? {
 										type: "preset",
 										preset: "claude_code",
-										append:
-											"\n\nYou are running in autonomous mode. Complete the task without asking for user confirmation unless absolutely necessary.",
+										append: `\n\nYou are in autonomous mode working on a new worktree of this project. First of all read @project.md to understand the project. The user requested a task that you must try to complete to the best of your ability. Use your best judgment at all times. Ensure high quality, pragmatic and clean delivery. You will continue working indefinitely until you have exhausted all your attempts at solving the problem, or successfully completed it. If you completed, run 'bun biome' in the packages/apps that have modified files, which runs tooling like linting, formatting.
+After you are done working, commit your changes and push to git. Create a PR using 'gh' cli.
+Do not ask questions to the user or self-doubt. Choose the best options to comply with the task.`,
 									}
 								: { type: "preset", preset: "claude_code" },
 							permissionMode: "bypassPermissions",
