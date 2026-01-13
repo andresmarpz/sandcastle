@@ -60,6 +60,7 @@ function AppReady({ children }: { children: React.ReactNode }) {
 function App() {
 	// Gate app behind backend URL configuration
 	if (!hasBackendUrl()) {
+		hideLoadingScreen();
 		return (
 			<ThemeProvider>
 				<BackendUrlSetup />

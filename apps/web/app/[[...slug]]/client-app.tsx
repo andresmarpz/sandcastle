@@ -3,6 +3,8 @@
 import { RegistryProvider } from "@effect-atom/atom-react";
 import { PlatformProvider } from "@sandcastle/ui/context/platform-context";
 import { ThemeProvider } from "@sandcastle/ui/context/theme-context";
+import { BackendUrlSetup } from "@sandcastle/ui/features/app/backend-url-setup";
+import { hasBackendUrl } from "@sandcastle/ui/lib/backend-url";
 import { lazy, Suspense, useEffect } from "react";
 import { BrowserRouter } from "react-router";
 import { LoadingScreen } from "@/features/app/loading-screen";
@@ -34,6 +36,16 @@ function AppReady({ children }: { children: React.ReactNode }) {
 }
 
 export default function ClientApp() {
+	// Gate app behind backend URL configuration
+	if (!hasBackendUrl()) {
+		hideLoadingScreen();
+		return (
+			<ThemeProvider>
+				<BackendUrlSetup />
+			</ThemeProvider>
+		);
+	}
+
 	return (
 		<BrowserRouter>
 			<ThemeProvider>
