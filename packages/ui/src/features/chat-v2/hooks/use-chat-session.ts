@@ -1,14 +1,14 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
 	type ChatSessionContext,
 	useChatSessionContext,
 } from "../context/chat-session-context";
 import { createRpcTransport } from "../lib/rpc-transport";
-import type { AskUserEvent, SessionMetadata } from "../lib/transport-types";
+import type { SessionMetadata } from "../lib/transport-types";
 
 /**
  * Return type for the useChatSession hook.
@@ -23,8 +23,6 @@ export interface UseChatSessionReturn {
 
 	// Session-specific
 	sessionMetadata: SessionMetadata | null;
-	pendingAskUser: AskUserEvent | null;
-	respondToAskUser: (answers: Record<string, string>) => Promise<void>;
 	config: ChatSessionContext["config"];
 	updateValue: ChatSessionContext["updateValue"];
 }
@@ -40,9 +38,6 @@ export function useChatSession(): UseChatSessionReturn {
 
 	const [sessionMetadata, setSessionMetadata] =
 		useState<SessionMetadata | null>(null);
-	const [pendingAskUser, setPendingAskUser] = useState<AskUserEvent | null>(
-		null,
-	);
 
 	const transport = useMemo(() => {
 		return createRpcTransport(
@@ -56,7 +51,6 @@ export function useChatSession(): UseChatSessionReturn {
 			{
 				onSessionStart: (csi) => updateValue({ claudeSessionId: csi }),
 				onMetadata: setSessionMetadata,
-				onAskUser: setPendingAskUser,
 			},
 		);
 	}, [
@@ -98,24 +92,6 @@ export function useChatSession(): UseChatSessionReturn {
 		hasSetInitialMessages.current = false;
 	}, [config.sessionId]);
 
-	// Handler for responding to AskUser
-	const respondToAskUser = useCallback(
-		async (answers: Record<string, string>) => {
-			if (!pendingAskUser) return;
-
-			// TODO: Call chat.respond RPC mutation when backend implements it
-			// For now, log and clear the pending question
-			console.log("[useChatSession] respondToAskUser:", {
-				sessionId: config.sessionId,
-				toolUseId: pendingAskUser.toolCallId,
-				answers,
-			});
-
-			setPendingAskUser(null);
-		},
-		[config.sessionId, pendingAskUser],
-	);
-
 	return {
 		messages,
 		sendMessage,
@@ -123,8 +99,6 @@ export function useChatSession(): UseChatSessionReturn {
 		error,
 		stop,
 		sessionMetadata,
-		pendingAskUser,
-		respondToAskUser,
 		config,
 		updateValue,
 	};

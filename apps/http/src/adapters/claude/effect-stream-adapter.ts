@@ -7,7 +7,6 @@ import type {
 import {
 	ChatRpcError,
 	type ChatStreamEvent,
-	StreamEventAskUser,
 	StreamEventError,
 	StreamEventFinish,
 	StreamEventStart,
@@ -18,10 +17,6 @@ import {
 	StreamEventToolInputStart,
 	StreamEventToolOutputAvailable,
 } from "@sandcastle/rpc";
-import {
-	AskUserQuestionItem,
-	AskUserQuestionOption,
-} from "@sandcastle/storage/entities";
 import { Chunk, Effect, Stream } from "effect";
 import type { ClaudeSDKError } from "../../agents/claude";
 import {
@@ -218,42 +213,6 @@ function processAssistantMessage(
 					input: toolInput,
 				}),
 			);
-
-			// Check if this is an AskUserQuestion tool
-			if (block.name === "AskUserQuestion") {
-				const askInput = toolInput as {
-					questions?: Array<{
-						question: string;
-						header: string;
-						options: Array<{ label: string; description: string }>;
-						multiSelect: boolean;
-					}>;
-				};
-
-				if (askInput.questions) {
-					events.push(
-						new StreamEventAskUser({
-							type: "ask-user",
-							toolCallId: block.id,
-							questions: askInput.questions.map(
-								(q) =>
-									new AskUserQuestionItem({
-										question: q.question,
-										header: q.header,
-										options: q.options.map(
-											(o) =>
-												new AskUserQuestionOption({
-													label: o.label,
-													description: o.description,
-												}),
-										),
-										multiSelect: q.multiSelect,
-									}),
-							),
-						}),
-					);
-				}
-			}
 
 			// Track the tool call in state
 			newState = registerToolCall(newState, block.id, block.name, toolInput);

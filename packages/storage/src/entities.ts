@@ -225,6 +225,8 @@ export class ChatMessage extends Schema.Class<ChatMessage>("ChatMessage")({
 export class CreateChatMessageInput extends Schema.Class<CreateChatMessageInput>(
 	"CreateChatMessageInput",
 )({
+	/** Optional explicit ID (for stream/history dedup) */
+	id: Schema.optional(Schema.String),
 	sessionId: Schema.String,
 	role: MessageRole,
 	parts: Schema.Array(MessagePart),

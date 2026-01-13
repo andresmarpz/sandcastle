@@ -1,5 +1,4 @@
 import type {
-	AskUserPart,
 	ChatMessage,
 	MessagePart,
 	ReasoningPart,
@@ -33,12 +32,6 @@ function convertPart(part: MessagePart): UIMessagePart {
 			type: "reasoning",
 			text: reasoningPart.reasoning,
 		};
-	}
-
-	// Check for AskUserPart - custom extension, pass through
-	if (part.type === "ask-user") {
-		const askUserPart = part as AskUserPart;
-		return askUserPart as unknown as UIMessagePart;
 	}
 
 	// ToolCallPart and any other parts - pass through directly

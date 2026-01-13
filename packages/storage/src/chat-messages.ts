@@ -55,6 +55,7 @@ export const createChatMessagesService = (db: DbInstance) => ({
 		}),
 
 	create: (input: {
+		id?: string;
 		sessionId: string;
 		role: MessageRole;
 		parts: readonly (typeof MessagePart.Type)[];
@@ -62,7 +63,7 @@ export const createChatMessagesService = (db: DbInstance) => ({
 	}) =>
 		Effect.gen(function* () {
 			const now = nowIso();
-			const id = generateId();
+			const id = input.id ?? generateId();
 
 			const existingSession = yield* tryDb(
 				"chatMessages.create.checkSession",

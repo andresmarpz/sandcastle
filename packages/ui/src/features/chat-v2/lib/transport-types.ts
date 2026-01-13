@@ -1,5 +1,3 @@
-import type { AskUserQuestionItem } from "@sandcastle/rpc";
-
 /**
  * Configuration for the RPC transport.
  */
@@ -27,19 +25,9 @@ export interface SessionMetadata {
 }
 
 /**
- * AskUser event data for rendering the dialog.
- */
-export interface AskUserEvent {
-	toolCallId: string;
-	questions: readonly AskUserQuestionItem[];
-}
-
-/**
  * Callbacks for transport events.
  */
 export interface TransportCallbacks {
-	/** Called when AskUser event is received - must respond to continue */
-	onAskUser?: (event: AskUserEvent) => void;
 	/** Called when session metadata is available (on finish) */
 	onMetadata?: (metadata: SessionMetadata) => void;
 	/** Called when claudeSessionId is received (on start) */
