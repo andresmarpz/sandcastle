@@ -1,5 +1,5 @@
 import { useAtomValue } from "@effect-atom/atom-react";
-import { FileIcon } from "lucide-react";
+import { IconFile } from "@tabler/icons-react";
 import { useMemo } from "react";
 import { type FileMatch, fileSearchAtomFamily } from "@/api/files-atoms";
 import { CommandEmpty, CommandGroup, CommandItem } from "@/components/command";
@@ -42,7 +42,7 @@ function FileSearchResultsInner({
 						onSelect={() => onSelect(file.path)}
 						title={file.path}
 					>
-						<FileIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
+						<IconFile className="h-4 w-4 shrink-0 text-muted-foreground" />
 						<span className="flex min-w-0">
 							{directory && (
 								<span className="truncate text-muted-foreground">

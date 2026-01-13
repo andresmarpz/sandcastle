@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckIcon, CopyIcon } from "lucide-react";
+import { IconCheck, IconCopy } from "@tabler/icons-react";
 import {
 	type ComponentProps,
 	createContext,
@@ -197,7 +197,7 @@ export const CodeBlockCopyButton = ({
 		}
 	};
 
-	const Icon = isCopied ? CheckIcon : CopyIcon;
+	const Icon = isCopied ? IconCheck : IconCopy;
 
 	return (
 		<Button

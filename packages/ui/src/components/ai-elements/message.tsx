@@ -2,11 +2,11 @@
 
 import type { FileUIPart, UIMessage } from "ai";
 import {
-	ChevronLeftIcon,
-	ChevronRightIcon,
-	PaperclipIcon,
-	XIcon,
-} from "lucide-react";
+	IconChevronLeft,
+	IconChevronRight,
+	IconPaperclip,
+	IconX,
+} from "@tabler/icons-react";
 import type { ComponentProps, HTMLAttributes, ReactElement } from "react";
 import {
 	createContext,
@@ -261,7 +261,7 @@ export const MessageBranchPrevious = ({
 			variant="ghost"
 			{...props}
 		>
-			{children ?? <ChevronLeftIcon size={14} />}
+			{children ?? <IconChevronLeft size={14} />}
 		</Button>
 	);
 };
@@ -284,7 +284,7 @@ export const MessageBranchNext = ({
 			variant="ghost"
 			{...props}
 		>
-			{children ?? <ChevronRightIcon size={14} />}
+			{children ?? <IconChevronRight size={14} />}
 		</Button>
 	);
 };
@@ -373,7 +373,7 @@ export function MessageAttachment({
 							type="button"
 							variant="ghost"
 						>
-							<XIcon />
+							<IconX />
 							<span className="sr-only">Remove</span>
 						</Button>
 					)}
@@ -388,7 +388,7 @@ export function MessageAttachment({
 							// @ts-expect-error - type prop conflicts with Button's type
 							nativeButton={false}
 						>
-							<PaperclipIcon className="size-4" />
+							<IconPaperclip className="size-4" />
 						</TooltipTrigger>
 						<TooltipContent>
 							<p>{attachmentLabel}</p>
@@ -405,7 +405,7 @@ export function MessageAttachment({
 							type="button"
 							variant="ghost"
 						>
-							<XIcon />
+							<IconX />
 							<span className="sr-only">Remove</span>
 						</Button>
 					)}

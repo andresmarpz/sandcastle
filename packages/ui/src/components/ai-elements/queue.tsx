@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDownIcon, PaperclipIcon } from "lucide-react";
+import { IconChevronDown, IconPaperclip } from "@tabler/icons-react";
 import type { ComponentProps } from "react";
 import { Button } from "@/components/button";
 import {
@@ -174,7 +174,7 @@ export const QueueItemFile = ({
 		)}
 		{...props}
 	>
-		<PaperclipIcon size={12} />
+		<IconPaperclip size={12} />
 		<span className="max-w-[100px] truncate">{children}</span>
 	</span>
 );
@@ -243,7 +243,7 @@ export const QueueSectionLabel = ({
 	...props
 }: QueueSectionLabelProps) => (
 	<span className={cn("flex items-center gap-2", className)} {...props}>
-		<ChevronDownIcon className="group-data-[state=closed]:-rotate-90 size-4 transition-transform" />
+		<IconChevronDown className="group-data-[state=closed]:-rotate-90 size-4 transition-transform" />
 		{icon}
 		<span>
 			{count} {label}

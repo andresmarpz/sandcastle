@@ -2,11 +2,11 @@
 
 import { useControllableState } from "@radix-ui/react-use-controllable-state";
 import {
-	BrainIcon,
-	ChevronDownIcon,
-	DotIcon,
-	type LucideIcon,
-} from "lucide-react";
+	type Icon,
+	IconBrain,
+	IconChevronDown,
+	IconPoint,
+} from "@tabler/icons-react";
 import type { ComponentProps, ReactNode } from "react";
 import { createContext, memo, useContext, useMemo } from "react";
 import { Badge } from "@/components/badge";
@@ -92,11 +92,11 @@ export const ChainOfThoughtHeader = memo(
 					)}
 					{...props}
 				>
-					<BrainIcon className="size-4" />
+					<IconBrain className="size-4" />
 					<span className="flex-1 text-left">
 						{children ?? "Chain of Thought"}
 					</span>
-					<ChevronDownIcon
+					<IconChevronDown
 						className={cn(
 							"size-4 transition-transform",
 							isOpen ? "rotate-180" : "rotate-0",
@@ -109,7 +109,7 @@ export const ChainOfThoughtHeader = memo(
 );
 
 export type ChainOfThoughtStepProps = ComponentProps<"div"> & {
-	icon?: LucideIcon;
+	icon?: Icon;
 	label: ReactNode;
 	description?: ReactNode;
 	status?: "complete" | "active" | "pending";
@@ -118,7 +118,7 @@ export type ChainOfThoughtStepProps = ComponentProps<"div"> & {
 export const ChainOfThoughtStep = memo(
 	({
 		className,
-		icon: Icon = DotIcon,
+		icon: IconComponent = IconPoint,
 		label,
 		description,
 		status = "complete",
@@ -142,7 +142,7 @@ export const ChainOfThoughtStep = memo(
 				{...props}
 			>
 				<div className="relative mt-0.5">
-					<Icon className="size-4" />
+					<IconComponent className="size-4" />
 					<div className="-mx-px absolute top-7 bottom-0 left-1/2 w-px bg-border" />
 				</div>
 				<div className="flex-1 space-y-2 overflow-hidden">
