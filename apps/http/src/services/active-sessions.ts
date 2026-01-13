@@ -1,13 +1,13 @@
+import type { SequencedEvent, StreamingStatus } from "@sandcastle/rpc";
 import {
 	Context,
 	Effect,
+	type Fiber,
 	Layer,
 	Option,
 	PubSub,
 	Ref,
-	type Fiber,
 } from "effect";
-import type { SequencedEvent, SessionStatus } from "@sandcastle/rpc";
 import type { QueryHandle } from "../agents/claude";
 
 /**
@@ -23,7 +23,7 @@ export interface ActiveSession {
 	epoch: string;
 	bufferHasGap: Ref.Ref<boolean>;
 	subscriberCount: Ref.Ref<number>;
-	status: Ref.Ref<SessionStatus>;
+	status: Ref.Ref<StreamingStatus>;
 	cleanupFiber: Fiber.RuntimeFiber<unknown, unknown> | null;
 }
 
@@ -37,7 +37,7 @@ export interface ActiveSessionInput {
 	epoch?: string;
 	bufferHasGap?: Ref.Ref<boolean>;
 	subscriberCount?: Ref.Ref<number>;
-	status?: Ref.Ref<SessionStatus>;
+	status?: Ref.Ref<StreamingStatus>;
 	cleanupFiber?: Fiber.RuntimeFiber<unknown, unknown> | null;
 }
 
@@ -110,14 +110,15 @@ export const makeActiveSessionsService = Effect.gen(function* () {
 	const sessionsRef = yield* Ref.make<Map<string, ActiveSession>>(new Map());
 	const makeActiveSession = (input: ActiveSessionInput) =>
 		Effect.gen(function* () {
-			const pubsub = input.pubsub ?? (yield* PubSub.unbounded<SequencedEvent>());
+			const pubsub =
+				input.pubsub ?? (yield* PubSub.unbounded<SequencedEvent>());
 			const eventBuffer =
 				input.eventBuffer ?? (yield* Ref.make<SequencedEvent[]>([]));
 			const lastSeq = input.lastSeq ?? (yield* Ref.make(0));
 			const bufferHasGap = input.bufferHasGap ?? (yield* Ref.make(false));
 			const subscriberCount = input.subscriberCount ?? (yield* Ref.make(0));
 			const status =
-				input.status ?? (yield* Ref.make<SessionStatus>("idle"));
+				input.status ?? (yield* Ref.make<StreamingStatus>("idle"));
 			const epoch = input.epoch ?? crypto.randomUUID();
 
 			return {
@@ -148,21 +149,23 @@ export const makeActiveSessionsService = Effect.gen(function* () {
 
 		getOrCreate: (sessionId, session = {}) =>
 			Effect.gen(function* () {
-				const existing = yield* Ref.get(sessionsRef).pipe(
-					Effect.map((sessions) => Option.fromNullable(sessions.get(sessionId))),
-				);
+				// Pre-create session (will be discarded if one already exists)
+				const newSession = yield* makeActiveSession(session);
 
-				if (Option.isSome(existing)) {
-					return existing.value;
-				}
-
-				const activeSession = yield* makeActiveSession(session);
-				yield* Ref.update(sessionsRef, (sessions) => {
+				// Atomically check-and-insert to avoid race conditions
+				const result = yield* Ref.modify(sessionsRef, (sessions) => {
+					const existing = sessions.get(sessionId);
+					if (existing) {
+						// Return existing, don't modify map
+						return [existing, sessions] as const;
+					}
+					// Insert new session
 					const newSessions = new Map(sessions);
-					newSessions.set(sessionId, activeSession);
-					return newSessions;
+					newSessions.set(sessionId, newSession);
+					return [newSession, newSessions] as const;
 				});
-				return activeSession;
+
+				return result;
 			}),
 
 		get: (sessionId) =>

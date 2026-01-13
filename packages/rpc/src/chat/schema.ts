@@ -26,13 +26,11 @@ export class ChatSessionNotFoundRpcError extends Schema.TaggedError<ChatSessionN
 ) {}
 
 /**
- * Session status for multi-client coordination
+ * Streaming status for multi-client coordination (idle vs actively streaming)
+ * Note: This is distinct from storage SessionStatus which tracks session lifecycle.
  */
-export const SessionStatus = Schema.Literal(
-	"idle",
-	"streaming",
-);
-export type SessionStatus = typeof SessionStatus.Type;
+export const StreamingStatus = Schema.Literal("idle", "streaming");
+export type StreamingStatus = typeof StreamingStatus.Type;
 
 /**
  * Session is busy (already streaming)
@@ -41,7 +39,7 @@ export class SessionBusyRpcError extends Schema.TaggedError<SessionBusyRpcError>
 	"SessionBusyRpcError",
 	{
 		sessionId: Schema.String,
-		currentStatus: SessionStatus,
+		currentStatus: StreamingStatus,
 	},
 ) {}
 
@@ -221,7 +219,7 @@ export class SessionStateEvent extends Schema.Class<SessionStateEvent>(
 	"SessionStateEvent",
 )({
 	type: Schema.Literal("session-state"),
-	status: SessionStatus,
+	status: StreamingStatus,
 	claudeSessionId: Schema.NullOr(Schema.String),
 }) {}
 
@@ -233,7 +231,7 @@ export class SessionSnapshotEvent extends Schema.Class<SessionSnapshotEvent>(
 )({
 	type: Schema.Literal("session-snapshot"),
 	epoch: Schema.String,
-	status: SessionStatus,
+	status: StreamingStatus,
 	claudeSessionId: Schema.NullOr(Schema.String),
 	bufferMinSeq: Schema.NullOr(Schema.Number),
 	bufferMaxSeq: Schema.NullOr(Schema.Number),
@@ -265,7 +263,10 @@ export class SequencedEvent extends Schema.Class<SequencedEvent>(
 /**
  * Events emitted on chat.subscribe
  */
-export const SubscribeEvent = Schema.Union(SessionSnapshotEvent, SequencedEvent);
+export const SubscribeEvent = Schema.Union(
+	SessionSnapshotEvent,
+	SequencedEvent,
+);
 export type SubscribeEvent = typeof SubscribeEvent.Type;
 
 // ─── Input Types ─────────────────────────────────────────────
@@ -305,25 +306,27 @@ export class ChatSubscribeInput extends Schema.Class<ChatSubscribeInput>(
 /**
  * Input for sending a user message (non-streaming RPC)
  */
-export class ChatSendInput extends Schema.Class<ChatSendInput>("ChatSendInput")({
-	/** Session ID from storage */
-	sessionId: Schema.String,
-	/** Worktree ID - used to get the working directory */
-	worktreeId: Schema.String,
-	/** The prompt to send */
-	prompt: Schema.String,
-	/** Optional: Claude session ID for resume */
-	claudeSessionId: Schema.optional(Schema.NullOr(Schema.String)),
-	/** Optional: Enable autonomous mode with extended system prompt */
-	autonomous: Schema.optional(Schema.Boolean),
-}) {}
+export class ChatSendInput extends Schema.Class<ChatSendInput>("ChatSendInput")(
+	{
+		/** Session ID from storage */
+		sessionId: Schema.String,
+		/** Worktree ID - used to get the working directory */
+		worktreeId: Schema.String,
+		/** The prompt to send */
+		prompt: Schema.String,
+		/** Optional: Claude session ID for resume */
+		claudeSessionId: Schema.optional(Schema.NullOr(Schema.String)),
+		/** Optional: Enable autonomous mode with extended system prompt */
+		autonomous: Schema.optional(Schema.Boolean),
+	},
+) {}
 
 /**
  * Input for fetching current session state
  */
-export class ChatGetSessionStateInput extends Schema.Class<
-	ChatGetSessionStateInput
->("ChatGetSessionStateInput")({
+export class ChatGetSessionStateInput extends Schema.Class<ChatGetSessionStateInput>(
+	"ChatGetSessionStateInput",
+)({
 	/** Session ID */
 	sessionId: Schema.String,
 }) {}
@@ -390,7 +393,7 @@ export class ChatRpc extends RpcGroup.make(
 	Rpc.make("chat.getSessionState", {
 		payload: ChatGetSessionStateInput,
 		success: Schema.Struct({
-			status: SessionStatus,
+			status: StreamingStatus,
 			claudeSessionId: Schema.NullOr(Schema.String),
 			epoch: Schema.String,
 			subscriberCount: Schema.Number,
