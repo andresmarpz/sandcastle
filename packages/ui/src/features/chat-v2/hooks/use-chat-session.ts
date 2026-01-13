@@ -3,7 +3,10 @@
 import { useChat } from "@ai-sdk/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { useChatSessionContext } from "../context/chat-session-context";
+import {
+	type ChatSessionContext,
+	useChatSessionContext,
+} from "../context/chat-session-context";
 import { createRpcTransport } from "../lib/rpc-transport";
 import type { AskUserEvent, SessionMetadata } from "../lib/transport-types";
 
@@ -22,12 +25,8 @@ export interface UseChatSessionReturn {
 	sessionMetadata: SessionMetadata | null;
 	pendingAskUser: AskUserEvent | null;
 	respondToAskUser: (answers: Record<string, string>) => Promise<void>;
-	claudeSessionId: string | null;
-}
-
-export interface UseChatSessionOptions {
-	/** Override autonomous mode from context */
-	autonomous?: boolean;
+	config: ChatSessionContext["config"];
+	updateValue: ChatSessionContext["updateValue"];
 }
 
 /**
@@ -36,35 +35,26 @@ export interface UseChatSessionOptions {
  *
  * Must be used within a ChatSessionProvider.
  */
-export function useChatSession(
-	options?: UseChatSessionOptions,
-): UseChatSessionReturn {
-	const config = useChatSessionContext();
+export function useChatSession(): UseChatSessionReturn {
+	const { config, updateValue } = useChatSessionContext();
 
 	const [sessionMetadata, setSessionMetadata] =
 		useState<SessionMetadata | null>(null);
 	const [pendingAskUser, setPendingAskUser] = useState<AskUserEvent | null>(
 		null,
 	);
-	const [claudeSessionId, setClaudeSessionId] = useState<string | null>(
-		config.claudeSessionId ?? null,
-	);
 
-	// Use options.autonomous if provided, otherwise fall back to context
-	const autonomous = options?.autonomous ?? config.autonomous;
-
-	// Create transport with callbacks
 	const transport = useMemo(() => {
 		return createRpcTransport(
 			{
 				sessionId: config.sessionId,
 				worktreeId: config.worktreeId,
-				claudeSessionId,
+				claudeSessionId: config.claudeSessionId,
 				rpcUrl: config.rpcUrl,
-				autonomous,
+				autonomous: config.autonomous,
 			},
 			{
-				onSessionStart: setClaudeSessionId,
+				onSessionStart: (csi) => updateValue({ claudeSessionId: csi }),
 				onMetadata: setSessionMetadata,
 				onAskUser: setPendingAskUser,
 			},
@@ -72,9 +62,10 @@ export function useChatSession(
 	}, [
 		config.sessionId,
 		config.worktreeId,
-		claudeSessionId,
+		config.claudeSessionId,
 		config.rpcUrl,
-		autonomous,
+		config.autonomous,
+		updateValue,
 	]);
 
 	const { messages, sendMessage, status, error, stop, setMessages } = useChat({
@@ -134,6 +125,7 @@ export function useChatSession(
 		sessionMetadata,
 		pendingAskUser,
 		respondToAskUser,
-		claudeSessionId,
+		config,
+		updateValue,
 	};
 }

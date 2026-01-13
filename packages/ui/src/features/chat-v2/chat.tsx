@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import {
 	Conversation,
 	ConversationContent,
@@ -25,8 +24,6 @@ import { MessageList } from "./message-list";
  * ```
  */
 export function Chat() {
-	const [autonomous, setAutonomous] = useState(false);
-
 	const {
 		messages,
 		sendMessage,
@@ -36,7 +33,14 @@ export function Chat() {
 		pendingAskUser,
 		respondToAskUser,
 		sessionMetadata,
-	} = useChatSession({ autonomous });
+		config,
+		updateValue,
+	} = useChatSession();
+
+	const handleAutonomousChange = (val: boolean) =>
+		updateValue({
+			autonomous: val,
+		});
 
 	return (
 		<div className="flex h-full min-w-0 flex-col max-w-5xl m-auto">
@@ -64,8 +68,8 @@ export function Chat() {
 				onSend={sendMessage}
 				onStop={stop}
 				status={status}
-				autonomous={autonomous}
-				onAutonomousChange={setAutonomous}
+				autonomous={config.autonomous ?? false}
+				onAutonomousChange={handleAutonomousChange}
 			/>
 
 			{/* AskUser Dialog */}

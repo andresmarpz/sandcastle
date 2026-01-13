@@ -1,10 +1,15 @@
 "use client";
 
 import { Dialog, DialogContent } from "@/components/dialog";
-import { AppearanceSettings, ChatSettings, GitSettings } from "./sections";
+import {
+	AppearanceSettings,
+	ChatSettings,
+	GitSettings,
+	ServerSettings,
+} from "./sections";
 import { SettingsSidebar } from "./settings-sidebar";
 
-export type SettingsSection = "chat" | "appearance" | "git";
+export type SettingsSection = "chat" | "appearance" | "git" | "server";
 
 interface SettingsModalProps {
 	open: boolean;
@@ -47,6 +52,8 @@ function SettingsContent({ section }: { section: SettingsSection }) {
 			return <AppearanceSettings />;
 		case "git":
 			return <GitSettings />;
+		case "server":
+			return <ServerSettings />;
 		default:
 			return <ChatSettings />;
 	}
