@@ -1,9 +1,8 @@
+import { FileMatch, FileSearchRpcError, FilesRpc } from "@sandcastle/rpc/files";
+import { StorageService, StorageServiceDefault } from "@sandcastle/storage";
 import { Glob } from "bun";
 import { Effect, Layer } from "effect";
 import { Fzf } from "fzf";
-
-import { FileMatch, FileSearchRpcError, FilesRpc } from "@sandcastle/rpc/files";
-import { StorageService, StorageServiceDefault } from "@sandcastle/storage";
 
 // ─── Helpers ─────────────────────────────────────────────────
 
@@ -57,8 +56,7 @@ export const FilesRpcHandlers = FilesRpc.toLayer(
 						try: () => scanFiles(worktreePath),
 						catch: (error) =>
 							new FileSearchRpcError({
-								message:
-									error instanceof Error ? error.message : String(error),
+								message: error instanceof Error ? error.message : String(error),
 							}),
 					});
 
@@ -90,8 +88,7 @@ export const FilesRpcHandlers = FilesRpc.toLayer(
 					Effect.catchAll((error) =>
 						Effect.fail(
 							new FileSearchRpcError({
-								message:
-									error instanceof Error ? error.message : String(error),
+								message: error instanceof Error ? error.message : String(error),
 							}),
 						),
 					),

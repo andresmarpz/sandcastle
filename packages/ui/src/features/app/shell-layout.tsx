@@ -16,7 +16,9 @@ export function ShellLayout() {
 	const isMobile = useIsMobile();
 	const [searchParams, setSearchParams] = useSearchParams();
 
-	const settingsSection = searchParams.get("settings") as SettingsSection | null;
+	const settingsSection = searchParams.get(
+		"settings",
+	) as SettingsSection | null;
 	const isSettingsOpen = settingsSection !== null;
 
 	const handleSettingsOpenChange = useCallback(
