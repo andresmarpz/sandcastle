@@ -39,7 +39,7 @@ export function BashPart({ part }: BashPartProps) {
 	const output = typeof part.output === "string" ? part.output : "";
 
 	return (
-		<Tool>
+		<Tool defaultOpen>
 			<ToolHeader
 				title="Bash"
 				type="tool-Bash"
