@@ -1,6 +1,9 @@
-import { CheckCircleIcon, FileTextIcon, LoaderIcon } from "lucide-react";
+"use client";
+
+import { IconFileText } from "@tabler/icons-react";
 import type { BundledLanguage } from "shiki";
 import { CodeBlock } from "@/components/ai-elements/code-block";
+import { Tool, ToolContent, ToolHeader } from "@/components/ai-elements/tool";
 import type { ToolCallPart } from "./index";
 
 interface ReadInput {
@@ -79,8 +82,6 @@ export function ReadPart({ part }: ReadPartProps) {
 	const extension = getFileExtension(filePath);
 	const language = getLanguageFromExtension(extension);
 
-	const isLoading =
-		part.state === "input-streaming" || part.state === "input-available";
 	const hasError = part.state === "output-error";
 	const isComplete = part.state === "output-available";
 
@@ -97,51 +98,54 @@ export function ReadPart({ part }: ReadPartProps) {
 		})
 		.join("\n");
 
+	const mapState = (state: ToolCallPart["state"]) => {
+		switch (state) {
+			case "input-streaming":
+			case "input-available":
+				return "input-available";
+			case "output-available":
+				return "output-available";
+			case "output-error":
+				return "output-error";
+			default:
+				return "input-available";
+		}
+	};
+
+	// Build title with file info
+	const title = input?.offset !== undefined && input?.limit !== undefined
+		? `Read: ${fileName} (lines ${input.offset + 1}-${input.offset + input.limit})`
+		: `Read: ${fileName}`;
+
 	return (
-		<div className="mb-4 rounded-md border overflow-hidden">
-			<div className="flex items-center justify-between gap-2 bg-muted/30 px-3 py-2 border-b">
-				<div className="flex items-center gap-2 min-w-0">
-					<FileTextIcon className="size-4 shrink-0 text-muted-foreground" />
-					<span className="text-sm font-medium truncate" title={filePath}>
-						{fileName}
-					</span>
-					{input?.offset !== undefined && input?.limit !== undefined && (
-						<span className="text-xs text-muted-foreground">
-							(lines {input.offset + 1}-{input.offset + input.limit})
-						</span>
+		<Tool defaultOpen>
+			<ToolHeader
+				title={title}
+				type="tool-Read"
+				state={mapState(part.state)}
+				icon={<IconFileText className="size-4 text-muted-foreground" />}
+			/>
+			<ToolContent>
+				<div className="p-4">
+					{hasError && part.errorText && (
+						<div className="px-3 py-2 bg-destructive/10 text-destructive text-sm rounded-md">
+							{part.errorText}
+						</div>
+					)}
+
+					{isComplete && cleanedOutput && (
+						<div className="max-h-[400px] overflow-auto rounded-md border">
+							<CodeBlock code={cleanedOutput} language={language} />
+						</div>
+					)}
+
+					{!isComplete && !hasError && (
+						<div className="px-3 py-4 text-center text-sm text-muted-foreground">
+							Reading file...
+						</div>
 					)}
 				</div>
-				<div className="flex items-center gap-1.5 shrink-0">
-					{isLoading && (
-						<>
-							<LoaderIcon className="size-3.5 animate-spin text-blue-600" />
-							<span className="text-xs text-muted-foreground">Reading...</span>
-						</>
-					)}
-					{isComplete && (
-						<CheckCircleIcon className="size-3.5 text-green-600" />
-					)}
-					{hasError && <span className="text-xs text-destructive">Error</span>}
-				</div>
-			</div>
-
-			{hasError && part.errorText && (
-				<div className="px-3 py-2 bg-destructive/10 text-destructive text-sm">
-					{part.errorText}
-				</div>
-			)}
-
-			{isComplete && cleanedOutput && (
-				<div className="max-h-[400px] overflow-auto">
-					<CodeBlock code={cleanedOutput} language={language} />
-				</div>
-			)}
-
-			{!isComplete && !hasError && !cleanedOutput && (
-				<div className="px-3 py-4 text-center text-sm text-muted-foreground">
-					Reading file...
-				</div>
-			)}
-		</div>
+			</ToolContent>
+		</Tool>
 	);
 }

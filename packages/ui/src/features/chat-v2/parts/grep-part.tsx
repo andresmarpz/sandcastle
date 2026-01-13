@@ -1,6 +1,6 @@
 "use client";
 
-import { SearchIcon, FileIcon } from "lucide-react";
+import { IconSearch, IconFile } from "@tabler/icons-react";
 import { Tool, ToolContent, ToolHeader } from "@/components/ai-elements/tool";
 import type { ToolCallPart } from "./index";
 
@@ -99,7 +99,7 @@ function parseGrepOutput(output: string): { fileCount: number; files: string[] }
 
 	// Check for "Found X files" header
 	const countMatch = lines[0]?.match(/^Found (\d+) files?$/);
-	if (countMatch) {
+	if (countMatch?.[1]) {
 		return {
 			fileCount: parseInt(countMatch[1], 10),
 			files: lines.slice(1),
@@ -142,7 +142,7 @@ export function GrepPart({ part }: GrepPartProps) {
 				title="Grep"
 				type="tool-Grep"
 				state={mapState(part.state)}
-				icon={<SearchIcon className="size-4 text-muted-foreground" />}
+				icon={<IconSearch className="size-4 text-muted-foreground" />}
 			/>
 			<ToolContent>
 				<div className="p-4">
@@ -167,7 +167,7 @@ export function GrepPart({ part }: GrepPartProps) {
 										key={index}
 										className="flex items-center gap-2 px-3 py-1.5 hover:bg-muted/30"
 									>
-										<FileIcon className="size-3.5 text-muted-foreground shrink-0" />
+										<IconFile className="size-3.5 text-muted-foreground shrink-0" />
 										{highlightMatch(file, pattern)}
 									</li>
 								))}

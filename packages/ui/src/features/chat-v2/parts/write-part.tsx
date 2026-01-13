@@ -1,6 +1,6 @@
 "use client";
 
-import { FileCodeIcon } from "lucide-react";
+import { IconFileCode } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
 import { Tool, ToolContent, ToolHeader } from "@/components/ai-elements/tool";
 import { cn } from "@/lib/utils";
@@ -301,7 +301,7 @@ export function WritePart({ part }: WritePartProps) {
 				title="Write"
 				type="tool-Write"
 				state={mapState(part.state)}
-				icon={<FileCodeIcon className="size-4 text-muted-foreground" />}
+				icon={<IconFileCode className="size-4 text-muted-foreground" />}
 			/>
 			<ToolContent>
 				<div className="p-4">

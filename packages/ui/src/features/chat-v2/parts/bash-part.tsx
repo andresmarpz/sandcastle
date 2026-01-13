@@ -1,6 +1,6 @@
 "use client";
 
-import { TerminalIcon } from "lucide-react";
+import { IconTerminal } from "@tabler/icons-react";
 import { Tool, ToolContent, ToolHeader } from "@/components/ai-elements/tool";
 import { cn } from "@/lib/utils";
 import type { ToolCallPart } from "./index";
@@ -44,7 +44,7 @@ export function BashPart({ part }: BashPartProps) {
 				title="Bash"
 				type="tool-Bash"
 				state={mapState(part.state)}
-				icon={<TerminalIcon className="size-4 text-muted-foreground" />}
+				icon={<IconTerminal className="size-4 text-muted-foreground" />}
 			/>
 			<ToolContent>
 				<div className="space-y-3 p-4">
@@ -60,7 +60,7 @@ export function BashPart({ part }: BashPartProps) {
 						</h4>
 						<div className="rounded-md border bg-muted/50 overflow-hidden">
 							<div className="flex items-start gap-2 p-3">
-								<TerminalIcon className="size-4 text-muted-foreground mt-0.5 shrink-0" />
+								<IconTerminal className="size-4 text-muted-foreground mt-0.5 shrink-0" />
 								<code className="font-mono text-sm break-all whitespace-pre-wrap">
 									{command}
 								</code>
