@@ -113,7 +113,7 @@ export function GlobPart({ part }: GlobPartProps) {
 				icon={<IconFolderSearch className="size-4 text-muted-foreground" />}
 			/>
 			<ToolContent>
-				<div className="p-4">
+				<div className="p-2">
 					<div className="overflow-hidden rounded-md border">
 						{/* Pattern header */}
 						<div className="flex items-center gap-2 border-b bg-muted/50 px-3 py-2">

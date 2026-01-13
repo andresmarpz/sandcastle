@@ -47,7 +47,7 @@ export function BashPart({ part }: BashPartProps) {
 				icon={<IconTerminal className="size-4 text-muted-foreground" />}
 			/>
 			<ToolContent>
-				<div className="space-y-3 p-4">
+				<div className="space-y-3 p-2">
 					{/* Description if provided */}
 					{description && (
 						<div className="text-sm text-muted-foreground">{description}</div>

@@ -1,6 +1,8 @@
 "use client";
 
+import { File, type FileContents } from "@pierre/diffs/react";
 import { IconFile, IconFileText } from "@tabler/icons-react";
+import { useMemo } from "react";
 import type { BundledLanguage } from "shiki";
 import { CodeBlock } from "@/components/ai-elements/code-block";
 import { Tool, ToolContent, ToolHeader } from "@/components/ai-elements/tool";
@@ -121,6 +123,13 @@ export function ReadPart({ part }: ReadPartProps) {
 	// Count lines in output
 	const lineCount = cleanedOutput.split("\n").filter(Boolean).length;
 
+	const file = useMemo(() => {
+		return {
+			name: relativePath,
+			contents: cleanedOutput,
+		} satisfies FileContents;
+	}, []);
+
 	const mapState = (state: ToolCallPart["state"]) => {
 		switch (state) {
 			case "input-streaming":
@@ -143,43 +152,13 @@ export function ReadPart({ part }: ReadPartProps) {
 				state={mapState(part.state)}
 				icon={<IconFileText className="size-4 text-muted-foreground" />}
 			/>
-			<ToolContent>
-				<div className="p-4">
-					<div className="overflow-hidden rounded-md border">
-						{/* File path header */}
-						<div className="flex items-center gap-2 border-b bg-muted/50 px-3 py-2">
-							<IconFile className="size-3.5 text-muted-foreground shrink-0" />
-							<code className="font-mono text-xs text-muted-foreground truncate">
-								{relativePath}
-							</code>
-							{input?.offset !== undefined && input?.limit !== undefined && (
-								<span className="text-xs text-muted-foreground">
-									(lines {input.offset + 1}-{input.offset + input.limit})
-								</span>
-							)}
-							{isComplete && lineCount > 0 && (
-								<span className="ml-auto text-xs text-muted-foreground shrink-0">
-									{lineCount} {lineCount === 1 ? "line" : "lines"}
-								</span>
-							)}
-						</div>
-
-						{/* File content */}
-						{hasError && part.errorText ? (
-							<div className="px-3 py-2 bg-destructive/10 text-destructive text-sm">
-								{part.errorText}
-							</div>
-						) : isComplete && cleanedOutput ? (
-							<div className="max-h-[400px] overflow-auto">
-								<CodeBlock code={cleanedOutput} language={language} />
-							</div>
-						) : (
-							<div className="px-3 py-4 text-center text-xs text-muted-foreground">
-								Reading...
-							</div>
-						)}
-					</div>
-				</div>
+			<ToolContent className="overflow-auto rounded-md border relative max-h-96 m-2 mt-0">
+				<File
+					file={file}
+					options={{
+						theme: { dark: "vitesse-dark", light: "vitesse-light" },
+					}}
+				/>
 			</ToolContent>
 		</Tool>
 	);

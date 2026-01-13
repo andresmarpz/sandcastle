@@ -1,5 +1,6 @@
 import type { UIMessage } from "ai";
 import { BashPart } from "./bash-part";
+import { EditPart } from "./edit-part";
 import { GlobPart } from "./glob-part";
 import { GrepPart } from "./grep-part";
 import { ReadPart } from "./read-part";
@@ -56,6 +57,14 @@ export function PartRenderer({ part }: PartRendererProps) {
 			(part.type === "dynamic-tool" && toolPart.toolName === "Write")
 		) {
 			return <WritePart part={toolPart} />;
+		}
+
+		// Use dedicated component for Edit
+		if (
+			part.type === "tool-Edit" ||
+			(part.type === "dynamic-tool" && toolPart.toolName === "Edit")
+		) {
+			return <EditPart part={toolPart} />;
 		}
 
 		// Use dedicated component for Bash
