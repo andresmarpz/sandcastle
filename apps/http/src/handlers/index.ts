@@ -1,4 +1,5 @@
 export { ChatRpcHandlers, ChatRpcHandlersLive } from "./chat";
+export { FilesRpcHandlers, FilesRpcHandlersLive } from "./files";
 export {
 	RepositoryRpcHandlers,
 	RepositoryRpcHandlersLive,
