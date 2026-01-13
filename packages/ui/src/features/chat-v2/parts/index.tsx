@@ -1,4 +1,5 @@
 import type { UIMessage } from "ai";
+import { memo } from "react";
 import { BashPart } from "./bash-part";
 import { EditPart } from "./edit-part";
 import { GlobPart } from "./glob-part";
@@ -17,7 +18,36 @@ interface PartRendererProps {
 	part: MessagePart;
 }
 
-export function PartRenderer({ part }: PartRendererProps) {
+function arePartsEqual(
+	prev: PartRendererProps,
+	next: PartRendererProps,
+): boolean {
+	const p = prev.part;
+	const n = next.part;
+
+	if (p.type !== n.type) return false;
+
+	if (p.type === "text" && n.type === "text") {
+		return p.text === n.text;
+	}
+
+	if (p.type === "reasoning" && n.type === "reasoning") {
+		return p.text === n.text && p.state === n.state;
+	}
+
+	// Tool parts: compare by toolCallId and state
+	if (p.type.startsWith("tool-") || p.type === "dynamic-tool") {
+		const pTool = p as ToolCallPart;
+		const nTool = n as ToolCallPart;
+		return pTool.toolCallId === nTool.toolCallId && pTool.state === nTool.state;
+	}
+
+	return false;
+}
+
+export const PartRenderer = memo(function PartRenderer({
+	part,
+}: PartRendererProps) {
 	if (part.type === "text") {
 		return <TextPart text={part.text} />;
 	}
@@ -100,7 +130,7 @@ export function PartRenderer({ part }: PartRendererProps) {
 			{JSON.stringify(part, null, 2)}
 		</pre>
 	);
-}
+}, arePartsEqual);
 
 // Type helper for tool parts - matches AI SDK UIToolInvocation states
 export interface ToolCallPart {

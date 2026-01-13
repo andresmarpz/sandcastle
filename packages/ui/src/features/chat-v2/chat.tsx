@@ -38,10 +38,6 @@ export function Chat() {
 		sessionMetadata,
 	} = useChatSession({ autonomous });
 
-	const handleSend = (text: string) => {
-		sendMessage({ text });
-	};
-
 	return (
 		<div className="flex h-full min-w-0 flex-col max-w-5xl m-auto">
 			{error && (
@@ -65,7 +61,7 @@ export function Chat() {
 			</Conversation>
 
 			<ChatInput
-				onSend={handleSend}
+				onSend={sendMessage}
 				onStop={stop}
 				status={status}
 				autonomous={autonomous}

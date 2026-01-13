@@ -75,7 +75,7 @@ export function ReadPart({ part }: ReadPartProps) {
 	};
 
 	return (
-		<Tool defaultOpen>
+		<Tool>
 			<ToolHeader
 				title="Read"
 				type="tool-Read"

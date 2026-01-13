@@ -16,6 +16,7 @@ import {
 	Collapsible,
 	CollapsiblePanel,
 	CollapsibleTrigger,
+	useCollapsibleContext,
 } from "@/components/collapsible";
 import { cn } from "@/lib/utils";
 import { CodeBlock } from "./code-block";
@@ -96,15 +97,28 @@ export const ToolHeader = ({
 
 export type ToolContentProps = ComponentProps<typeof CollapsiblePanel>;
 
-export const ToolContent = ({ className, ...props }: ToolContentProps) => (
-	<CollapsiblePanel
-		className={cn(
-			"data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2 text-popover-foreground outline-none data-[state=closed]:animate-out data-[state=open]:animate-in",
-			className,
-		)}
-		{...props}
-	/>
-);
+export const ToolContent = ({
+	className,
+	children,
+	...props
+}: ToolContentProps) => {
+	const context = useCollapsibleContext();
+	// Only render children if the collapsible has been opened at least once
+	// This prevents expensive components from being evaluated until needed
+	const shouldRender = context?.hasOpened ?? true;
+
+	return (
+		<CollapsiblePanel
+			className={cn(
+				"data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2 text-popover-foreground outline-none data-[state=closed]:animate-out data-[state=open]:animate-in",
+				className,
+			)}
+			{...props}
+		>
+			{shouldRender ? children : null}
+		</CollapsiblePanel>
+	);
+};
 
 export type ToolInputProps = ComponentProps<"div"> & {
 	input: ToolUIPart["input"];

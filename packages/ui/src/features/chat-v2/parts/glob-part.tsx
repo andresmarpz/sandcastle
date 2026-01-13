@@ -105,7 +105,7 @@ export function GlobPart({ part }: GlobPartProps) {
 	};
 
 	return (
-		<Tool defaultOpen>
+		<Tool>
 			<ToolHeader
 				title="Glob"
 				type="tool-Glob"
