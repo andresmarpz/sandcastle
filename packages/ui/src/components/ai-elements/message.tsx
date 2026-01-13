@@ -1,12 +1,12 @@
 "use client";
 
-import type { FileUIPart, UIMessage } from "ai";
 import {
 	IconChevronLeft,
 	IconChevronRight,
 	IconPaperclip,
 	IconX,
 } from "@tabler/icons-react";
+import type { FileUIPart, UIMessage } from "ai";
 import type { ComponentProps, HTMLAttributes, ReactElement } from "react";
 import {
 	createContext,

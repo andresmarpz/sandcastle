@@ -1,14 +1,14 @@
 "use client";
 
-import type { ToolUIPart } from "ai";
 import {
-	IconCircleCheck,
 	IconChevronDown,
 	IconCircle,
+	IconCircleCheck,
+	IconCircleX,
 	IconClock,
 	IconTool,
-	IconCircleX,
 } from "@tabler/icons-react";
+import type { ToolUIPart } from "ai";
 import type { ComponentProps, ReactNode } from "react";
 import { isValidElement } from "react";
 import { Badge } from "@/components/badge";

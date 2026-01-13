@@ -1,6 +1,5 @@
 "use client";
 
-import type { ChatStatus, FileUIPart } from "ai";
 import {
 	IconCornerDownLeft,
 	IconLoader2,
@@ -9,6 +8,7 @@ import {
 	IconSquare,
 	IconX,
 } from "@tabler/icons-react";
+import type { ChatStatus, FileUIPart } from "ai";
 import { nanoid } from "nanoid";
 import {
 	type ChangeEvent,

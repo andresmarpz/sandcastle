@@ -1,8 +1,8 @@
 "use client";
 
 import type { useChat } from "@ai-sdk/react";
-import type { ChatStatus } from "ai";
 import { IconRobot, IconSquare } from "@tabler/icons-react";
+import type { ChatStatus } from "ai";
 import { type ChangeEvent, useCallback, useRef, useState } from "react";
 import {
 	PromptInput,
