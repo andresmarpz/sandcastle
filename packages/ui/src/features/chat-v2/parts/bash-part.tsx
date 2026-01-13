@@ -84,7 +84,7 @@ export function BashPart({ part }: BashPartProps) {
 							>
 								<pre
 									className={cn(
-										"p-3 font-mono text-xs overflow-auto max-h-96 whitespace-pre-wrap break-all",
+										"p-3 font-mono text-xs overflow-auto max-h-60 whitespace-pre-wrap break-all",
 										part.state === "output-error"
 											? "text-destructive"
 											: "text-foreground",
