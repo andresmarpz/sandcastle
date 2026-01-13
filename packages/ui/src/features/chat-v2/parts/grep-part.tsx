@@ -1,6 +1,6 @@
 "use client";
 
-import { IconSearch, IconFile } from "@tabler/icons-react";
+import { IconFile, IconSearch } from "@tabler/icons-react";
 import { Tool, ToolContent, ToolHeader } from "@/components/ai-elements/tool";
 import type { ToolCallPart } from "./index";
 
@@ -94,7 +94,10 @@ function highlightMatch(filePath: string, pattern: string): React.ReactNode {
 }
 
 // Parse grep output to extract file count and file list
-function parseGrepOutput(output: string): { fileCount: number; files: string[] } {
+function parseGrepOutput(output: string): {
+	fileCount: number;
+	files: string[];
+} {
 	const lines = output.trim().split("\n").filter(Boolean);
 
 	// Check for "Found X files" header

@@ -1,6 +1,6 @@
 "use client";
 
-import { IconFolderSearch, IconFile } from "@tabler/icons-react";
+import { IconFile, IconFolderSearch } from "@tabler/icons-react";
 import { Tool, ToolContent, ToolHeader } from "@/components/ai-elements/tool";
 import type { ToolCallPart } from "./index";
 
@@ -34,10 +34,7 @@ function getRelativePath(filePath: string): string {
 }
 
 // Highlight matching parts of the filename based on glob pattern
-function highlightMatch(
-	filePath: string,
-	pattern: string,
-): React.ReactNode {
+function highlightMatch(filePath: string, pattern: string): React.ReactNode {
 	const relativePath = getRelativePath(filePath);
 	const fileName = relativePath.split("/").pop() ?? relativePath;
 	const dirPath = relativePath.includes("/")
