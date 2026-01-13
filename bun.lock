@@ -65,6 +65,7 @@
         "@sandcastle/storage": "workspace:*",
         "@sandcastle/worktree": "workspace:*",
         "effect": "^3.19.14",
+        "fzf": "^0.5.2",
       },
       "devDependencies": {
         "@types/bun": "latest",
