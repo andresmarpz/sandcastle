@@ -1,6 +1,6 @@
 "use client";
 
-import { IconFileText } from "@tabler/icons-react";
+import { IconFile, IconFileText } from "@tabler/icons-react";
 import type { BundledLanguage } from "shiki";
 import { CodeBlock } from "@/components/ai-elements/code-block";
 import { Tool, ToolContent, ToolHeader } from "@/components/ai-elements/tool";
@@ -71,6 +71,26 @@ function getFileName(filePath: string): string {
 	return parts[parts.length - 1] ?? "";
 }
 
+// Extract relative path from absolute path
+function getRelativePath(filePath: string): string {
+	const patterns = [
+		/.*\/(packages\/.*)/,
+		/.*\/(src\/.*)/,
+		/.*\/(apps\/.*)/,
+		/.*\/(lib\/.*)/,
+		/.*\/(components\/.*)/,
+	];
+
+	for (const pattern of patterns) {
+		const match = filePath.match(pattern);
+		if (match?.[1]) {
+			return match[1];
+		}
+	}
+
+	return filePath.split("/").pop() ?? filePath;
+}
+
 function getLanguageFromExtension(ext: string): BundledLanguage {
 	return LANGUAGE_MAP[ext.toLowerCase()] ?? DEFAULT_LANGUAGE;
 }
@@ -78,9 +98,9 @@ function getLanguageFromExtension(ext: string): BundledLanguage {
 export function ReadPart({ part }: ReadPartProps) {
 	const input = part.input as ReadInput | undefined;
 	const filePath = input?.file_path ?? "";
-	const fileName = getFileName(filePath);
 	const extension = getFileExtension(filePath);
 	const language = getLanguageFromExtension(extension);
+	const relativePath = getRelativePath(filePath);
 
 	const hasError = part.state === "output-error";
 	const isComplete = part.state === "output-available";
@@ -98,6 +118,9 @@ export function ReadPart({ part }: ReadPartProps) {
 		})
 		.join("\n");
 
+	// Count lines in output
+	const lineCount = cleanedOutput.split("\n").filter(Boolean).length;
+
 	const mapState = (state: ToolCallPart["state"]) => {
 		switch (state) {
 			case "input-streaming":
@@ -112,38 +135,50 @@ export function ReadPart({ part }: ReadPartProps) {
 		}
 	};
 
-	// Build title with file info
-	const title = input?.offset !== undefined && input?.limit !== undefined
-		? `Read: ${fileName} (lines ${input.offset + 1}-${input.offset + input.limit})`
-		: `Read: ${fileName}`;
-
 	return (
 		<Tool defaultOpen>
 			<ToolHeader
-				title={title}
+				title="Read"
 				type="tool-Read"
 				state={mapState(part.state)}
 				icon={<IconFileText className="size-4 text-muted-foreground" />}
 			/>
 			<ToolContent>
 				<div className="p-4">
-					{hasError && part.errorText && (
-						<div className="px-3 py-2 bg-destructive/10 text-destructive text-sm rounded-md">
-							{part.errorText}
+					<div className="overflow-hidden rounded-md border">
+						{/* File path header */}
+						<div className="flex items-center gap-2 border-b bg-muted/50 px-3 py-2">
+							<IconFile className="size-3.5 text-muted-foreground shrink-0" />
+							<code className="font-mono text-xs text-muted-foreground truncate">
+								{relativePath}
+							</code>
+							{input?.offset !== undefined && input?.limit !== undefined && (
+								<span className="text-xs text-muted-foreground">
+									(lines {input.offset + 1}-{input.offset + input.limit})
+								</span>
+							)}
+							{isComplete && lineCount > 0 && (
+								<span className="ml-auto text-xs text-muted-foreground shrink-0">
+									{lineCount} {lineCount === 1 ? "line" : "lines"}
+								</span>
+							)}
 						</div>
-					)}
 
-					{isComplete && cleanedOutput && (
-						<div className="max-h-[400px] overflow-auto rounded-md border">
-							<CodeBlock code={cleanedOutput} language={language} />
-						</div>
-					)}
-
-					{!isComplete && !hasError && (
-						<div className="px-3 py-4 text-center text-sm text-muted-foreground">
-							Reading file...
-						</div>
-					)}
+						{/* File content */}
+						{hasError && part.errorText ? (
+							<div className="px-3 py-2 bg-destructive/10 text-destructive text-sm">
+								{part.errorText}
+							</div>
+						) : isComplete && cleanedOutput ? (
+							<div className="max-h-[400px] overflow-auto">
+								<CodeBlock code={cleanedOutput} language={language} />
+							</div>
+						) : (
+							<div className="px-3 py-4 text-center text-xs text-muted-foreground">
+								Reading...
+							</div>
+						)}
+					</div>
 				</div>
 			</ToolContent>
 		</Tool>
