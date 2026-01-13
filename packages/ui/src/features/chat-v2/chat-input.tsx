@@ -117,7 +117,7 @@ export function ChatInput({
 	);
 
 	return (
-		<div ref={containerRef} className="relative border-t p-4">
+		<div ref={containerRef} className="relative p-4">
 			{/* File picker popover */}
 			<FilePickerPopover
 				worktreeId={worktreeId}
