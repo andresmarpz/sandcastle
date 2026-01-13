@@ -4,8 +4,6 @@ import { Glob } from "bun";
 import { Effect, Layer } from "effect";
 import { Fzf } from "fzf";
 
-// ─── Helpers ─────────────────────────────────────────────────
-
 const EXCLUDED_DIRS = [
 	"node_modules/",
 	".git/",
@@ -35,8 +33,6 @@ async function scanFiles(worktreePath: string): Promise<string[]> {
 	}
 	return files;
 }
-
-// ─── Handlers ────────────────────────────────────────────────
 
 export const FilesRpcHandlers = FilesRpc.toLayer(
 	Effect.gen(function* () {
