@@ -1,14 +1,14 @@
 "use client";
 
-import type { ChatStatus, FileUIPart } from "ai";
 import {
-	CornerDownLeftIcon,
-	Loader2Icon,
-	MicIcon,
-	PlusIcon,
-	SquareIcon,
-	XIcon,
-} from "lucide-react";
+	IconCornerDownLeft,
+	IconLoader2,
+	IconMicrophone,
+	IconPlus,
+	IconSquare,
+	IconX,
+} from "@tabler/icons-react";
+import type { ChatStatus, FileUIPart } from "ai";
 import { nanoid } from "nanoid";
 import {
 	type ChangeEvent,
@@ -987,7 +987,7 @@ export const PromptInputActionMenuTrigger = ({
 	<DropdownMenuTrigger
 		render={<PromptInputButton className={className} {...props} />}
 	>
-		{children ?? <PlusIcon className="size-4" />}
+		{children ?? <IconPlus className="size-4" />}
 	</DropdownMenuTrigger>
 );
 
@@ -1026,14 +1026,14 @@ export const PromptInputSubmit = ({
 	children,
 	...props
 }: PromptInputSubmitProps) => {
-	let Icon = <CornerDownLeftIcon className="size-4" />;
+	let Icon = <IconCornerDownLeft className="size-4" />;
 
 	if (status === "submitted") {
-		Icon = <Loader2Icon className="size-4 animate-spin" />;
+		Icon = <IconLoader2 className="size-4 animate-spin" />;
 	} else if (status === "streaming") {
-		Icon = <SquareIcon className="size-4" />;
+		Icon = <IconSquare className="size-4" />;
 	} else if (status === "error") {
-		Icon = <XIcon className="size-4" />;
+		Icon = <IconX className="size-4" />;
 	}
 
 	return (
@@ -1205,7 +1205,7 @@ export const PromptInputSpeechButton = ({
 			onClick={toggleListening}
 			{...props}
 		>
-			<MicIcon className="size-4" />
+			<IconMicrophone className="size-4" />
 		</PromptInputButton>
 	);
 };
