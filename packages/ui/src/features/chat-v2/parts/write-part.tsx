@@ -1,9 +1,10 @@
 "use client";
 
+import { parseDiffFromFile } from "@pierre/diffs";
+import { FileDiff } from "@pierre/diffs/react";
 import { IconFileCode } from "@tabler/icons-react";
-import { useEffect, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { Tool, ToolContent, ToolHeader } from "@/components/ai-elements/tool";
-import { cn } from "@/lib/utils";
 import type { ToolCallPart } from "./index";
 
 interface WriteInput {
@@ -242,11 +243,11 @@ async function highlightCode(code: string, language: string) {
 	const [light, dark] = await Promise.all([
 		codeToHtml(code, {
 			lang: language,
-			theme: "github-light",
+			theme: "vitesse-light",
 		}),
 		codeToHtml(code, {
 			lang: language,
-			theme: "github-dark",
+			theme: "vitesse-dark",
 		}),
 	]);
 
@@ -258,7 +259,6 @@ export function WritePart({ part }: WritePartProps) {
 	const [html, setHtml] = useState<{ light: string; dark: string } | null>(
 		null,
 	);
-	const mounted = useRef(false);
 
 	const filePath = input?.file_path ?? "";
 	const content = input?.content ?? "";
@@ -266,20 +266,18 @@ export function WritePart({ part }: WritePartProps) {
 	const relativePath = getRelativePath(filePath);
 	const fileIcon = getFileIcon(filePath);
 
-	useEffect(() => {
-		if (!content) return;
-
-		highlightCode(content, language).then((result) => {
-			if (!mounted.current) {
-				setHtml(result);
-				mounted.current = true;
-			}
-		});
-
-		return () => {
-			mounted.current = false;
-		};
-	}, [content, language]);
+	const file = useMemo(() => {
+		return parseDiffFromFile(
+			{
+				name: relativePath,
+				contents: "",
+			},
+			{
+				name: relativePath,
+				contents: content,
+			},
+		);
+	}, [relativePath, content]);
 
 	const mapState = (state: ToolCallPart["state"]) => {
 		switch (state) {
@@ -303,48 +301,16 @@ export function WritePart({ part }: WritePartProps) {
 				state={mapState(part.state)}
 				icon={<IconFileCode className="size-4 text-muted-foreground" />}
 			/>
-			<ToolContent>
-				<div className="p-4">
-					{/* Code block with diff styling */}
-					<div className="overflow-hidden rounded-md border">
-						{/* File path header */}
-						<div className="flex items-center gap-2 border-b bg-muted/50 px-3 py-2">
-							{fileIcon}
-							<span className="font-mono text-xs text-muted-foreground truncate">
-								{relativePath}
-							</span>
-						</div>
-
-						<div className="relative max-h-96 overflow-auto">
-							{html ? (
-								<>
-									<div
-										className={cn(
-											"dark:hidden min-w-fit",
-											"[&>pre]:m-0 [&>pre]:bg-green-50! [&>pre]:p-4 [&>pre]:text-sm [&>pre]:min-w-full",
-											"[&_code]:font-mono [&_code]:text-sm",
-											"[&_.line]:before:content-['+'] [&_.line]:before:text-green-600 [&_.line]:before:mr-3 [&_.line]:before:select-none",
-										)}
-										dangerouslySetInnerHTML={{ __html: html.light }}
-									/>
-									<div
-										className={cn(
-											"hidden dark:block min-w-fit",
-											"[&>pre]:m-0 [&>pre]:bg-[#0d1f12]! [&>pre]:p-4 [&>pre]:text-sm [&>pre]:min-w-full",
-											"[&_code]:font-mono [&_code]:text-sm",
-											"[&_.line]:before:content-['+'] [&_.line]:before:text-green-500 [&_.line]:before:mr-3 [&_.line]:before:select-none",
-										)}
-										dangerouslySetInnerHTML={{ __html: html.dark }}
-									/>
-								</>
-							) : (
-								<pre className="m-0 bg-green-50 dark:bg-green-950/30 p-4 text-sm font-mono whitespace-pre-wrap">
-									{content}
-								</pre>
-							)}
-						</div>
-					</div>
-				</div>
+			<ToolContent className="overflow-auto rounded-md border relative max-h-96 m-2 mt-0">
+				<FileDiff
+					fileDiff={file}
+					options={{
+						theme: {
+							dark: "vitesse-dark",
+							light: "vitesse-light",
+						},
+					}}
+				/>
 			</ToolContent>
 		</Tool>
 	);
