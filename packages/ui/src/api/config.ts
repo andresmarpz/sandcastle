@@ -1,22 +1,31 @@
+import { DEFAULT_BACKEND_URL, getBackendUrl } from "@/lib/backend-url";
+
 /**
  * API configuration for RPC client connections.
  *
- * Environment variable support:
- * - Vite: VITE_API_URL
- * - Next.js: NEXT_PUBLIC_API_URL
- * - Default: http://localhost:3000
+ * URL priority:
+ * 1. localStorage (user-configured via Settings)
+ * 2. Vite: VITE_API_URL
+ * 3. Next.js: NEXT_PUBLIC_API_URL
+ * 4. Default: http://localhost:3000
  */
 function getApiBaseUrl(): string {
-	// Check Vite env (import.meta.env)
+	// Priority 1: User-configured URL from localStorage
+	const storedUrl = getBackendUrl();
+	if (storedUrl) {
+		return storedUrl;
+	}
+	// Priority 2: Check Vite env (import.meta.env)
 	const meta = import.meta as { env?: Record<string, string | undefined> };
 	if (meta.env?.VITE_API_URL) {
 		return meta.env.VITE_API_URL;
 	}
-	// Check Next.js env (process.env)
+	// Priority 3: Check Next.js env (process.env)
 	if (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_API_URL) {
 		return process.env.NEXT_PUBLIC_API_URL;
 	}
-	return "http://localhost:3000";
+	// Priority 4: Default
+	return DEFAULT_BACKEND_URL;
 }
 
 const API_BASE_URL = getApiBaseUrl();

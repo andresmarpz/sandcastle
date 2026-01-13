@@ -1,15 +1,13 @@
 "use client";
 
 import {
-	IconArrowLeft,
 	IconBrandGit,
 	IconMessage,
 	IconPalette,
+	IconServer,
 } from "@tabler/icons-react";
-import { Button } from "@/components/button";
 import {
 	SidebarContent,
-	SidebarHeader,
 	SidebarMenu,
 	SidebarMenuButton,
 	SidebarMenuItem,
@@ -32,6 +30,11 @@ const settingsNav = [
 		id: "git" as const,
 		label: "Git",
 		icon: IconBrandGit,
+	},
+	{
+		id: "server" as const,
+		label: "Server",
+		icon: IconServer,
 	},
 ];
 

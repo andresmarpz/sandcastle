@@ -30,7 +30,9 @@ export function ChatInput({
 	autonomous,
 	onAutonomousChange,
 }: ChatInputProps) {
-	const { worktreeId } = useChatSessionContext();
+	const {
+		config: { worktreeId },
+	} = useChatSessionContext();
 	const isStreaming = status === "streaming";
 	const isSubmitted = status === "submitted";
 	const isDisabled = isStreaming || isSubmitted;

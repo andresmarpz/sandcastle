@@ -43,6 +43,8 @@ function ChatWithHistory(props: {
 		return convertChatHistory(chatHistoryResult.value);
 	}, [chatHistoryResult]);
 
+	if (chatHistoryResult._tag === "Initial") return "Loading chat...";
+
 	return (
 		<ChatSessionProvider {...props} initialMessages={initialMessages}>
 			<Chat />
