@@ -43,7 +43,7 @@ export default function ClientApp() {
 					openInEditor={null}
 					copyToClipboard={copyToClipboard}
 				>
-					<RegistryProvider>
+					<RegistryProvider defaultIdleTTL={5 * 60 * 1000}>
 						<Suspense fallback={<LoadingScreen />}>
 							<AppReady>
 								<RootLayout />
