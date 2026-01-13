@@ -1,13 +1,44 @@
-import { Context, Effect, Layer, Option, Ref } from "effect";
+import {
+	Context,
+	Effect,
+	Layer,
+	Option,
+	PubSub,
+	Ref,
+	type Fiber,
+} from "effect";
+import type { SequencedEvent, SessionStatus } from "@sandcastle/rpc";
 import type { QueryHandle } from "../agents/claude";
 
 /**
  * Represents an active chat session with its control handles
  */
 export interface ActiveSession {
-	readonly queryHandle: QueryHandle;
-	readonly abortController: AbortController;
+	queryHandle: QueryHandle | null;
+	abortController: AbortController | null;
 	claudeSessionId: string | null;
+	pubsub: PubSub.PubSub<SequencedEvent>;
+	eventBuffer: Ref.Ref<SequencedEvent[]>;
+	lastSeq: Ref.Ref<number>;
+	epoch: string;
+	bufferHasGap: Ref.Ref<boolean>;
+	subscriberCount: Ref.Ref<number>;
+	status: Ref.Ref<SessionStatus>;
+	cleanupFiber: Fiber.RuntimeFiber<unknown, unknown> | null;
+}
+
+export interface ActiveSessionInput {
+	queryHandle?: QueryHandle | null;
+	abortController?: AbortController | null;
+	claudeSessionId?: string | null;
+	pubsub?: PubSub.PubSub<SequencedEvent>;
+	eventBuffer?: Ref.Ref<SequencedEvent[]>;
+	lastSeq?: Ref.Ref<number>;
+	epoch?: string;
+	bufferHasGap?: Ref.Ref<boolean>;
+	subscriberCount?: Ref.Ref<number>;
+	status?: Ref.Ref<SessionStatus>;
+	cleanupFiber?: Fiber.RuntimeFiber<unknown, unknown> | null;
 }
 
 /**
@@ -19,8 +50,16 @@ export interface ActiveSessionsServiceInterface {
 	 */
 	readonly register: (
 		sessionId: string,
-		session: ActiveSession,
+		session: ActiveSessionInput,
 	) => Effect.Effect<void>;
+
+	/**
+	 * Get existing session or create with defaults
+	 */
+	readonly getOrCreate: (
+		sessionId: string,
+		session?: ActiveSessionInput,
+	) => Effect.Effect<ActiveSession>;
 
 	/**
 	 * Get an active session by ID
@@ -43,6 +82,14 @@ export interface ActiveSessionsServiceInterface {
 	) => Effect.Effect<void>;
 
 	/**
+	 * Update a session in-place if it exists
+	 */
+	readonly update: (
+		sessionId: string,
+		update: (session: ActiveSession) => ActiveSession,
+	) => Effect.Effect<void>;
+
+	/**
 	 * Check if a session is currently active
 	 */
 	readonly isActive: (sessionId: string) => Effect.Effect<boolean>;
@@ -61,13 +108,61 @@ export class ActiveSessionsService extends Context.Tag("ActiveSessionsService")<
  */
 export const makeActiveSessionsService = Effect.gen(function* () {
 	const sessionsRef = yield* Ref.make<Map<string, ActiveSession>>(new Map());
+	const makeActiveSession = (input: ActiveSessionInput) =>
+		Effect.gen(function* () {
+			const pubsub = input.pubsub ?? (yield* PubSub.unbounded<SequencedEvent>());
+			const eventBuffer =
+				input.eventBuffer ?? (yield* Ref.make<SequencedEvent[]>([]));
+			const lastSeq = input.lastSeq ?? (yield* Ref.make(0));
+			const bufferHasGap = input.bufferHasGap ?? (yield* Ref.make(false));
+			const subscriberCount = input.subscriberCount ?? (yield* Ref.make(0));
+			const status =
+				input.status ?? (yield* Ref.make<SessionStatus>("idle"));
+			const epoch = input.epoch ?? crypto.randomUUID();
+
+			return {
+				queryHandle: input.queryHandle ?? null,
+				abortController: input.abortController ?? null,
+				claudeSessionId: input.claudeSessionId ?? null,
+				pubsub,
+				eventBuffer,
+				lastSeq,
+				epoch,
+				bufferHasGap,
+				subscriberCount,
+				status,
+				cleanupFiber: input.cleanupFiber ?? null,
+			};
+		});
 
 	const service: ActiveSessionsServiceInterface = {
 		register: (sessionId, session) =>
-			Ref.update(sessionsRef, (sessions) => {
-				const newSessions = new Map(sessions);
-				newSessions.set(sessionId, session);
-				return newSessions;
+			Effect.gen(function* () {
+				const activeSession = yield* makeActiveSession(session);
+				yield* Ref.update(sessionsRef, (sessions) => {
+					const newSessions = new Map(sessions);
+					newSessions.set(sessionId, activeSession);
+					return newSessions;
+				});
+			}),
+
+		getOrCreate: (sessionId, session = {}) =>
+			Effect.gen(function* () {
+				const existing = yield* Ref.get(sessionsRef).pipe(
+					Effect.map((sessions) => Option.fromNullable(sessions.get(sessionId))),
+				);
+
+				if (Option.isSome(existing)) {
+					return existing.value;
+				}
+
+				const activeSession = yield* makeActiveSession(session);
+				yield* Ref.update(sessionsRef, (sessions) => {
+					const newSessions = new Map(sessions);
+					newSessions.set(sessionId, activeSession);
+					return newSessions;
+				});
+				return activeSession;
 			}),
 
 		get: (sessionId) =>
@@ -91,6 +186,15 @@ export const makeActiveSessionsService = Effect.gen(function* () {
 					return newSessions;
 				}
 				return sessions;
+			}),
+
+		update: (sessionId, update) =>
+			Ref.update(sessionsRef, (sessions) => {
+				const session = sessions.get(sessionId);
+				if (!session) return sessions;
+				const newSessions = new Map(sessions);
+				newSessions.set(sessionId, update(session));
+				return newSessions;
 			}),
 
 		isActive: (sessionId) =>

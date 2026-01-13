@@ -63,9 +63,6 @@ function mapEventToChunk(event: ChatStreamEvent): UIMessageChunk | null {
 			return { type: "finish", finishReason: event.finishReason };
 		case "error":
 			return { type: "error", errorText: event.errorText };
-		case "ask-user":
-			// This is handled via callback, not as a chunk
-			return null;
 		default:
 			return null;
 	}
@@ -79,7 +76,7 @@ function mapEventToChunk(event: ChatStreamEvent): UIMessageChunk | null {
  * - Calls the Effect RPC streaming endpoint
  * - Converts Effect Stream to ReadableStream<UIMessageChunk>
  * - Handles cancellation via AbortSignal → Fiber.interrupt
- * - Provides callbacks for session events (AskUser, metadata, etc.)
+ * - Provides callbacks for session events (metadata, etc.)
  *
  * @param config - Transport configuration (sessionId, worktreeId, etc.)
  * @param callbacks - Optional callbacks for stream events
@@ -128,15 +125,6 @@ export function createRpcTransport(
 								if (event.type === "start" && event.claudeSessionId) {
 									latestClaudeSessionId = event.claudeSessionId;
 									callbacks?.onSessionStart?.(event.claudeSessionId);
-								}
-
-								if (event.type === "ask-user") {
-									callbacks?.onAskUser?.({
-										toolCallId: event.toolCallId,
-										questions: event.questions,
-									});
-									// Don't enqueue - handled by callback
-									return;
 								}
 
 								if (event.type === "finish" && event.metadata) {

@@ -8,7 +8,6 @@ import {
 } from "@/components/ai-elements/conversation";
 
 import { ChatInput } from "./chat-input";
-import { AskUserDialog } from "./components/ask-user-dialog";
 import { useChatSession } from "./hooks/use-chat-session";
 import { MessageList } from "./message-list";
 
@@ -30,8 +29,6 @@ export function Chat() {
 		status,
 		error,
 		stop,
-		pendingAskUser,
-		respondToAskUser,
 		sessionMetadata,
 		config,
 		updateValue,
@@ -71,11 +68,6 @@ export function Chat() {
 				autonomous={config.autonomous ?? false}
 				onAutonomousChange={handleAutonomousChange}
 			/>
-
-			{/* AskUser Dialog */}
-			{pendingAskUser && (
-				<AskUserDialog event={pendingAskUser} onRespond={respondToAskUser} />
-			)}
 
 			{/* Session metadata display */}
 			{sessionMetadata && (

@@ -2,10 +2,6 @@
 export { Chat } from "./chat";
 export { ChatInput } from "./chat-input";
 export { ChatMessage } from "./chat-message";
-export {
-	AskUserDialog,
-	type AskUserDialogProps,
-} from "./components/ask-user-dialog";
 
 // Context
 export {
@@ -24,7 +20,6 @@ export {
 // Transport (for advanced usage)
 export { createRpcTransport } from "./lib/rpc-transport";
 export type {
-	AskUserEvent,
 	RpcTransportConfig,
 	SessionMetadata,
 	TransportCallbacks,

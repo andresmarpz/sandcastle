@@ -1,5 +1,5 @@
 import { Rpc, RpcGroup } from "@effect/rpc";
-import { AskUserQuestionItem, ChatMessage } from "@sandcastle/storage/entities";
+import { ChatMessage } from "@sandcastle/storage/entities";
 import { Schema } from "effect";
 
 import { DatabaseRpcError } from "../common/errors";
@@ -26,12 +26,22 @@ export class ChatSessionNotFoundRpcError extends Schema.TaggedError<ChatSessionN
 ) {}
 
 /**
- * No pending question to respond to
+ * Session status for multi-client coordination
  */
-export class NoPendingQuestionRpcError extends Schema.TaggedError<NoPendingQuestionRpcError>()(
-	"NoPendingQuestionRpcError",
+export const SessionStatus = Schema.Literal(
+	"idle",
+	"streaming",
+);
+export type SessionStatus = typeof SessionStatus.Type;
+
+/**
+ * Session is busy (already streaming)
+ */
+export class SessionBusyRpcError extends Schema.TaggedError<SessionBusyRpcError>()(
+	"SessionBusyRpcError",
 	{
 		sessionId: Schema.String,
+		currentStatus: SessionStatus,
 	},
 ) {}
 
@@ -143,17 +153,6 @@ export class StreamEventReasoningEnd extends Schema.Class<StreamEventReasoningEn
 }) {}
 
 /**
- * AskUser event - custom extension for interactive questions
- */
-export class StreamEventAskUser extends Schema.Class<StreamEventAskUser>(
-	"StreamEventAskUser",
-)({
-	type: Schema.Literal("ask-user"),
-	toolCallId: Schema.String,
-	questions: Schema.Array(AskUserQuestionItem),
-}) {}
-
-/**
  * Finish event - ends the stream
  */
 export class StreamEventFinish extends Schema.Class<StreamEventFinish>(
@@ -196,11 +195,78 @@ export const ChatStreamEvent = Schema.Union(
 	StreamEventReasoningStart,
 	StreamEventReasoningDelta,
 	StreamEventReasoningEnd,
-	StreamEventAskUser,
 	StreamEventFinish,
 	StreamEventError,
 );
 export type ChatStreamEvent = typeof ChatStreamEvent.Type;
+
+// ─── Multi-Client Session Events ─────────────────────────────
+
+/**
+ * User sent a message (broadcast to all clients)
+ */
+export class UserMessageEvent extends Schema.Class<UserMessageEvent>(
+	"UserMessageEvent",
+)({
+	type: Schema.Literal("user-message"),
+	messageId: Schema.String,
+	text: Schema.String,
+	timestamp: Schema.String,
+}) {}
+
+/**
+ * Session state changed
+ */
+export class SessionStateEvent extends Schema.Class<SessionStateEvent>(
+	"SessionStateEvent",
+)({
+	type: Schema.Literal("session-state"),
+	status: SessionStatus,
+	claudeSessionId: Schema.NullOr(Schema.String),
+}) {}
+
+/**
+ * Initial snapshot for a new subscription (per-subscriber only)
+ */
+export class SessionSnapshotEvent extends Schema.Class<SessionSnapshotEvent>(
+	"SessionSnapshotEvent",
+)({
+	type: Schema.Literal("session-snapshot"),
+	epoch: Schema.String,
+	status: SessionStatus,
+	claudeSessionId: Schema.NullOr(Schema.String),
+	bufferMinSeq: Schema.NullOr(Schema.Number),
+	bufferMaxSeq: Schema.NullOr(Schema.Number),
+	latestSeq: Schema.Number,
+	needsHistory: Schema.Boolean,
+}) {}
+
+/**
+ * Union of all session events
+ */
+export const SessionEvent = Schema.Union(
+	ChatStreamEvent,
+	UserMessageEvent,
+	SessionStateEvent,
+);
+export type SessionEvent = typeof SessionEvent.Type;
+
+/**
+ * Wrapper with sequence number for replay/ordering
+ */
+export class SequencedEvent extends Schema.Class<SequencedEvent>(
+	"SequencedEvent",
+)({
+	seq: Schema.Number,
+	timestamp: Schema.String,
+	event: SessionEvent,
+}) {}
+
+/**
+ * Events emitted on chat.subscribe
+ */
+export const SubscribeEvent = Schema.Union(SessionSnapshotEvent, SequencedEvent);
+export type SubscribeEvent = typeof SubscribeEvent.Type;
 
 // ─── Input Types ─────────────────────────────────────────────
 
@@ -223,17 +289,43 @@ export class ChatStreamInput extends Schema.Class<ChatStreamInput>(
 }) {}
 
 /**
- * Input for responding to AskUserQuestion
+ * Input for subscribing to session events
  */
-export class ChatRespondInput extends Schema.Class<ChatRespondInput>(
-	"ChatRespondInput",
+export class ChatSubscribeInput extends Schema.Class<ChatSubscribeInput>(
+	"ChatSubscribeInput",
 )({
+	/** Session ID from storage */
+	sessionId: Schema.String,
+	/** Client's last seen sequence number for replay */
+	lastSeenSeq: Schema.optional(Schema.Number),
+	/** Client's last known epoch token */
+	epoch: Schema.optional(Schema.String),
+}) {}
+
+/**
+ * Input for sending a user message (non-streaming RPC)
+ */
+export class ChatSendInput extends Schema.Class<ChatSendInput>("ChatSendInput")({
+	/** Session ID from storage */
+	sessionId: Schema.String,
+	/** Worktree ID - used to get the working directory */
+	worktreeId: Schema.String,
+	/** The prompt to send */
+	prompt: Schema.String,
+	/** Optional: Claude session ID for resume */
+	claudeSessionId: Schema.optional(Schema.NullOr(Schema.String)),
+	/** Optional: Enable autonomous mode with extended system prompt */
+	autonomous: Schema.optional(Schema.Boolean),
+}) {}
+
+/**
+ * Input for fetching current session state
+ */
+export class ChatGetSessionStateInput extends Schema.Class<
+	ChatGetSessionStateInput
+>("ChatGetSessionStateInput")({
 	/** Session ID */
 	sessionId: Schema.String,
-	/** Tool use ID from the ask_user event */
-	toolUseId: Schema.String,
-	/** Answers keyed by question header */
-	answers: Schema.Record({ key: Schema.String, value: Schema.String }),
 }) {}
 
 // ─── RPC Group ───────────────────────────────────────────────
@@ -258,12 +350,55 @@ export class ChatRpc extends RpcGroup.make(
 	}),
 
 	/**
+	 * Subscribe to session events (read-only stream).
+	 */
+	Rpc.make("chat.subscribe", {
+		payload: ChatSubscribeInput,
+		success: SubscribeEvent,
+		error: Schema.Union(ChatRpcError, ChatSessionNotFoundRpcError),
+		stream: true,
+	}),
+
+	/**
+	 * Send a user message (non-streaming).
+	 * Events are delivered via chat.subscribe.
+	 */
+	Rpc.make("chat.send", {
+		payload: ChatSendInput,
+		success: Schema.Void,
+		error: Schema.Union(
+			ChatRpcError,
+			ChatSessionNotFoundRpcError,
+			SessionBusyRpcError,
+			DatabaseRpcError,
+		),
+	}),
+
+	/**
 	 * Interrupt a running chat session.
 	 * Aborts the current Claude query.
 	 */
 	Rpc.make("chat.interrupt", {
 		payload: { sessionId: Schema.String },
 		success: Schema.Void,
+		error: Schema.Union(ChatRpcError, ChatSessionNotFoundRpcError),
+	}),
+
+	/**
+	 * Get current session state.
+	 */
+	Rpc.make("chat.getSessionState", {
+		payload: ChatGetSessionStateInput,
+		success: Schema.Struct({
+			status: SessionStatus,
+			claudeSessionId: Schema.NullOr(Schema.String),
+			epoch: Schema.String,
+			subscriberCount: Schema.Number,
+			bufferMinSeq: Schema.NullOr(Schema.Number),
+			bufferMaxSeq: Schema.NullOr(Schema.Number),
+			latestSeq: Schema.Number,
+			bufferHasGap: Schema.Boolean,
+		}),
 		error: Schema.Union(ChatRpcError, ChatSessionNotFoundRpcError),
 	}),
 

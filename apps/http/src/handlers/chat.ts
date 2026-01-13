@@ -2,6 +2,13 @@ import {
 	ChatRpc,
 	ChatRpcError,
 	ChatSessionNotFoundRpcError,
+	SequencedEvent,
+	SessionBusyRpcError,
+	SessionSnapshotEvent,
+	SessionStateEvent,
+	type SessionStatus,
+	StreamEventError,
+	UserMessageEvent,
 	type ChatStreamEvent,
 	DatabaseRpcError,
 } from "@sandcastle/rpc";
@@ -13,14 +20,11 @@ import {
 	type WorktreeNotFoundError,
 } from "@sandcastle/storage";
 import {
-	AskUserPart,
-	AskUserQuestionItem,
-	AskUserQuestionOption,
 	type MessagePart,
 	TextPart,
 	ToolCallPart,
 } from "@sandcastle/storage/entities";
-import { Effect, Layer, Option, Ref, Stream } from "effect";
+import { Effect, Fiber, Layer, Option, Ref, Stream } from "effect";
 import { type AdapterConfig, adaptSDKStreamToEvents } from "../adapters/claude";
 import {
 	type ClaudeSDKError,
@@ -31,6 +35,8 @@ import {
 import {
 	ActiveSessionsService,
 	ActiveSessionsServiceLive,
+	type ActiveSession,
+	type ActiveSessionsServiceInterface,
 } from "../services/active-sessions";
 
 // ─── Error Mapping ───────────────────────────────────────────
@@ -63,6 +69,7 @@ const mapClaudeError = (error: ClaudeSDKError): ChatRpcError =>
 interface AccumulatedMessage {
 	parts: MessagePart[];
 	currentText: { id: string; content: string } | null;
+	messageId: string | null;
 	claudeSessionId: string | null;
 	metadata: {
 		costUsd?: number;
@@ -75,6 +82,7 @@ function createAccumulator(): AccumulatedMessage {
 	return {
 		parts: [],
 		currentText: null,
+		messageId: null,
 		claudeSessionId: null,
 		metadata: {},
 	};
@@ -88,6 +96,7 @@ function accumulateEvent(
 		case "start":
 			return {
 				...acc,
+				messageId: event.messageId,
 				claudeSessionId: event.claudeSessionId ?? null,
 			};
 
@@ -157,33 +166,6 @@ function accumulateEvent(
 			return { ...acc, parts: updatedParts };
 		}
 
-		case "ask-user":
-			return {
-				...acc,
-				parts: [
-					...acc.parts,
-					new AskUserPart({
-						type: "ask-user",
-						toolCallId: event.toolCallId,
-						questions: event.questions.map(
-							(q) =>
-								new AskUserQuestionItem({
-									question: q.question,
-									header: q.header,
-									options: q.options.map(
-										(o) =>
-											new AskUserQuestionOption({
-												label: o.label,
-												description: o.description,
-											}),
-									),
-									multiSelect: q.multiSelect,
-								}),
-						),
-					}),
-				],
-			};
-
 		case "finish":
 			if (event.metadata) {
 				return {
@@ -210,6 +192,131 @@ const adapterConfig: AdapterConfig = {
 	generateId: () => crypto.randomUUID(),
 };
 
+// ─── Session Event Helpers ───────────────────────────────────
+
+const MAX_BUFFER_SIZE = 2000;
+const CLEANUP_TIMEOUT = "5 minutes";
+
+const replayBuffer = (
+	buffer: SequencedEvent[],
+	lastSeenSeq: number,
+): SequencedEvent[] => buffer.filter((event) => event.seq > lastSeenSeq);
+
+const bufferEvent = (session: ActiveSession, event: SequencedEvent) =>
+	Effect.gen(function* () {
+		const dropped = yield* Ref.modify(session.eventBuffer, (buffer) => {
+			const next = [...buffer, event];
+			if (next.length > MAX_BUFFER_SIZE) {
+				return [true, next.slice(-MAX_BUFFER_SIZE)];
+			}
+			return [false, next];
+		});
+
+		if (dropped) {
+			yield* Ref.set(session.bufferHasGap, true);
+		}
+	});
+
+const publishEvent = (
+	session: ActiveSession,
+	event: ChatStreamEvent | UserMessageEvent | SessionStateEvent,
+) =>
+	Effect.gen(function* () {
+		const seq = yield* Ref.modify(session.lastSeq, (current) => [
+			current + 1,
+			current + 1,
+		]);
+		const wrapped = new SequencedEvent({
+			seq,
+			timestamp: new Date().toISOString(),
+			event,
+		});
+
+		yield* bufferEvent(session, wrapped);
+		yield* session.pubsub.publish(wrapped);
+	});
+
+const buildSnapshot = (
+	session: ActiveSession,
+	lastSeenSeq: number | undefined,
+	epoch: string | undefined,
+) =>
+	Effect.gen(function* () {
+		const buffer = yield* Ref.get(session.eventBuffer);
+		const status = yield* Ref.get(session.status);
+		const latestSeq = yield* Ref.get(session.lastSeq);
+		const bufferHasGap = yield* Ref.get(session.bufferHasGap);
+		const bufferMinSeq = buffer.length ? buffer[0].seq : null;
+		const bufferMaxSeq = buffer.length ? buffer[buffer.length - 1].seq : null;
+		const epochMismatch = epoch !== undefined && epoch !== session.epoch;
+		const needsHistory =
+			lastSeenSeq === undefined ||
+			epochMismatch ||
+			bufferHasGap ||
+			(bufferMinSeq !== null && lastSeenSeq < bufferMinSeq) ||
+			(lastSeenSeq !== undefined && lastSeenSeq > latestSeq);
+
+		return new SessionSnapshotEvent({
+			type: "session-snapshot",
+			epoch: session.epoch,
+			status,
+			claudeSessionId: session.claudeSessionId,
+			bufferMinSeq,
+			bufferMaxSeq,
+			latestSeq,
+			needsHistory,
+		});
+	});
+
+const clearBuffer = (session: ActiveSession) =>
+	Effect.gen(function* () {
+		yield* Ref.set(session.eventBuffer, []);
+		yield* Ref.set(session.bufferHasGap, false);
+	});
+
+const cancelCleanup = (session: ActiveSession) =>
+	session.cleanupFiber
+		? Effect.gen(function* () {
+				yield* Fiber.interrupt(session.cleanupFiber).pipe(
+					Effect.catchAll(() => Effect.void),
+				);
+				session.cleanupFiber = null;
+			})
+		: Effect.void;
+
+const scheduleCleanup = (
+	activeSessions: ActiveSessionsServiceInterface,
+	sessionId: string,
+	session: ActiveSession,
+) =>
+	Effect.gen(function* () {
+		if (session.cleanupFiber) {
+			yield* Fiber.interrupt(session.cleanupFiber).pipe(
+				Effect.catchAll(() => Effect.void),
+			);
+		}
+
+		const fiber = yield* Effect.fork(
+			Effect.gen(function* () {
+				yield* Effect.sleep(CLEANUP_TIMEOUT);
+
+				const maybeSession = yield* activeSessions.get(sessionId);
+				if (Option.isNone(maybeSession)) {
+					return;
+				}
+
+				const current = maybeSession.value;
+				const count = yield* Ref.get(current.subscriberCount);
+				const status = yield* Ref.get(current.status);
+
+				if (count === 0 && status === "idle") {
+					yield* activeSessions.remove(sessionId);
+				}
+			}),
+		);
+		session.cleanupFiber = fiber;
+	});
+
 // ─── Handlers ────────────────────────────────────────────────
 
 export const ChatRpcHandlers = ChatRpc.toLayer(
@@ -229,11 +336,21 @@ export const ChatRpcHandlers = ChatRpc.toLayer(
 						const worktree = yield* storage.worktrees.get(params.worktreeId);
 
 						// 2. Verify session exists
-						yield* storage.sessions.get(params.sessionId);
+						const sessionRecord = yield* storage.sessions.get(params.sessionId);
 
-						// 3. Check if session already has an active stream
-						const isActive = yield* activeSessions.isActive(params.sessionId);
-						if (isActive) {
+						// 3. Get or create active session
+						const session = yield* activeSessions.getOrCreate(params.sessionId, {
+							claudeSessionId: sessionRecord.claudeSessionId ?? null,
+						});
+
+						yield* cancelCleanup(session);
+
+						// 4. Atomically lock the session for streaming
+						const previousStatus = yield* Ref.modify(session.status, (status) =>
+							status === "idle" ? ["idle", "streaming"] : [status, status],
+						);
+
+						if (previousStatus !== "idle") {
 							return yield* Effect.fail(
 								new ChatRpcError({
 									message: "Session already has an active stream",
@@ -242,21 +359,52 @@ export const ChatRpcHandlers = ChatRpc.toLayer(
 							);
 						}
 
-						// 4. Store user message
-						yield* storage.chatMessages.create({
+						yield* clearBuffer(session);
+
+						// 5. Store user message
+						const userMessage = yield* storage.chatMessages.create({
 							sessionId: params.sessionId,
 							role: "user",
 							parts: [new TextPart({ type: "text", text: params.prompt })],
 						});
 
-						// 5. Create AbortController for interrupt capability
+						yield* publishEvent(
+							session,
+							new UserMessageEvent({
+								type: "user-message",
+								messageId: userMessage.id,
+								text: params.prompt,
+								timestamp: userMessage.createdAt,
+							}),
+						);
+
+						// 6. Create AbortController for interrupt capability
 						const abortController = new AbortController();
 
-						// 6. Build query options
+						const resumeId =
+							params.claudeSessionId ??
+							session.claudeSessionId ??
+							sessionRecord.claudeSessionId ??
+							undefined;
+
+						if (resumeId && resumeId !== session.claudeSessionId) {
+							session.claudeSessionId = resumeId;
+						}
+
+						yield* publishEvent(
+							session,
+							new SessionStateEvent({
+								type: "session-state",
+								status: "streaming",
+								claudeSessionId: session.claudeSessionId,
+							}),
+						);
+
+						// 7. Build query options
 						const queryOptions: QueryOptions = {
 							cwd: worktree.path,
 							abortController,
-							resume: params.claudeSessionId ?? undefined,
+							resume: resumeId,
 							systemPrompt: params.autonomous
 								? {
 										type: "preset",
@@ -270,18 +418,28 @@ Do not ask questions to the user or self-doubt. Choose the best options to compl
 							allowDangerouslySkipPermissions: true,
 						};
 
-						// 7. Create query handle
-						const queryHandle = yield* claudeSDK.query(
-							params.prompt,
-							queryOptions,
-						);
+						// 8. Create query handle
+						const queryHandle = yield* claudeSDK
+							.query(params.prompt, queryOptions)
+							.pipe(
+								Effect.catchAll((error) =>
+									Effect.gen(function* () {
+										yield* Ref.set(session.status, "idle");
+										yield* publishEvent(
+											session,
+											new SessionStateEvent({
+												type: "session-state",
+												status: "idle",
+												claudeSessionId: session.claudeSessionId,
+											}),
+										);
+										return yield* Effect.fail(error);
+									}),
+								),
+							);
 
-						// 8. Register for interrupt
-						yield* activeSessions.register(params.sessionId, {
-							queryHandle,
-							abortController,
-							claudeSessionId: params.claudeSessionId ?? null,
-						});
+						session.queryHandle = queryHandle;
+						session.abortController = abortController;
 
 						// 9. Create accumulator ref for message persistence
 						const accumulatorRef = yield* Ref.make(createAccumulator());
@@ -300,6 +458,7 @@ Do not ask questions to the user or self-doubt. Choose the best options to compl
 							// Update claudeSessionId in active session when we get it
 							Stream.tap((event) => {
 								if (event.type === "start" && event.claudeSessionId) {
+									session.claudeSessionId = event.claudeSessionId;
 									return activeSessions.updateClaudeSessionId(
 										params.sessionId,
 										event.claudeSessionId,
@@ -307,6 +466,8 @@ Do not ask questions to the user or self-doubt. Choose the best options to compl
 								}
 								return Effect.void;
 							}),
+							// Publish events to subscribers
+							Stream.tap((event) => publishEvent(session, event)),
 							// On stream completion, persist assistant message
 							Stream.ensuring(
 								Effect.gen(function* () {
@@ -316,6 +477,7 @@ Do not ask questions to the user or self-doubt. Choose the best options to compl
 									if (acc.parts.length > 0) {
 										yield* storage.chatMessages
 											.create({
+												id: acc.messageId ?? undefined,
 												sessionId: params.sessionId,
 												role: "assistant",
 												parts: acc.parts,
@@ -338,12 +500,54 @@ Do not ask questions to the user or self-doubt. Choose the best options to compl
 											.pipe(Effect.orElse(() => Effect.void));
 									}
 
-									// Remove from active sessions
-									yield* activeSessions.remove(params.sessionId);
+									session.queryHandle = null;
+									session.abortController = null;
+
+									yield* Ref.set(session.status, "idle");
+									yield* publishEvent(
+										session,
+										new SessionStateEvent({
+											type: "session-state",
+											status: "idle",
+											claudeSessionId: session.claudeSessionId,
+										}),
+									);
+									yield* clearBuffer(session);
+
+									const count = yield* Ref.get(session.subscriberCount);
+									if (count === 0) {
+										yield* scheduleCleanup(
+											activeSessions,
+											params.sessionId,
+											session,
+										);
+									}
 								}),
 							),
 						);
 					}).pipe(
+						Effect.catchAll((error) =>
+							error._tag === "ChatRpcError"
+								? Effect.fail(error)
+								: Effect.gen(function* () {
+										const maybeSession = yield* activeSessions.get(
+											params.sessionId,
+										);
+										if (Option.isSome(maybeSession)) {
+											const session = maybeSession.value;
+											yield* Ref.set(session.status, "idle");
+											yield* publishEvent(
+												session,
+												new SessionStateEvent({
+													type: "session-state",
+													status: "idle",
+													claudeSessionId: session.claudeSessionId,
+												}),
+											);
+										}
+										return yield* Effect.fail(error);
+									}),
+						),
 						Effect.mapError((error) => {
 							if (error._tag === "ClaudeSDKError") return mapClaudeError(error);
 							if (
@@ -374,6 +578,371 @@ Do not ask questions to the user or self-doubt. Choose the best options to compl
 				),
 
 			/**
+			 * Subscribe to session events (read-only stream)
+			 */
+			"chat.subscribe": (params) =>
+				Stream.unwrapScoped(
+					Effect.gen(function* () {
+						const sessionRecord = yield* storage.sessions.get(params.sessionId);
+						const session = yield* activeSessions.getOrCreate(params.sessionId, {
+							claudeSessionId: sessionRecord.claudeSessionId ?? null,
+						});
+
+						if (!session.claudeSessionId && sessionRecord.claudeSessionId) {
+							session.claudeSessionId = sessionRecord.claudeSessionId;
+						}
+
+						yield* cancelCleanup(session);
+						yield* Ref.update(session.subscriberCount, (count) => count + 1);
+
+						const snapshot = yield* buildSnapshot(
+							session,
+							params.lastSeenSeq,
+							params.epoch,
+						);
+						const buffer = yield* Ref.get(session.eventBuffer);
+						const replayFromSeq = snapshot.needsHistory
+							? 0
+							: (params.lastSeenSeq ?? 0);
+						const replayEvents = replayBuffer(buffer, replayFromSeq);
+						const liveStream = yield* Stream.fromPubSub(session.pubsub, {
+							scoped: true,
+						});
+
+						return Stream.concat(
+							Stream.fromIterable([snapshot]),
+							Stream.fromIterable(replayEvents),
+							liveStream,
+						).pipe(
+							Stream.ensuring(
+								Effect.gen(function* () {
+									yield* Ref.update(session.subscriberCount, (count) =>
+										Math.max(0, count - 1),
+									);
+
+									const count = yield* Ref.get(session.subscriberCount);
+									const status = yield* Ref.get(session.status);
+
+									if (count === 0 && status === "idle") {
+										yield* scheduleCleanup(
+											activeSessions,
+											params.sessionId,
+											session,
+										);
+									}
+								}),
+							),
+						);
+					}).pipe(
+						Effect.mapError((error) => {
+							if (error._tag === "SessionNotFoundError") {
+								return mapSessionNotFoundError(error);
+							}
+							if (error._tag === "DatabaseError") {
+								return new ChatRpcError({
+									message: error.message,
+									code: "DATABASE_ERROR",
+								});
+							}
+							return new ChatRpcError({
+								message: String(error),
+								code: "UNKNOWN_ERROR",
+							});
+						}),
+					),
+				),
+
+			/**
+			 * Send a user message (non-streaming)
+			 */
+			"chat.send": (params) =>
+				Effect.gen(function* () {
+					const worktree = yield* storage.worktrees.get(params.worktreeId);
+					const sessionRecord = yield* storage.sessions.get(params.sessionId);
+
+					const session = yield* activeSessions.getOrCreate(params.sessionId, {
+						claudeSessionId: sessionRecord.claudeSessionId ?? null,
+					});
+
+					yield* cancelCleanup(session);
+
+					const previousStatus = yield* Ref.modify(session.status, (status) =>
+						status === "idle" ? ["idle", "streaming"] : [status, status],
+					);
+
+					if (previousStatus !== "idle") {
+						return yield* Effect.fail(
+							new SessionBusyRpcError({
+								sessionId: params.sessionId,
+								currentStatus: previousStatus as SessionStatus,
+							}),
+						);
+					}
+
+					yield* clearBuffer(session);
+
+					const userMessage = yield* storage.chatMessages.create({
+						sessionId: params.sessionId,
+						role: "user",
+						parts: [new TextPart({ type: "text", text: params.prompt })],
+					});
+
+					yield* publishEvent(
+						session,
+						new UserMessageEvent({
+							type: "user-message",
+							messageId: userMessage.id,
+							text: params.prompt,
+							timestamp: userMessage.createdAt,
+						}),
+					);
+
+					const resumeId =
+						params.claudeSessionId ??
+						session.claudeSessionId ??
+						sessionRecord.claudeSessionId ??
+						undefined;
+
+					if (resumeId && resumeId !== session.claudeSessionId) {
+						session.claudeSessionId = resumeId;
+					}
+
+					yield* publishEvent(
+						session,
+						new SessionStateEvent({
+							type: "session-state",
+							status: "streaming",
+							claudeSessionId: session.claudeSessionId,
+						}),
+					);
+
+					const abortController = new AbortController();
+					const queryOptions: QueryOptions = {
+						cwd: worktree.path,
+						abortController,
+						resume: resumeId,
+						systemPrompt: params.autonomous
+							? {
+									type: "preset",
+									preset: "claude_code",
+									append: `\n\nYou are in autonomous mode working on a new worktree of this project. First of all read @project.md to understand the project. The user requested a task that you must try to complete to the best of your ability. Use your best judgment at all times. Ensure high quality, pragmatic and clean delivery. You will continue working indefinitely until you have exhausted all your attempts at solving the problem, or successfully completed it. If you completed, run 'bun biome' in the packages/apps that have modified files, which runs tooling like linting, formatting.
+After you are done working, commit your changes and push to git. Create a PR using 'gh' cli.
+Do not ask questions to the user or self-doubt. Choose the best options to comply with the task.`,
+								}
+							: { type: "preset", preset: "claude_code" },
+						permissionMode: "bypassPermissions",
+						allowDangerouslySkipPermissions: true,
+					};
+
+					const queryHandle = yield* claudeSDK
+						.query(params.prompt, queryOptions)
+						.pipe(
+							Effect.catchAll((error) =>
+								Effect.gen(function* () {
+									yield* Ref.set(session.status, "idle");
+									yield* publishEvent(
+										session,
+										new SessionStateEvent({
+											type: "session-state",
+											status: "idle",
+											claudeSessionId: session.claudeSessionId,
+										}),
+									);
+									return yield* Effect.fail(error);
+								}),
+							),
+						);
+
+					session.queryHandle = queryHandle;
+					session.abortController = abortController;
+
+					const accumulatorRef = yield* Ref.make(createAccumulator());
+
+					const runStream = adaptSDKStreamToEvents(
+						queryHandle.stream,
+						adapterConfig,
+					).pipe(
+						Stream.tap((event) =>
+							Ref.update(accumulatorRef, (acc) =>
+								accumulateEvent(acc, event),
+							),
+						),
+						Stream.tap((event) => {
+							if (event.type === "start" && event.claudeSessionId) {
+								session.claudeSessionId = event.claudeSessionId;
+								return activeSessions.updateClaudeSessionId(
+									params.sessionId,
+									event.claudeSessionId,
+								);
+							}
+							return Effect.void;
+						}),
+						Stream.tap((event) => publishEvent(session, event)),
+						Stream.runDrain,
+						Effect.catchAll((error) =>
+							publishEvent(
+								session,
+								new StreamEventError({
+									type: "error",
+									errorText: String(error),
+								}),
+							),
+						),
+						Effect.ensuring(
+							Effect.gen(function* () {
+								const acc = yield* Ref.get(accumulatorRef);
+
+								if (acc.parts.length > 0) {
+									yield* storage.chatMessages
+										.create({
+											id: acc.messageId ?? undefined,
+											sessionId: params.sessionId,
+											role: "assistant",
+											parts: acc.parts,
+											metadata: acc.metadata,
+										})
+										.pipe(Effect.orElse(() => Effect.void));
+								}
+
+								if (acc.claudeSessionId || acc.metadata.costUsd) {
+									yield* storage.sessions
+										.update(params.sessionId, {
+											claudeSessionId: acc.claudeSessionId,
+											status: "active",
+											lastActivityAt: new Date().toISOString(),
+											totalCostUsd: acc.metadata.costUsd,
+											inputTokens: acc.metadata.inputTokens,
+											outputTokens: acc.metadata.outputTokens,
+										})
+										.pipe(Effect.orElse(() => Effect.void));
+								}
+
+								session.queryHandle = null;
+								session.abortController = null;
+
+								yield* Ref.set(session.status, "idle");
+								yield* publishEvent(
+									session,
+									new SessionStateEvent({
+										type: "session-state",
+										status: "idle",
+										claudeSessionId: session.claudeSessionId,
+									}),
+								);
+								yield* clearBuffer(session);
+
+								const count = yield* Ref.get(session.subscriberCount);
+								if (count === 0) {
+									yield* scheduleCleanup(
+										activeSessions,
+										params.sessionId,
+										session,
+									);
+								}
+							}),
+						),
+					);
+
+					yield* Effect.fork(runStream);
+				}).pipe(
+					Effect.catchAll((error) =>
+						error._tag === "SessionBusyRpcError"
+							? Effect.fail(error)
+							: Effect.gen(function* () {
+									const maybeSession = yield* activeSessions.get(
+										params.sessionId,
+									);
+									if (Option.isSome(maybeSession)) {
+										const session = maybeSession.value;
+										yield* Ref.set(session.status, "idle");
+										yield* publishEvent(
+											session,
+											new SessionStateEvent({
+												type: "session-state",
+												status: "idle",
+												claudeSessionId: session.claudeSessionId,
+											}),
+										);
+									}
+									return yield* Effect.fail(error);
+								}),
+					),
+					Effect.mapError((error) => {
+						if (error._tag === "SessionBusyRpcError") return error;
+						if (error._tag === "ClaudeSDKError") return mapClaudeError(error);
+						if (
+							error._tag === "SessionNotFoundError" ||
+							error._tag === "WorktreeNotFoundError"
+						) {
+							return mapSessionNotFoundError(error);
+						}
+						if (error._tag === "DatabaseError") {
+							return mapDatabaseError(error);
+						}
+						if (error._tag === "ForeignKeyViolationError") {
+							return new ChatSessionNotFoundRpcError({
+								sessionId: params.sessionId,
+							});
+						}
+						if (error._tag === "ChatRpcError") {
+							return error;
+						}
+						return new ChatRpcError({
+							message: String(error),
+							code: "UNKNOWN_ERROR",
+						});
+					}),
+				),
+
+			/**
+			 * Get current session state
+			 */
+			"chat.getSessionState": (params) =>
+				Effect.gen(function* () {
+					const sessionRecord = yield* storage.sessions.get(params.sessionId);
+					const session = yield* activeSessions.getOrCreate(params.sessionId, {
+						claudeSessionId: sessionRecord.claudeSessionId ?? null,
+					});
+
+					if (!session.claudeSessionId && sessionRecord.claudeSessionId) {
+						session.claudeSessionId = sessionRecord.claudeSessionId;
+					}
+
+					const status = yield* Ref.get(session.status);
+					const subscriberCount = yield* Ref.get(session.subscriberCount);
+					const buffer = yield* Ref.get(session.eventBuffer);
+					const latestSeq = yield* Ref.get(session.lastSeq);
+					const bufferHasGap = yield* Ref.get(session.bufferHasGap);
+
+					return {
+						status,
+						claudeSessionId: session.claudeSessionId,
+						epoch: session.epoch,
+						subscriberCount,
+						bufferMinSeq: buffer.length ? buffer[0].seq : null,
+						bufferMaxSeq: buffer.length ? buffer[buffer.length - 1].seq : null,
+						latestSeq,
+						bufferHasGap,
+					};
+				}).pipe(
+					Effect.mapError((error) => {
+						if (error._tag === "SessionNotFoundError") {
+							return mapSessionNotFoundError(error);
+						}
+						if (error._tag === "DatabaseError") {
+							return new ChatRpcError({
+								message: error.message,
+								code: "DATABASE_ERROR",
+							});
+						}
+						return new ChatRpcError({
+							message: String(error),
+							code: "UNKNOWN_ERROR",
+						});
+					}),
+				),
+
+			/**
 			 * Interrupt a running chat session
 			 */
 			"chat.interrupt": (params) =>
@@ -391,15 +960,34 @@ Do not ask questions to the user or self-doubt. Choose the best options to compl
 					const session = maybeSession.value;
 
 					// Abort via controller
-					session.abortController.abort();
+					if (session.abortController) {
+						session.abortController.abort();
+					}
 
 					// Also call SDK interrupt
-					yield* session.queryHandle.interrupt.pipe(
-						Effect.catchAll(() => Effect.void),
+					if (session.queryHandle) {
+						yield* session.queryHandle.interrupt.pipe(
+							Effect.catchAll(() => Effect.void),
+						);
+					}
+
+					session.queryHandle = null;
+					session.abortController = null;
+
+					yield* Ref.set(session.status, "idle");
+					yield* publishEvent(
+						session,
+						new SessionStateEvent({
+							type: "session-state",
+							status: "idle",
+							claudeSessionId: session.claudeSessionId,
+						}),
 					);
 
-					// Remove from active sessions
-					yield* activeSessions.remove(params.sessionId);
+					const count = yield* Ref.get(session.subscriberCount);
+					if (count === 0) {
+						yield* scheduleCleanup(activeSessions, params.sessionId, session);
+					}
 				}),
 
 			/**
