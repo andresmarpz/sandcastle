@@ -140,7 +140,7 @@ export function GrepPart({ part }: GrepPartProps) {
 	};
 
 	return (
-		<Tool defaultOpen>
+		<Tool>
 			<ToolHeader
 				title="Grep"
 				type="tool-Grep"

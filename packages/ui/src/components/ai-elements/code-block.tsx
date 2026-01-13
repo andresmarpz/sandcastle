@@ -9,6 +9,7 @@ import {
 	useEffect,
 	useRef,
 	useState,
+	useSyncExternalStore,
 } from "react";
 import { type BundledLanguage, codeToHtml, type ShikiTransformer } from "shiki";
 import { Button } from "@/components/button";
@@ -49,27 +50,67 @@ const lineNumberTransformer: ShikiTransformer = {
 	},
 };
 
-export async function highlightCode(
+// Theme detection using useSyncExternalStore for SSR safety
+const darkModeQuery =
+	typeof window !== "undefined"
+		? window.matchMedia("(prefers-color-scheme: dark)")
+		: null;
+
+function subscribeToDarkMode(callback: () => void) {
+	darkModeQuery?.addEventListener("change", callback);
+	return () => darkModeQuery?.removeEventListener("change", callback);
+}
+
+function getDarkModeSnapshot() {
+	return darkModeQuery?.matches ?? false;
+}
+
+function getDarkModeServerSnapshot() {
+	return false;
+}
+
+function useIsDarkMode() {
+	return useSyncExternalStore(
+		subscribeToDarkMode,
+		getDarkModeSnapshot,
+		getDarkModeServerSnapshot,
+	);
+}
+
+// Cache for highlighted code to avoid re-highlighting
+const highlightCache = new Map<string, string>();
+const MAX_CACHE_SIZE = 10;
+
+async function highlightCodeSingle(
 	code: string,
 	language: BundledLanguage,
-	showLineNumbers = false,
-) {
+	theme: "one-light" | "one-dark-pro",
+	showLineNumbers: boolean,
+): Promise<string> {
+	const cacheKey = `${theme}:${language}:${showLineNumbers}:${code}`;
+
+	if (highlightCache.has(cacheKey)) {
+		return highlightCache.get(cacheKey) as typeof cacheKey;
+	}
+
 	const transformers: ShikiTransformer[] = showLineNumbers
 		? [lineNumberTransformer]
 		: [];
 
-	return await Promise.all([
-		codeToHtml(code, {
-			lang: language,
-			theme: "one-light",
-			transformers,
-		}),
-		codeToHtml(code, {
-			lang: language,
-			theme: "one-dark-pro",
-			transformers,
-		}),
-	]);
+	const html = await codeToHtml(code, {
+		lang: language,
+		theme,
+		transformers,
+	});
+
+	// LRU-style cleanup
+	if (highlightCache.size >= MAX_CACHE_SIZE) {
+		const firstKey = highlightCache.keys().next().value;
+		if (firstKey) highlightCache.delete(firstKey);
+	}
+
+	highlightCache.set(cacheKey, html);
+	return html;
 }
 
 export const CodeBlock = ({
@@ -80,23 +121,23 @@ export const CodeBlock = ({
 	children,
 	...props
 }: CodeBlockProps) => {
+	const isDark = useIsDarkMode();
 	const [html, setHtml] = useState<string>("");
-	const [darkHtml, setDarkHtml] = useState<string>("");
-	const mounted = useRef(false);
+	const currentRequestRef = useRef(0);
 
 	useEffect(() => {
-		highlightCode(code, language, showLineNumbers).then(([light, dark]) => {
-			if (!mounted.current) {
-				setHtml(light);
-				setDarkHtml(dark);
-				mounted.current = true;
-			}
-		});
+		const requestId = ++currentRequestRef.current;
+		const theme = isDark ? "one-dark-pro" : "one-light";
 
-		return () => {
-			mounted.current = false;
-		};
-	}, [code, language, showLineNumbers]);
+		highlightCodeSingle(code, language, theme, showLineNumbers).then(
+			(result) => {
+				// Only update if this is still the current request
+				if (requestId === currentRequestRef.current) {
+					setHtml(result);
+				}
+			},
+		);
+	}, [code, language, showLineNumbers, isDark]);
 
 	return (
 		<CodeBlockContext.Provider value={{ code }}>
@@ -109,12 +150,8 @@ export const CodeBlock = ({
 			>
 				<div className="relative">
 					<div
-						className="overflow-auto dark:hidden [&>pre]:m-0 [&>pre]:bg-background! [&>pre]:p-4 [&>pre]:text-foreground! [&>pre]:text-sm [&_code]:font-mono [&_code]:text-sm"
+						className="overflow-auto [&>pre]:m-0 [&>pre]:bg-background! [&>pre]:p-4 [&>pre]:text-foreground! [&>pre]:text-sm [&_code]:font-mono [&_code]:text-sm"
 						dangerouslySetInnerHTML={{ __html: html }}
-					/>
-					<div
-						className="hidden overflow-auto dark:block [&>pre]:m-0 [&>pre]:bg-background! [&>pre]:p-4 [&>pre]:text-foreground! [&>pre]:text-sm [&_code]:font-mono [&_code]:text-sm"
-						dangerouslySetInnerHTML={{ __html: darkHtml }}
 					/>
 					{children && (
 						<div className="absolute top-2 right-2 flex items-center gap-2">

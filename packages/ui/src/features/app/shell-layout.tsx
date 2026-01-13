@@ -1,17 +1,45 @@
 "use client";
 
-import { Outlet } from "react-router";
+import { useCallback } from "react";
+import { Outlet, useSearchParams } from "react-router";
 
 import {
 	SidebarInset,
 	SidebarProvider,
 	SidebarTrigger,
 } from "@/components/sidebar";
+import { SettingsModal, type SettingsSection } from "@/features/settings";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { AppSidebar } from "./sidebar/app-sidebar";
 
 export function ShellLayout() {
 	const isMobile = useIsMobile();
+	const [searchParams, setSearchParams] = useSearchParams();
+
+	const settingsSection = searchParams.get("settings") as SettingsSection | null;
+	const isSettingsOpen = settingsSection !== null;
+
+	const handleSettingsOpenChange = useCallback(
+		(open: boolean) => {
+			if (!open) {
+				setSearchParams((prev) => {
+					prev.delete("settings");
+					return prev;
+				});
+			}
+		},
+		[setSearchParams],
+	);
+
+	const handleSettingsSectionChange = useCallback(
+		(section: SettingsSection) => {
+			setSearchParams((prev) => {
+				prev.set("settings", section);
+				return prev;
+			});
+		},
+		[setSearchParams],
+	);
 
 	return (
 		<SidebarProvider>
@@ -27,6 +55,12 @@ export function ShellLayout() {
 					<Outlet />
 				</div>
 			</SidebarInset>
+			<SettingsModal
+				open={isSettingsOpen}
+				onOpenChange={handleSettingsOpenChange}
+				section={settingsSection ?? "chat"}
+				onSectionChange={handleSettingsSectionChange}
+			/>
 		</SidebarProvider>
 	);
 }

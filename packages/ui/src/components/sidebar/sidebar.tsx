@@ -6,9 +6,10 @@ import {
 	IconFolderOpen,
 	IconLayoutDashboard,
 	IconPlus,
+	IconSettings,
 } from "@tabler/icons-react";
 import * as React from "react";
-import { useLocation } from "react-router";
+import { useLocation, useSearchParams } from "react-router";
 import { Button } from "@/components/button";
 import {
 	DropdownMenu,
@@ -19,6 +20,7 @@ import {
 import { Separator } from "@/components/separator";
 import {
 	SidebarContent,
+	SidebarFooter,
 	SidebarHeader,
 	SidebarMenu,
 	SidebarMenuButton,
@@ -58,6 +60,7 @@ export function Sidebar({
 	deletingWorktreeId = null,
 }: SidebarProps) {
 	const location = useLocation();
+	const [, setSearchParams] = useSearchParams();
 	const isActive = location.pathname === "/";
 
 	// Sort: pinned first (by createdAt DESC), then unpinned (by createdAt DESC)
@@ -154,6 +157,20 @@ export function Sidebar({
 					)}
 				</SidebarMenu>
 			</SidebarContent>
+
+			{/* Footer with Settings */}
+			<SidebarFooter className="border-border border-t p-2">
+				<SidebarMenu>
+					<SidebarMenuItem>
+						<SidebarMenuButton
+							onClick={() => setSearchParams({ settings: "chat" })}
+						>
+							<IconSettings className="size-4" />
+							<span>Settings</span>
+						</SidebarMenuButton>
+					</SidebarMenuItem>
+				</SidebarMenu>
+			</SidebarFooter>
 
 			{/* Resize rail */}
 			<SidebarRail />
