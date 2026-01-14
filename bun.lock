@@ -62,6 +62,7 @@
         "@effect/rpc": "^0.73.0",
         "@sandcastle/petname": "workspace:*",
         "@sandcastle/rpc": "workspace:*",
+        "@sandcastle/schemas": "workspace:*",
         "@sandcastle/storage": "workspace:*",
         "@sandcastle/worktree": "workspace:*",
         "effect": "^3.19.14",
@@ -128,10 +129,24 @@
         "typescript": "^5.9.3",
       },
     },
+    "packages/schemas": {
+      "name": "@sandcastle/schemas",
+      "version": "0.1.0",
+      "dependencies": {
+        "effect": "^3.19.14",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+      },
+      "peerDependencies": {
+        "typescript": "^5",
+      },
+    },
     "packages/storage": {
       "name": "@sandcastle/storage",
       "version": "0.1.0",
       "dependencies": {
+        "@sandcastle/schemas": "workspace:*",
         "effect": "^3.19.14",
       },
       "devDependencies": {
@@ -671,6 +686,8 @@
     "@sandcastle/petname": ["@sandcastle/petname@workspace:packages/petname"],
 
     "@sandcastle/rpc": ["@sandcastle/rpc@workspace:packages/rpc"],
+
+    "@sandcastle/schemas": ["@sandcastle/schemas@workspace:packages/schemas"],
 
     "@sandcastle/storage": ["@sandcastle/storage@workspace:packages/storage"],
 
