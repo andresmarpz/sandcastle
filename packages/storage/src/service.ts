@@ -1,23 +1,6 @@
 import { Context, type Effect } from "effect";
-
+import type { ChatMessage, CreateChatMessageInput } from "./chat/schema";
 import type {
-	Agent,
-	ChatMessage,
-	CreateAgentInput,
-	CreateChatMessageInput,
-	CreateRepositoryInput,
-	CreateSessionInput,
-	CreateWorktreeInput,
-	Repository,
-	Session,
-	UpdateAgentInput,
-	UpdateRepositoryInput,
-	UpdateSessionInput,
-	UpdateWorktreeInput,
-	Worktree,
-} from "./entities";
-import type {
-	AgentNotFoundError,
 	ChatMessageNotFoundError,
 	DatabaseError,
 	ForeignKeyViolationError,
@@ -28,6 +11,21 @@ import type {
 	WorktreeNotFoundError,
 	WorktreePathExistsError,
 } from "./errors";
+import type {
+	CreateRepositoryInput,
+	Repository,
+	UpdateRepositoryInput,
+} from "./repository/schema";
+import type {
+	CreateSessionInput,
+	Session,
+	UpdateSessionInput,
+} from "./session/schema";
+import type {
+	CreateWorktreeInput,
+	UpdateWorktreeInput,
+	Worktree,
+} from "./worktree/schema";
 
 export class StorageService extends Context.Tag("StorageService")<
 	StorageService,
@@ -105,26 +103,6 @@ export class StorageService extends Context.Tag("StorageService")<
 			touch: (
 				id: string,
 			) => Effect.Effect<void, SessionNotFoundError | DatabaseError>;
-		};
-
-		agents: {
-			list: () => Effect.Effect<Agent[], DatabaseError>;
-			listBySession: (
-				sessionId: string,
-			) => Effect.Effect<Agent[], DatabaseError>;
-			get: (
-				id: string,
-			) => Effect.Effect<Agent, AgentNotFoundError | DatabaseError>;
-			create: (
-				input: CreateAgentInput,
-			) => Effect.Effect<Agent, ForeignKeyViolationError | DatabaseError>;
-			update: (
-				id: string,
-				input: UpdateAgentInput,
-			) => Effect.Effect<Agent, AgentNotFoundError | DatabaseError>;
-			delete: (
-				id: string,
-			) => Effect.Effect<void, AgentNotFoundError | DatabaseError>;
 		};
 
 		chatMessages: {

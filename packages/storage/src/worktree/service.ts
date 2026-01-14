@@ -1,19 +1,18 @@
 import { Effect } from "effect";
-
-import { Worktree } from "./entities";
 import {
 	type DatabaseError,
 	ForeignKeyViolationError,
 	WorktreeNotFoundError,
 	WorktreePathExistsError,
-} from "./errors";
+} from "../errors";
 import {
 	type DbInstance,
 	generateId,
 	nowIso,
 	type SQLQueryBindings,
 	tryDb,
-} from "./utils";
+} from "../utils";
+import { Worktree } from "./schema";
 
 const rowToWorktree = (row: Record<string, unknown>): Worktree =>
 	new Worktree({

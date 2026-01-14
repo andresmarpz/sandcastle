@@ -1,18 +1,17 @@
 import { Effect } from "effect";
-
-import { Repository } from "./entities";
 import {
 	type DatabaseError,
 	RepositoryNotFoundError,
 	RepositoryPathExistsError,
-} from "./errors";
+} from "../errors";
 import {
 	type DbInstance,
 	generateId,
 	nowIso,
 	type SQLQueryBindings,
 	tryDb,
-} from "./utils";
+} from "../utils";
+import { Repository } from "./schema";
 
 const rowToRepository = (row: Record<string, unknown>): Repository =>
 	new Repository({

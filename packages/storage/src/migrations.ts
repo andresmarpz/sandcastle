@@ -1,186 +1,145 @@
 import type { Database } from "bun:sqlite";
-import { Effect } from "effect";
-
+import { Console, Effect } from "effect";
 import { MigrationError } from "./errors";
 
 interface Migration {
 	version: number;
-	description: string;
+	name: string;
 	up: string;
 }
 
 const migrations: Migration[] = [
 	{
 		version: 1,
-		description: "Initial schema",
+		name: "initial_schema",
 		up: `
-      -- Repositories
-      CREATE TABLE IF NOT EXISTS repositories (
-        id TEXT PRIMARY KEY,
-        label TEXT NOT NULL,
-        directory_path TEXT NOT NULL UNIQUE,
-        default_branch TEXT NOT NULL DEFAULT 'main',
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
-      );
+			-- Repositories table
+			CREATE TABLE IF NOT EXISTS repositories (
+				id TEXT PRIMARY KEY,
+				label TEXT NOT NULL,
+				directoryPath TEXT NOT NULL UNIQUE,
+				defaultBranch TEXT NOT NULL,
+				pinned INTEGER NOT NULL DEFAULT 0,
+				createdAt TEXT NOT NULL,
+				updatedAt TEXT NOT NULL
+			);
 
-      -- Worktrees
-      CREATE TABLE IF NOT EXISTS worktrees (
-        id TEXT PRIMARY KEY,
-        repository_id TEXT NOT NULL REFERENCES repositories(id) ON DELETE CASCADE,
-        path TEXT NOT NULL UNIQUE,
-        branch TEXT NOT NULL,
-        name TEXT NOT NULL,
-        base_branch TEXT NOT NULL,
-        status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'stale', 'archived')),
-        created_at TEXT NOT NULL,
-        last_accessed_at TEXT NOT NULL
-      );
+			-- Worktrees table
+			CREATE TABLE IF NOT EXISTS worktrees (
+				id TEXT PRIMARY KEY,
+				repositoryId TEXT NOT NULL,
+				path TEXT NOT NULL UNIQUE,
+				branch TEXT NOT NULL,
+				name TEXT NOT NULL,
+				baseBranch TEXT NOT NULL,
+				status TEXT NOT NULL CHECK (status IN ('active', 'stale', 'archived')),
+				createdAt TEXT NOT NULL,
+				lastAccessedAt TEXT NOT NULL,
+				FOREIGN KEY (repositoryId) REFERENCES repositories(id) ON DELETE CASCADE
+			);
 
-      -- Sessions
-      CREATE TABLE IF NOT EXISTS sessions (
-        id TEXT PRIMARY KEY,
-        worktree_id TEXT NOT NULL REFERENCES worktrees(id) ON DELETE CASCADE,
-        title TEXT NOT NULL,
-        description TEXT,
-        status TEXT NOT NULL DEFAULT 'created' CHECK(status IN ('created', 'active', 'paused', 'completed', 'failed')),
-        created_at TEXT NOT NULL,
-        last_activity_at TEXT NOT NULL
-      );
+			-- Sessions table
+			CREATE TABLE IF NOT EXISTS sessions (
+				id TEXT PRIMARY KEY,
+				worktreeId TEXT NOT NULL,
+				title TEXT NOT NULL,
+				description TEXT,
+				status TEXT NOT NULL CHECK (status IN ('created', 'active', 'paused', 'completed', 'failed')),
+				claudeSessionId TEXT,
+				model TEXT,
+				totalCostUsd REAL NOT NULL DEFAULT 0,
+				inputTokens INTEGER NOT NULL DEFAULT 0,
+				outputTokens INTEGER NOT NULL DEFAULT 0,
+				createdAt TEXT NOT NULL,
+				lastActivityAt TEXT NOT NULL,
+				FOREIGN KEY (worktreeId) REFERENCES worktrees(id) ON DELETE CASCADE
+			);
 
-      -- Agents
-      CREATE TABLE IF NOT EXISTS agents (
-        id TEXT PRIMARY KEY,
-        session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
-        process_id INTEGER,
-        status TEXT NOT NULL DEFAULT 'starting' CHECK(status IN ('starting', 'running', 'idle', 'stopped', 'crashed')),
-        started_at TEXT NOT NULL,
-        stopped_at TEXT,
-        exit_code INTEGER
-      );
-    `,
-	},
-	{
-		version: 2,
-		description: "Add pinned field to repositories",
-		up: `ALTER TABLE repositories ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0;`,
-	},
-	{
-		version: 3,
-		description: "Add chat messages table",
-		up: `
-      CREATE TABLE IF NOT EXISTS chat_messages (
-        id TEXT PRIMARY KEY,
-        session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
-        sequence_number INTEGER NOT NULL,
-        role TEXT NOT NULL CHECK(role IN ('user', 'assistant', 'system')),
-        content_type TEXT NOT NULL CHECK(content_type IN (
-          'text', 'tool_use', 'tool_result', 'thinking', 'error', 'ask_user'
-        )),
-        content TEXT NOT NULL,
-        parent_tool_use_id TEXT,
-        uuid TEXT,
-        created_at TEXT NOT NULL,
-        UNIQUE(session_id, sequence_number)
-      );
-      CREATE INDEX IF NOT EXISTS idx_chat_messages_session ON chat_messages(session_id, sequence_number);
-    `,
-	},
-	{
-		version: 4,
-		description: "Add Claude-specific session fields",
-		up: `
-      ALTER TABLE sessions ADD COLUMN claude_session_id TEXT;
-      ALTER TABLE sessions ADD COLUMN model TEXT DEFAULT 'claude-sonnet-4-5-20250929';
-      ALTER TABLE sessions ADD COLUMN total_cost_usd REAL DEFAULT 0;
-      ALTER TABLE sessions ADD COLUMN input_tokens INTEGER DEFAULT 0;
-      ALTER TABLE sessions ADD COLUMN output_tokens INTEGER DEFAULT 0;
-    `,
-	},
-	{
-		version: 5,
-		description: "Update chat_messages to AI SDK v6 format with parts array",
-		up: `
-      -- Drop old chat_messages table and recreate with new schema
-      DROP TABLE IF EXISTS chat_messages;
+			-- Chat messages table
+			CREATE TABLE IF NOT EXISTS chat_messages (
+				id TEXT PRIMARY KEY,
+				sessionId TEXT NOT NULL,
+				role TEXT NOT NULL CHECK (role IN ('user', 'assistant', 'system')),
+				parts TEXT NOT NULL,
+				createdAt TEXT NOT NULL,
+				metadata TEXT,
+				FOREIGN KEY (sessionId) REFERENCES sessions(id) ON DELETE CASCADE
+			);
 
-      CREATE TABLE chat_messages (
-        id TEXT PRIMARY KEY,
-        session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
-        role TEXT NOT NULL CHECK(role IN ('user', 'assistant', 'system')),
-        parts TEXT NOT NULL,  -- JSON array of message parts
-        created_at TEXT NOT NULL,
-        metadata TEXT  -- Optional JSON metadata
-      );
-
-      CREATE INDEX idx_chat_messages_session ON chat_messages(session_id, created_at);
-    `,
+			-- Indexes for common queries
+			CREATE INDEX IF NOT EXISTS idx_worktrees_repositoryId ON worktrees(repositoryId);
+			CREATE INDEX IF NOT EXISTS idx_sessions_worktreeId ON sessions(worktreeId);
+			CREATE INDEX IF NOT EXISTS idx_chat_messages_sessionId ON chat_messages(sessionId);
+		`,
 	},
 ];
+
+const ensureMigrationsTable = (db: Database): void => {
+	db.run(`
+		CREATE TABLE IF NOT EXISTS _migrations (
+			version INTEGER PRIMARY KEY,
+			name TEXT NOT NULL,
+			appliedAt TEXT NOT NULL
+		)
+	`);
+};
+
+const getAppliedVersions = (db: Database): Set<number> => {
+	const rows = db.query("SELECT version FROM _migrations").all() as {
+		version: number;
+	}[];
+	return new Set(rows.map((r) => r.version));
+};
+
+const applyMigration = (db: Database, migration: Migration) =>
+	Effect.gen(function* () {
+		yield* Console.log(`Running migration: ${migration.name}`);
+		yield* Effect.try({
+			try: () => {
+				db.run(migration.up);
+				db.run(
+					"INSERT INTO _migrations (version, name, appliedAt) VALUES (?, ?, ?)",
+					[migration.version, migration.name, new Date().toISOString()],
+				);
+			},
+			catch: (error) =>
+				new MigrationError({
+					version: migration.version,
+					message: `Failed to apply migration "${migration.name}": ${error}`,
+					cause: error,
+				}),
+		});
+	});
 
 export const runMigrations = (
 	db: Database,
 ): Effect.Effect<void, MigrationError> =>
 	Effect.gen(function* () {
-		// Create migrations tracking table if it doesn't exist
-		db.run(`
-      CREATE TABLE IF NOT EXISTS _migrations (
-        version INTEGER PRIMARY KEY,
-        description TEXT NOT NULL,
-        applied_at TEXT NOT NULL
-      )
-    `);
+		yield* Effect.try({
+			try: () => ensureMigrationsTable(db),
+			catch: (error) =>
+				new MigrationError({
+					version: 0,
+					message: `Failed to create migrations table: ${error}`,
+					cause: error,
+				}),
+		});
 
-		// Get current schema version
-		const result = db
-			.query<{ version: number }, []>(
-				"SELECT MAX(version) as version FROM _migrations",
-			)
-			.get();
-		const currentVersion = result?.version ?? 0;
+		const appliedVersions = yield* Effect.try({
+			try: () => getAppliedVersions(db),
+			catch: (error) =>
+				new MigrationError({
+					version: 0,
+					message: `Failed to get applied migrations: ${error}`,
+					cause: error,
+				}),
+		});
 
-		// Apply pending migrations
-		for (const migration of migrations) {
-			if (migration.version > currentVersion) {
-				yield* Effect.try({
-					try: () => {
-						db.run("BEGIN TRANSACTION");
-						try {
-							db.run(migration.up);
-							db.run(
-								"INSERT INTO _migrations (version, description, applied_at) VALUES (?, ?, ?)",
-								[
-									migration.version,
-									migration.description,
-									new Date().toISOString(),
-								],
-							);
-							db.run("COMMIT");
-						} catch (error) {
-							db.run("ROLLBACK");
-							throw error;
-						}
-					},
-					catch: (error) =>
-						new MigrationError({
-							version: migration.version,
-							message: `Failed to apply migration: ${migration.description}`,
-							cause: error,
-						}),
-				});
-			}
+		const pendingMigrations = migrations
+			.filter((m) => !appliedVersions.has(m.version))
+			.sort((a, b) => a.version - b.version);
+
+		for (const migration of pendingMigrations) {
+			yield* applyMigration(db, migration);
 		}
 	});
-
-export const getCurrentVersion = (db: Database): number => {
-	try {
-		const result = db
-			.query<{ version: number }, []>(
-				"SELECT MAX(version) as version FROM _migrations",
-			)
-			.get();
-		return result?.version ?? 0;
-	} catch {
-		return 0;
-	}
-};
