@@ -1,5 +1,5 @@
 import { Context, type Effect } from "effect";
-import type { ChatMessage, CreateChatMessageInput } from "./chat/schema";
+import type { ChatMessage, CreateChatMessageInput } from "@sandcastle/schemas";
 import type {
 	ChatMessageNotFoundError,
 	DatabaseError,
