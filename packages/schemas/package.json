@@ -1,0 +1,26 @@
+{
+	"name": "@sandcastle/schemas",
+	"version": "0.1.0",
+	"description": "Shared types and schemas.",
+	"module": "index.ts",
+	"type": "module",
+	"private": true,
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"test": "bun test",
+		"typecheck": "tsc --noEmit",
+		"biome": "biome check --write .",
+		"biome:check": "biome check ."
+	},
+	"dependencies": {
+		"effect": "^3.19.14"
+	},
+	"devDependencies": {
+		"@types/bun": "latest"
+	},
+	"peerDependencies": {
+		"typescript": "^5"
+	}
+}
