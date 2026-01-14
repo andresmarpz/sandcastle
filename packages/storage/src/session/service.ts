@@ -1,18 +1,17 @@
 import { Effect } from "effect";
-
-import { Session } from "./entities";
 import {
 	type DatabaseError,
 	ForeignKeyViolationError,
 	SessionNotFoundError,
-} from "./errors";
+} from "../errors";
 import {
 	type DbInstance,
 	generateId,
 	nowIso,
 	type SQLQueryBindings,
 	tryDb,
-} from "./utils";
+} from "../utils";
+import { Session } from "./schema";
 
 const rowToSession = (row: Record<string, unknown>): Session =>
 	new Session({

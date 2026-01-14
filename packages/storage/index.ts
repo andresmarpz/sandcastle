@@ -1,4 +1,4 @@
-export * from "./src/entities";
+export * from "./src/chat/schema";
 export * from "./src/errors";
 export {
 	makeStorageService,
@@ -6,4 +6,7 @@ export {
 	StorageServiceDefault,
 	StorageServiceLive,
 } from "./src/live";
+export * from "./src/repository/schema";
 export { StorageService } from "./src/service";
+export * from "./src/session/schema";
+export * from "./src/worktree/schema";

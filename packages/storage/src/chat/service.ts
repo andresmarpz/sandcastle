@@ -1,12 +1,12 @@
 import { Effect, Schema } from "effect";
 
-import { ChatMessage, MessagePart, type MessageRole } from "./entities";
 import {
 	ChatMessageNotFoundError,
 	type DatabaseError,
 	ForeignKeyViolationError,
-} from "./errors";
-import { type DbInstance, generateId, nowIso, tryDb } from "./utils";
+} from "../errors";
+import { type DbInstance, generateId, nowIso, tryDb } from "../utils";
+import { ChatMessage, MessagePart, type MessageRole } from "./schema";
 
 const rowToChatMessage = (row: Record<string, unknown>): ChatMessage => {
 	const partsJson = row.parts as string;
