@@ -19,6 +19,7 @@
 		"biome:check": "biome check ."
 	},
 	"dependencies": {
+		"@sandcastle/schemas": "workspace:*",
 		"effect": "^3.19.14"
 	},
 	"devDependencies": {

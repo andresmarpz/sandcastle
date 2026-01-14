@@ -1,4 +1,23 @@
-export * from "./src/chat/schema";
+// Re-export chat schemas from the centralized schemas package
+export {
+	ChatMessage,
+	CreateChatMessageInput,
+	MessageMetadata,
+	MessagePart,
+	MessageRole,
+	TextPart,
+	ReasoningPart,
+	ToolCallPart,
+	ToolCallState,
+	ToolApproval,
+	FilePart,
+	SourceUrlPart,
+	SourceDocumentPart,
+	StepStartPart,
+	DataPart,
+	ProviderMetadata,
+	StreamingState,
+} from "@sandcastle/schemas";
 export * from "./src/errors";
 export {
 	makeStorageService,
