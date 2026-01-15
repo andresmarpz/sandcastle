@@ -9,6 +9,10 @@ This document describes Sandcastle's approach to AI agent integration: using the
 - [Why This Approach](#why-this-approach)
 - [Data Flow](#data-flow)
 - [Adapter Pattern](#adapter-pattern)
+- [Stream Translation Deep Dive](#stream-translation-deep-dive)
+- [Message Accumulation for Storage](#message-accumulation-for-storage)
+- [Tool Call Correlation](#tool-call-correlation)
+- [Mental Model](#mental-model)
 - [Future Extensibility](#future-extensibility)
 
 ---
@@ -264,6 +268,347 @@ const AgentService = process.env.AGENT === 'opencode'
 
 ---
 
+## Stream Translation Deep Dive
+
+The adapter performs a critical transformation: **exploding** complete SDK messages into granular stream events that the AI SDK frontend expects.
+
+### The Key Insight
+
+Agent SDKs like Claude's emit **complete thoughts** - whole messages with all content blocks assembled. The AI SDK expects **granular events** for real-time UI updates.
+
+```
+Agent SDK Output (complete messages):
+┌─────────────────────────────────────────────────────────────────────┐
+│ SDKAssistantMessage                                                 │
+│ ┌─────────────────────────────────────────────────────────────────┐ │
+│ │ content: [                                                      │ │
+│ │   { type: "thinking", thinking: "Let me analyze..." },          │ │
+│ │   { type: "text", text: "I'll help you with that." },           │ │
+│ │   { type: "tool_use", id: "t1", name: "Read", input: {...} }    │ │
+│ │ ]                                                               │ │
+│ └─────────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    │ EXPLODE
+                                    ▼
+AI SDK Stream Events (granular):
+┌──────────────────┐ ┌──────────────────┐ ┌──────────────────┐
+│ reasoning-start  │ │ reasoning-delta  │ │ reasoning-end    │
+│ id: "r1"         │ │ id: "r1"         │ │ id: "r1"         │
+│                  │ │ delta: "Let me"  │ │                  │
+└──────────────────┘ └──────────────────┘ └──────────────────┘
+┌──────────────────┐ ┌──────────────────┐ ┌──────────────────┐
+│ text-start       │ │ text-delta       │ │ text-end         │
+│ id: "t1"         │ │ id: "t1"         │ │ id: "t1"         │
+│                  │ │ delta: "I'll..." │ │                  │
+└──────────────────┘ └──────────────────┘ └──────────────────┘
+┌──────────────────┐ ┌──────────────────────────────────────────┐
+│ tool-input-start │ │ tool-input-available                     │
+│ toolCallId: "t1" │ │ toolCallId: "t1", toolName: "Read"       │
+│ toolName: "Read" │ │ input: { file_path: "/src/index.ts" }    │
+└──────────────────┘ └──────────────────────────────────────────┘
+```
+
+### Why Explode Messages?
+
+The AI SDK frontend (`useChat`) expects this granular protocol because:
+
+1. **Real-time UI**: Each delta renders immediately (typing effect)
+2. **Part lifecycle**: Start/delta/end events let the UI show loading states
+3. **Incremental updates**: Frontend builds `UIMessage.parts[]` progressively
+4. **Tool states**: Tool parts transition through states (pending → available → output)
+
+### Content Block to Stream Event Mapping
+
+| SDK Content Block | Stream Events Emitted |
+|-------------------|----------------------|
+| `{ type: "text", text: "..." }` | `text-start` → `text-delta` → `text-end` |
+| `{ type: "thinking", thinking: "..." }` | `reasoning-start` → `reasoning-delta` → `reasoning-end` |
+| `{ type: "tool_use", id, name, input }` | `tool-input-start` → `tool-input-available` |
+| `{ type: "tool_result", tool_use_id, content }` | `tool-output-available` or `tool-output-error` |
+
+### SDK Message Type to Events
+
+| SDK Message Type | Events Emitted |
+|-----------------|----------------|
+| `system.init` | `start` (with session info) |
+| `assistant` | Content block events (text, reasoning, tool) |
+| `user` (with tool_result) | `tool-output-available` / `tool-output-error` |
+| `result.success` | `finish` (with metadata: cost, tokens) |
+| `result.error_*` | `finish` (with error reason) |
+
+### Implementation: The Stream Transformer
+
+Located at `apps/http/src/adapters/claude/transformer.ts`:
+
+```typescript
+// One SDKMessage can produce MANY stream events
+function processMessage(
+  message: SDKMessage,
+  state: StreamState,
+  config: AdapterConfig,
+): { events: ChatStreamEvent[]; newState: StreamState } {
+  const events: ChatStreamEvent[] = [];
+
+  switch (message.type) {
+    case "assistant":
+      // Process each content block
+      for (const block of message.message.content) {
+        if (block.type === "text") {
+          const id = config.generateId();
+          events.push(new StreamEventTextStart({ type: "text-start", id }));
+          events.push(new StreamEventTextDelta({ type: "text-delta", id, delta: block.text }));
+          events.push(new StreamEventTextEnd({ type: "text-end", id }));
+        }
+        // ... similar for thinking, tool_use
+      }
+      break;
+    // ...
+  }
+
+  return { events, newState };
+}
+```
+
+### The Effect.js Pipeline
+
+The adapter uses `Stream.mapConcatEffect` to flatten:
+
+```typescript
+sdkStream.pipe(
+  Stream.mapConcatEffect((message) =>
+    Effect.sync(() => {
+      const result = processMessage(message, state, config);
+      state = result.newState;
+      return Chunk.fromIterable(result.events);  // 1 message → N events
+    }),
+  ),
+)
+```
+
+---
+
+## Message Accumulation for Storage
+
+While stream events power real-time UI, we also need **complete messages** for storage. This is the dual-path architecture:
+
+```
+                         SDKMessage Stream
+                               │
+              ┌────────────────┴────────────────┐
+              │                                 │
+              ▼                                 ▼
+    ┌─────────────────────┐          ┌─────────────────────┐
+    │  Stream Transformer │          │  Message Accumulator │
+    │  (for real-time UI) │          │    (for storage)     │
+    └──────────┬──────────┘          └──────────┬──────────┘
+               │                                │
+               ▼                                ▼
+    ┌─────────────────────┐          ┌─────────────────────┐
+    │  ChatStreamEvent[]  │          │    ChatMessage[]    │
+    │  (send to client)   │          │  (save to SQLite)   │
+    └─────────────────────┘          └─────────────────────┘
+```
+
+### Why Two Paths?
+
+| Concern | Stream Transformer | Message Accumulator |
+|---------|-------------------|---------------------|
+| Purpose | Real-time UI updates | Persistent storage |
+| Output | Granular events | Complete messages |
+| Format | `ChatStreamEvent[]` | `ChatMessage[]` (UIMessage compatible) |
+| Timing | Emit immediately | Collect until stream ends |
+
+### The Accumulator Pattern
+
+Located at `apps/http/src/adapters/claude/message-accumulator.ts`:
+
+```typescript
+interface MessageAccumulator {
+  process(message: SDKMessage): void;
+  getMessages(): ChatMessage[];
+  getSessionMetadata(): SessionMetadata | null;
+  getClaudeSessionId(): string | null;
+}
+
+// Usage
+const accumulator = createMessageAccumulator({
+  generateId: () => crypto.randomUUID(),
+  storageSessionId: "your-session-id"
+});
+
+for await (const sdkMessage of claudeStream) {
+  accumulator.process(sdkMessage);
+}
+
+// After stream completes
+const messages = accumulator.getMessages();    // Save to DB
+const metadata = accumulator.getSessionMetadata();  // Cost, tokens, etc.
+```
+
+### SDKMessage to ChatMessage Mapping
+
+| SDKMessage Type | ChatMessage Action |
+|-----------------|-------------------|
+| `system.init` | No message (store session ID internally) |
+| `assistant` | CREATE `{ role: "assistant", parts: [...] }` |
+| `user` (tool_result only) | UPDATE existing assistant's ToolCallPart |
+| `user` (with text) | CREATE `{ role: "user", parts: [...] }` |
+| `result` | No message (extract session metadata) |
+
+### Content Block to MessagePart Mapping
+
+| SDK Content Block | MessagePart Type |
+|-------------------|------------------|
+| `{ type: "text", text }` | `TextPart { type: "text", text, state: "done" }` |
+| `{ type: "thinking", thinking }` | `ReasoningPart { type: "reasoning", text, state: "done" }` |
+| `{ type: "tool_use", id, name, input }` | `ToolCallPart { type: "tool-{name}", state: "input-available", ... }` |
+
+---
+
+## Tool Call Correlation
+
+The trickiest part of the adapter is **tool call correlation**: matching `tool_use` in assistant messages with `tool_result` in user messages.
+
+### The Challenge
+
+```
+SDKMessage 1 (assistant):
+┌──────────────────────────────────────────────────────┐
+│ content: [                                           │
+│   { type: "tool_use", id: "call_abc", name: "Read" } │
+│ ]                                                    │
+└──────────────────────────────────────────────────────┘
+
+SDKMessage 2 (user):
+┌──────────────────────────────────────────────────────┐
+│ content: [                                           │
+│   { type: "tool_result", tool_use_id: "call_abc",    │
+│     content: "file contents..." }                    │
+│ ]                                                    │
+└──────────────────────────────────────────────────────┘
+```
+
+The `tool_result` in the **user** message must update the `tool_use` in the **assistant** message.
+
+### State Tracking Solution
+
+Both the stream transformer and message accumulator maintain state to correlate tool calls:
+
+```typescript
+// Track pending tool calls
+const pendingToolCalls = new Map<string, {
+  messageIndex: number;  // Which ChatMessage
+  partIndex: number;     // Which part in that message
+}>();
+
+// When tool_use is encountered
+pendingToolCalls.set(toolBlock.id, { messageIndex: 0, partIndex: 2 });
+
+// When tool_result arrives
+const location = pendingToolCalls.get(result.tool_use_id);
+messages[location.messageIndex].parts[location.partIndex].state = "output-available";
+messages[location.messageIndex].parts[location.partIndex].output = result.content;
+```
+
+### Tool Part State Transitions
+
+```
+tool_use in assistant message    →    state: "input-available"
+                                           │
+                                           ▼
+tool_result (success)            →    state: "output-available"
+                                           │
+                                      output: "..."
+
+tool_result (is_error: true)     →    state: "output-error"
+                                           │
+                                      errorText: "..."
+```
+
+### Multiple Tool Calls
+
+An assistant message can have multiple tool calls, all tracked independently:
+
+```
+Assistant Message:
+├── TextPart: "Let me read both files"
+├── ToolCallPart: { toolCallId: "t1", state: "input-available" }  ← tracked
+└── ToolCallPart: { toolCallId: "t2", state: "input-available" }  ← tracked
+
+After User Message with tool_results:
+├── TextPart: "Let me read both files"
+├── ToolCallPart: { toolCallId: "t1", state: "output-available", output: "..." }
+└── ToolCallPart: { toolCallId: "t2", state: "output-error", errorText: "..." }
+```
+
+---
+
+## Mental Model
+
+### Think of It Like Translation
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                        AGENT WORLD                                  │
+│                                                                     │
+│  Claude speaks: SDKMessage (complete thoughts, tool calls, results) │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+                                │
+                                │  ADAPTER (translator)
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                        AI SDK WORLD                                 │
+│                                                                     │
+│  Frontend understands:                                              │
+│  - ChatStreamEvent (for real-time updates)                          │
+│  - ChatMessage/UIMessage (for state and storage)                    │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### The Dual Output Model
+
+When processing an agent stream, always think in two outputs:
+
+| Output | Purpose | Consumer |
+|--------|---------|----------|
+| **Stream Events** | Real-time UI updates | SSE → useChat → React |
+| **Accumulated Messages** | Persistent storage | SQLite → initialMessages → useChat |
+
+### Session ID Duality
+
+There are **two session IDs** in play:
+
+| ID | Owner | Purpose |
+|----|-------|---------|
+| `storageSessionId` | Your system | Primary key in your DB, groups messages |
+| `claudeSessionId` | Claude SDK | Resume capability, cost tracking |
+
+The adapter extracts `claudeSessionId` and stores it as metadata on your session.
+
+### The Frontend Doesn't Care
+
+The entire point of this architecture:
+
+```typescript
+// Frontend code - agent agnostic
+const { messages, sendMessage } = useChat({
+  api: "/api/chat",
+  initialMessages: await fetchStoredMessages(sessionId),
+});
+
+// Works the same whether backend uses:
+// - Claude Agents SDK
+// - OpenCode
+// - Custom agent
+// - Mock adapter for testing
+```
+
+---
+
 ## Future Extensibility
 
 ### Adding More Agents
@@ -289,8 +634,22 @@ Potential agents:
 |---------|----------|
 | Frontend protocol | AI SDK v6 (UIMessage, parts, SSE) |
 | Backend agent | Claude Agent SDK v1 (or any) |
-| Translation | Adapter pattern |
-| Streaming | SSE with AI SDK events |
+| Real-time streaming | Stream Transformer → ChatStreamEvent[] |
+| Storage | Message Accumulator → ChatMessage[] |
+| Tool correlation | State tracking with Map<toolCallId, location> |
+| Session identity | Storage session ID + Claude session ID (metadata) |
 | Extensibility | New adapter per agent |
 
-The key insight: **The frontend never knows which agent is running**. It only knows AI SDK protocol. This makes the system modular, testable, and future-proof.
+### Key Insights
+
+1. **The frontend never knows which agent is running**. It only knows AI SDK protocol.
+
+2. **One SDK message produces many stream events**. The adapter "explodes" complete messages into granular events for real-time UI.
+
+3. **Two outputs, one input**. Every SDK message is processed twice: once for streaming, once for storage.
+
+4. **Tool results cross message boundaries**. State tracking is essential to correlate tool_use with tool_result.
+
+5. **Storage is agent-agnostic**. ChatMessage format works regardless of which agent produced it.
+
+This architecture is modular, testable, and future-proof.
