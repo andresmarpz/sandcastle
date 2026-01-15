@@ -33,6 +33,10 @@ Sandcastle enables multiple clients (webapp, desktop) to connect to a single bac
 - **Resumable streams**: Clients can connect mid-stream and catch up on missed events
 - **In-memory only**: No Redis or external pub/sub; single server instance
 
+### Deployment / Trust Boundary
+
+This architecture assumes a **single-user, trusted network** deployment. There is **no built-in authentication or authorization**. Access control is expected to be handled externally (localhost, VPN, private LAN). If exposed on a public network, this design is unsafe.
+
 ### Why WebSocket Over SSE
 
 We chose WebSocket over Server-Sent Events (SSE) because:
@@ -102,7 +106,7 @@ The critical issue with SSE: if Client A interrupts a stream and then sends a ne
 │  │                                                                        │  │
 │  │  SessionState = {                                                      │  │
 │  │    status: "idle" | "streaming",                                       │  │
-│  │    buffer: ChatStreamEvent[],      // Current turn events              │  │
+│  │    buffer: StreamEnvelope[],       // Current turn events              │  │
 │  │    queue: QueuedMessage[],         // Pending messages                 │  │
 │  │    subscribers: Set<ConnectionId>, // Who's watching                   │  │
 │  │    fiber: Fiber | null,            // Running Claude stream            │  │
@@ -140,13 +144,13 @@ The critical issue with SSE: if Client A interrupts a stream and then sends a ne
 
 ## WebSocket Protocol
 
-### Protocol Version
+### Connection Handshake
 
-All connections start with a version handshake:
+Connections are established with a simple handshake. The server sends a `welcome` message on open; clients may optionally send `hello` if they want to verify connectivity.
 
 ```
-Client → Server: { "type": "hello", "protocolVersion": "1.0" }
-Server → Client: { "type": "welcome", "protocolVersion": "1.0", "connectionId": "conn_abc123" }
+Client → Server: { "type": "hello" }
+Server → Client: { "type": "welcome", "connectionId": "conn_abc123" }
 ```
 
 ### Message Types
@@ -158,7 +162,7 @@ Server → Client: { "type": "welcome", "protocolVersion": "1.0", "connectionId"
 // Connection
 // ═══════════════════════════════════════════════════════════════════════════
 
-{ type: "hello", protocolVersion: "1.0" }
+{ type: "hello" }
 { type: "ping" }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -172,11 +176,12 @@ Server → Client: { "type": "welcome", "protocolVersion": "1.0", "connectionId"
 // Session Actions
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Send a message (starts streaming if idle, queues if streaming)
+// Send a message (auto-subscribes sender; starts streaming if idle, queues if streaming)
 {
   type: "send_message",
   sessionId: string,
-  content: string,
+  content: string,            // Plain-text fallback
+  parts?: MessagePart[],      // Optional rich parts (UIMessage-compatible)
   clientMessageId: string  // For optimistic UI correlation
 }
 
@@ -194,20 +199,23 @@ Server → Client: { "type": "welcome", "protocolVersion": "1.0", "connectionId"
 // Connection
 // ═══════════════════════════════════════════════════════════════════════════
 
-{ type: "welcome", protocolVersion: "1.0", connectionId: string }
+{ type: "welcome", connectionId: string }
 { type: "pong" }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Subscription Lifecycle
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Subscription confirmed with current state
+// Subscription confirmed with current state (explicit subscribe or implicit on send_message)
 {
   type: "subscribed",
   sessionId: string,
   status: "idle" | "streaming",
-  buffer: ChatStreamEvent[],  // Current turn events (empty if idle)
-  queue: QueuedMessage[]      // Pending messages
+  activeTurnId?: string,       // Present if streaming
+  lastSeq?: number,            // Highest seq included in buffer
+  buffer: StreamEnvelope[],    // Current turn events (empty if idle)
+  queue: QueuedMessage[],      // Pending messages
+  historyCursor: HistoryCursor // Latest persisted message at subscribe time
 }
 
 // Unsubscription confirmed
@@ -218,12 +226,13 @@ Server → Client: { "type": "welcome", "protocolVersion": "1.0", "connectionId"
 // ═══════════════════════════════════════════════════════════════════════════
 
 // Streaming started (new turn beginning)
-{ type: "session_started", sessionId: string }
+{ type: "session_started", sessionId: string, turnId: string, messageId: string }
 
 // Streaming stopped
 {
   type: "session_stopped",
   sessionId: string,
+  turnId: string,
   reason: "completed" | "interrupted" | "error"
 }
 
@@ -235,7 +244,7 @@ Server → Client: { "type": "welcome", "protocolVersion": "1.0", "connectionId"
 // ═══════════════════════════════════════════════════════════════════════════
 
 // Individual stream event from Claude adapter
-{ type: "event", sessionId: string, event: ChatStreamEvent }
+{ type: "event", sessionId: string, turnId: string, seq: number, event: ChatStreamEvent }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Queue Events
@@ -258,6 +267,7 @@ Server → Client: { "type": "welcome", "protocolVersion": "1.0", "connectionId"
   message: {
     id: string,           // Server-generated ID (replaces clientMessageId)
     content: string,
+    parts?: MessagePart[],
     clientMessageId: string  // Original client ID for correlation
   }
 }
@@ -273,10 +283,27 @@ Server → Client: { "type": "welcome", "protocolVersion": "1.0", "connectionId"
 
 ```typescript
 interface QueuedMessage {
-  id: string;           // Server-generated
+  id: string;               // Server-generated
   content: string;
-  queuedAt: string;     // ISO timestamp
+  parts?: MessagePart[];
+  queuedAt: string;         // ISO timestamp
+  clientMessageId?: string; // Optional correlation for optimistic UI
 }
+
+interface StreamEnvelope {
+  turnId: string;      // Unique per turn
+  seq: number;         // Monotonic per turn
+  event: ChatStreamEvent;
+}
+
+interface HistoryCursor {
+  lastMessageId: string | null; // Latest persisted message at subscribe time
+  lastMessageAt: string | null; // ISO timestamp
+}
+
+type MessagePart =
+  | { type: "text"; text: string }
+  | { type: string; [key: string]: unknown }; // Extensible for tools/files/etc.
 
 // ChatStreamEvent is defined in @sandcastle/schemas
 // See docs/agent-protocol.md for full list
@@ -331,7 +358,7 @@ type ChatStreamEvent =
 | Current State | Event | Action | New State |
 |--------------|-------|--------|-----------|
 | IDLE | `send_message` (queue empty) | Save user message, start Claude stream | STREAMING |
-| IDLE | `send_message` (queue has items) | N/A (queue only exists during streaming) | - |
+| IDLE | `send_message` (queue has items) | Append to queue, broadcast `message_queued` | IDLE |
 | STREAMING | `send_message` | Queue message, broadcast `message_queued` | STREAMING |
 | STREAMING | `interrupt` | Call `QueryObject.interrupt()`, save partial, broadcast `session_stopped` | IDLE |
 | STREAMING | stream completes | Save messages to DB, clear buffer, broadcast `session_stopped` | IDLE |
@@ -349,13 +376,21 @@ When a stream ends (completed, interrupted, or error) and the queue is not empty
 
 This creates a seamless flow where queued messages are processed in order.
 
+### Serialized Session Updates (Atomicity)
+
+All session state changes (status, queue, buffer, fiber, active turn) must be **serialized per session**. This avoids races between `send_message`, `interrupt`, stream completion, and auto-send. Practically, this means:
+
+- Each session has a single "command loop" that processes actions one at a time.
+- All transitions happen within that loop, so updates are atomic from the perspective of other commands.
+- External events (stream events, disconnects) enqueue commands instead of mutating state directly.
+
 ---
 
 ## Buffer and Catch-up
 
 ### Buffer Purpose
 
-The buffer stores `ChatStreamEvent[]` for the **current turn only**. It enables:
+The buffer stores `StreamEnvelope[]` for the **current turn only**. It enables:
 
 1. **Mid-stream catch-up**: New subscribers receive all events from turn start
 2. **Reconnection recovery**: Disconnected clients can catch up
@@ -370,7 +405,7 @@ Turn Start (send_message accepted)
     │                         BUFFER                               │
     │  [start, text-start, text-delta, text-delta, text-end, ...] │
     │                                                              │
-    │  - Append each ChatStreamEvent as it's produced             │
+    │  - Append each StreamEnvelope as it's produced              │
     │  - Subscribers receive from buffer on subscribe             │
     │  - Live events also sent to subscribers                     │
     └─────────────────────────────────────────────────────────────┘
@@ -407,7 +442,7 @@ Server: Check session status
         └───────────┬───────────┘
                     │
                     ▼
-Server: { type: "subscribed", sessionId: "abc", status, buffer, queue }
+Server: { type: "subscribed", sessionId: "abc", status, buffer, lastSeq, queue, historyCursor }
                     │
                     ▼
 Client: Render buffer events (catch-up)
@@ -416,14 +451,19 @@ Client: Render buffer events (catch-up)
 Client: Continue receiving live { type: "event" } messages
 ```
 
+**Ordering guarantee**: On subscribe, the server attaches the subscriber, snapshots the buffer, and returns `lastSeq`. Live events always have `seq > lastSeq`, so clients can drop any duplicates with `seq <= lastSeq`.
+
 ### History Loading
 
 The buffer only contains the current turn. For full conversation history:
 
 1. Client calls RPC: `GET /api/sessions/:id/messages`
 2. Returns `ChatMessage[]` from SQLite (completed turns)
-3. Client renders history
+3. Client renders history and remembers `lastMessageId`
 4. Client subscribes via WebSocket for current turn + live events
+5. Server returns `historyCursor.lastMessageId`
+6. If `historyCursor.lastMessageId` is newer than the client's `lastMessageId`, fetch the gap:
+   `GET /api/sessions/:id/messages?after=<lastMessageId>`
 
 This separation keeps WebSocket focused on real-time events.
 
@@ -438,15 +478,16 @@ The queue holds messages that arrive while a session is streaming. This enables:
 - Queueing follow-up questions without waiting
 - Shared queue visible to all subscribers
 - Automatic processing when stream completes
+- **In-memory only**: queued messages are *not* persisted until executed
 
 ### Queue Behavior
 
 | Scenario | Behavior |
 |----------|----------|
 | Session IDLE, queue empty | Message sent immediately (bypass queue) |
-| Session STREAMING | Message added to queue, broadcast `message_queued` |
-| Stream completes, queue not empty | First message auto-sent, broadcast `message_dequeued` |
-| `dequeue_message` received | Remove from queue, broadcast `message_dequeued` |
+| Session STREAMING | Message added to queue, broadcast `message_queued` (not persisted) |
+| Stream completes, queue not empty | Dequeue first, persist as `user_message`, then start stream |
+| `dequeue_message` received | Remove from queue, broadcast `message_dequeued` (no persistence) |
 
 ### Queue Properties
 
@@ -454,6 +495,8 @@ The queue holds messages that arrive while a session is streaming. This enables:
 - **Shared**: All subscribers see the same queue
 - **No reordering**: Remove and re-add to change order
 - **Any client can modify**: Any subscriber can add or remove messages
+- **Not persisted**: Only persisted when a queued message begins execution
+- **UI correlation**: Include `clientMessageId` in queued items when provided
 
 ### Queue Data Structure
 
@@ -461,7 +504,9 @@ The queue holds messages that arrive while a session is streaming. This enables:
 interface QueuedMessage {
   id: string;        // Server-generated UUID
   content: string;   // Message content
+  parts?: MessagePart[];
   queuedAt: string;  // ISO timestamp
+  clientMessageId?: string;
 }
 ```
 
@@ -503,6 +548,9 @@ Each client maintains a local LRU cache of subscribed sessions (max 3). The serv
 | Server state | Per-client LRU tracking | Per-connection subscriptions only |
 
 Client-side is simpler: the server only knows "this connection is subscribed to X, Y, Z."
+
+Sending `send_message` implicitly subscribes the sender if needed. Explicit `subscribe` is still required for observers and for receiving `buffer`/`queue` state.
+Clients with an LRU should treat `send_message` as a session "visit" to keep unsubscribe behavior consistent.
 
 ### Reconnection
 
@@ -569,32 +617,17 @@ Server: session.status === "streaming" ?
 
 ### Sending a Message
 
+Server persists the full user payload (`content` + `parts`) and uses `content` as the model input fallback.
+If the sender is not yet subscribed, the server implicitly subscribes it and may emit `subscribed` before `user_message`.
+
 ```
 Client A: {
   type: "send_message",
   sessionId: "abc",
   content: "Hello",
+  parts: [{ type: "text", text: "Hello" }],
   clientMessageId: "temp_123"  // Client-generated for optimistic UI
 }
-                    │
-                    ▼
-Server: Generate server ID, save to SQLite immediately
-                    │
-                    ▼
-Server: Broadcast to ALL subscribers (including sender):
-        {
-          type: "user_message",
-          sessionId: "abc",
-          message: {
-            id: "msg_456",           // Server ID
-            content: "Hello",
-            clientMessageId: "temp_123"  // For correlation
-          }
-        }
-                    │
-                    ▼
-Client A: Replace temp_123 with msg_456 in UI
-Client B: Add new message msg_456 to UI
                     │
                     ▼
 Server: session.status === "idle" ?
@@ -602,16 +635,24 @@ Server: session.status === "idle" ?
         ┌───────────┴───────────┐
         │ No (streaming)        │ Yes (idle)
         ▼                       ▼
-   Queue message           Start Claude stream
-   Broadcast:              Broadcast:
-   message_queued          session_started
+Queue message (in-memory)  Persist user message to SQLite
+Broadcast: message_queued  Broadcast: user_message + session_started
+                    │                      │
+                    ▼                      ▼
+          (later) Dequeued                Start Claude stream
+          Persist user message
+          Broadcast: message_dequeued + user_message + session_started
+                    │
+                    ▼
+Client A: Replace temp_123 with msg_456 in UI
+Client B: Add new message msg_456 to UI
 ```
 
 ### Optimistic UI
 
 1. Client generates a temporary `clientMessageId`
 2. Client shows message immediately in UI (optimistic)
-3. Server processes and returns real `id`
+3. Server processes and returns real `id` (immediately if idle; when dequeued if queued)
 4. Client replaces temporary ID with server ID
 5. All clients now have consistent message IDs
 
@@ -629,14 +670,16 @@ When the Claude agent stream errors:
 4. **Notify subscribers**: `{ type: "session_stopped", reason: "error" }`
 5. **No retry**: User must send a new message to continue
 
+**Finish semantics**: `StreamEventFinish` is the canonical per-turn finish signal for the UI. `session_stopped` is a session lifecycle event and should not be mapped to a UI "finish" if one already arrived for the same `turnId`.
+
 ### WebSocket Errors
 
 | Error | Handling |
 |-------|----------|
-| Client disconnects | Remove from all session subscriber sets |
+| Client disconnects | Remove from session subscriber sets and stop subscriber fibers/outbox |
 | Server can't parse message | Send `{ type: "error", code: "PARSE_ERROR" }` |
 | Subscribe to non-existent session | Send `{ type: "error", code: "SESSION_NOT_FOUND" }` |
-| Action on unsubscribed session | Send `{ type: "error", code: "NOT_SUBSCRIBED" }` |
+| Action on unsubscribed session | Send `{ type: "error", code: "NOT_SUBSCRIBED" }` (except `send_message`, which auto-subscribes) |
 
 ### Server Restart
 
@@ -658,32 +701,34 @@ This is acceptable for a single-server, non-critical application.
 | Edge Case | Decision |
 |-----------|----------|
 | Reconnection with stale state | Client clears local state, fetches fresh history via RPC |
-| Duplicate events on reconnect | Client receives full buffer, deduplicates by event ID |
+| Duplicate events on reconnect | Client receives full buffer, deduplicates by `turnId` + `seq` |
 | Server restart mid-stream | Acceptable loss, user sends new message |
 | Session deleted while subscribed | Server sends `session_deleted`, client handles |
 | Message sent to IDLE session | Bypass queue, send immediately |
 | Interrupt race with queue | Acceptable, queue order preserved |
 | Multiple sessions streaming | Fully supported, independent streams |
 | Multiple browser tabs | Independent connections, independent subscriptions |
+| History gap on initial load | Use `historyCursor` and fetch `/messages?after=<lastMessageId>` |
+| `send_message` without prior subscribe | Auto-subscribe sender and proceed; optional `subscribed` response |
 
 ### Buffer Deduplication
 
-Since clients receive the full buffer on subscribe (not "events since X"), they may receive duplicates on reconnection. Clients should deduplicate:
+Since clients receive the full buffer on subscribe (not "events since X"), they may receive duplicates on reconnection. Clients should deduplicate using `turnId` + `seq`:
 
 ```typescript
-const receivedEventIds = new Set<string>();
+let lastSeqByTurn = new Map<string, number>();
 
-function handleEvent(event: ChatStreamEvent) {
-  const id = getEventId(event); // Extract ID from event
-  if (receivedEventIds.has(id)) return; // Skip duplicate
-  receivedEventIds.add(id);
-  // Process event
+function handleEvent(envelope: StreamEnvelope) {
+  const lastSeq = lastSeqByTurn.get(envelope.turnId) ?? -1;
+  if (envelope.seq <= lastSeq) return; // Skip duplicate or out-of-order
+  lastSeqByTurn.set(envelope.turnId, envelope.seq);
+  // Process envelope.event
 }
 ```
 
 This is simple because:
 - Buffer is bounded (one turn)
-- Events have unique IDs
+- `seq` is monotonic per turn
 - Worst case: re-process ~100 events
 
 ---
@@ -699,7 +744,9 @@ This is simple because:
 
 interface SessionState {
   status: "idle" | "streaming";
-  buffer: ChatStreamEvent[];
+  activeTurnId: string | null;
+  nextSeq: number;             // Monotonic per turn
+  buffer: StreamEnvelope[];
   queue: QueuedMessage[];
   subscribers: Set<string>;  // ConnectionIds
   fiber: Fiber.RuntimeFiber<void, Error> | null;
@@ -715,7 +762,12 @@ interface SessionHub {
   unsubscribe(sessionId: string, connectionId: string): Effect.Effect<void>;
 
   // Actions
-  sendMessage(sessionId: string, content: string, clientMessageId: string): Effect.Effect<void>;
+  sendMessage(
+    sessionId: string,
+    content: string,
+    clientMessageId: string,
+    parts?: MessagePart[]
+  ): Effect.Effect<void>;
   interrupt(sessionId: string): Effect.Effect<void>;
   dequeueMessage(sessionId: string, messageId: string): Effect.Effect<void>;
 
@@ -740,40 +792,49 @@ interface ConnectionManager {
   // Messaging
   send(connectionId: string, message: ServerMessage): Effect.Effect<void>;
   broadcast(connectionIds: Set<string>, message: ServerMessage): Effect.Effect<void>;
+  enqueue(connectionId: string, message: ServerMessage): Effect.Effect<void>; // Non-blocking
 
   // Routing
   handleMessage(connectionId: string, message: ClientMessage): Effect.Effect<void>;
 }
 ```
 
+**Serialization**: All `SessionHub` actions should enqueue `SessionCommand` values into a per-session command queue processed by a single fiber. This ensures atomic state updates and predictable ordering.
+
 ### Event Flow with PubSub
 
 ```typescript
-// Each session has a PubSub for fan-out
-const sessionPubSub = yield* PubSub.unbounded<SessionEvent>();
+// Each session has a bounded PubSub for fan-out
+const sessionPubSub = yield* PubSub.bounded<SessionEvent>(1024);
 
 // When Claude adapter produces an event:
-yield* PubSub.publish(sessionPubSub, { type: "event", event: chatStreamEvent });
+yield* PubSub.publish(sessionPubSub, { type: "event", turnId, seq, event: chatStreamEvent });
 
-// Each subscriber has a fiber consuming from PubSub:
+// Each subscriber has a fiber consuming from PubSub and enqueueing to its socket outbox:
 const subscriberFiber = yield* Effect.fork(
   PubSub.subscribe(sessionPubSub).pipe(
     Stream.fromQueue,
-    Stream.runForEach((event) =>
-      connectionManager.send(connectionId, event)
-    ),
+    Stream.runForEach((event) => connectionManager.enqueue(connectionId, event)),
   )
 );
 ```
+
+Use bounded buffers and a policy for slow consumers (drop oldest, drop latest, or disconnect) to prevent backpressure from stalling the Claude stream.
 
 ### Streaming Pipeline
 
 ```typescript
 // Claude stream → Buffer + Broadcast
-const runStream = (sessionId: string, message: string) =>
+const runStream = (sessionId: string, message: string, messageId: string) =>
   Effect.gen(function* () {
     const session = yield* sessionHub.getSession(sessionId);
+    const turnId = createTurnId();
+    session.activeTurnId = turnId;
+    session.nextSeq = 0;
+    session.buffer = [];
     const claudeStream = yield* claudeService.query(sessionId, message);
+
+    yield* sessionHub.broadcast(sessionId, { type: "session_started", sessionId, turnId, messageId });
 
     yield* claudeStream.pipe(
       Stream.tap((sdkMessage) =>
@@ -782,11 +843,13 @@ const runStream = (sessionId: string, message: string) =>
           const events = processMessage(sdkMessage, state, config);
 
           for (const event of events) {
+            const envelope = { turnId, seq: session.nextSeq++, event };
+
             // Add to buffer
-            session.buffer.push(event);
+            session.buffer.push(envelope);
 
             // Broadcast to subscribers
-            yield* sessionHub.broadcast(sessionId, { type: "event", event });
+            yield* sessionHub.broadcast(sessionId, { type: "event", ...envelope });
           }
         })
       ),
@@ -797,13 +860,20 @@ const runStream = (sessionId: string, message: string) =>
     const messages = accumulator.getMessages();
     yield* storage.messages.createMany(messages);
     session.buffer = [];
-    yield* sessionHub.broadcast(sessionId, { type: "session_stopped", reason: "completed" });
+    session.activeTurnId = null;
+    yield* sessionHub.broadcast(sessionId, { type: "session_stopped", sessionId, turnId, reason: "completed" });
 
     // Auto-send from queue if not empty
     if (session.queue.length > 0) {
       const next = session.queue.shift()!;
       yield* sessionHub.broadcast(sessionId, { type: "message_dequeued", messageId: next.id });
-      yield* runStream(sessionId, next.content);
+      // Enqueue as a new command to avoid recursive streams
+      yield* sessionHub.sendMessage(
+        sessionId,
+        next.content,
+        next.clientMessageId ?? next.id,
+        next.parts
+      );
     }
   });
 ```
@@ -884,6 +954,8 @@ Server `ChatStreamEvent` maps directly to AI SDK `UIMessageChunk`:
 | `StreamEventToolOutputError` | `tool-output-error` | Tool execution failed |
 | `StreamEventFinish` | `finish` | Includes `finishReason` |
 
+Each stream message also carries `turnId` + `seq` in the WebSocket envelope to support ordering and deduplication.
+
 ### WebSocketManager
 
 Global singleton managing the WebSocket connection and event routing.
@@ -895,9 +967,16 @@ import type { UIMessageChunk } from 'ai';
 type SessionEventHandler = (chunk: UIMessageChunk) => void;
 type SessionLifecycleHandler = (event: SessionLifecycleEvent) => void;
 
+type StreamEnvelope<T> = {
+  turnId: string;
+  seq: number;
+  event: T;
+};
+
 interface SessionLifecycleEvent {
   type: 'session_started' | 'session_stopped' | 'session_deleted';
   sessionId: string;
+  turnId?: string;
   reason?: 'completed' | 'interrupted' | 'error';
 }
 
@@ -905,14 +984,27 @@ interface SubscribedEvent {
   type: 'subscribed';
   sessionId: string;
   status: 'idle' | 'streaming';
-  buffer: UIMessageChunk[];
+  activeTurnId?: string;
+  lastSeq?: number;
+  buffer: StreamEnvelope<UIMessageChunk>[];
   queue: QueuedMessage[];
+  historyCursor: HistoryCursor;
+}
+
+interface HistoryCursor {
+  lastMessageId: string | null;
+  lastMessageAt: string | null;
 }
 
 interface ServerMessage {
   type: string;
   sessionId?: string;
+  turnId?: string;
+  seq?: number;
   event?: UIMessageChunk;
+  activeTurnId?: string;
+  lastSeq?: number;
+  historyCursor?: HistoryCursor;
   // ... other fields
 }
 
@@ -925,7 +1017,8 @@ class WebSocketManager {
   // Event handlers per session
   private streamHandlers = new Map<string, Set<SessionEventHandler>>();
   private lifecycleHandlers = new Map<string, Set<SessionLifecycleHandler>>();
-  private subscribeCallbacks = new Map<string, (event: SubscribedEvent) => void>();
+  private subscribeCallbacks = new Map<string, Set<(event: SubscribedEvent) => void>>();
+  private lastSeqBySession = new Map<string, { turnId: string; lastSeq: number }>();
 
   // Reconnection state
   private reconnectAttempts = 0;
@@ -950,7 +1043,7 @@ class WebSocketManager {
 
       this.ws.onopen = () => {
         this.reconnectAttempts = 0;
-        this.ws!.send(JSON.stringify({ type: 'hello', protocolVersion: '1.0' }));
+        this.ws!.send(JSON.stringify({ type: 'hello' }));
         // Re-subscribe to previously subscribed sessions on reconnect
         this.resubscribeAll();
         resolve();
@@ -987,9 +1080,15 @@ class WebSocketManager {
         break;
 
       case 'subscribed': {
-        const callback = this.subscribeCallbacks.get(sessionId!);
-        if (callback) {
-          callback(data as SubscribedEvent);
+        const callbacks = this.subscribeCallbacks.get(sessionId!);
+        if (callbacks) {
+          if (data.activeTurnId && typeof (data as any).lastSeq === 'number') {
+            this.lastSeqBySession.set(sessionId!, {
+              turnId: (data as any).activeTurnId,
+              lastSeq: (data as any).lastSeq,
+            });
+          }
+          callbacks.forEach((callback) => callback(data as SubscribedEvent));
           this.subscribeCallbacks.delete(sessionId!);
         }
         break;
@@ -999,7 +1098,25 @@ class WebSocketManager {
         // Route stream event to session handlers
         const handlers = this.streamHandlers.get(sessionId!);
         if (handlers && data.event) {
-          handlers.forEach(handler => handler(data.event!));
+          const turnId = data.turnId ?? '';
+          const seq = data.seq ?? -1;
+          const last = this.lastSeqBySession.get(sessionId!);
+
+          if (!turnId) {
+            handlers.forEach(handler => handler(data.event!));
+            break;
+          }
+
+          if (!last || last.turnId !== turnId) {
+            this.lastSeqBySession.set(sessionId!, { turnId, lastSeq: seq });
+            handlers.forEach(handler => handler(data.event!));
+            break;
+          }
+
+          if (seq > last.lastSeq) {
+            this.lastSeqBySession.set(sessionId!, { turnId, lastSeq: seq });
+            handlers.forEach(handler => handler(data.event!));
+          }
         }
         break;
       }
@@ -1012,6 +1129,7 @@ class WebSocketManager {
           const event: SessionLifecycleEvent = {
             type: data.type,
             sessionId: sessionId!,
+            turnId: (data as any).turnId,
             reason: (data as any).reason,
           };
           lifecycleHandlers.forEach(handler => handler(event));
@@ -1096,10 +1214,15 @@ class WebSocketManager {
    * Returns the current session state (status, buffer, queue).
    */
   async subscribeSession(sessionId: string): Promise<SubscribedEvent> {
+    if (!this.url) {
+      throw new Error('WebSocket URL not set; call connect(url) first');
+    }
     await this.connect(this.url);
 
     return new Promise((resolve) => {
-      this.subscribeCallbacks.set(sessionId, resolve);
+      const callbacks = this.subscribeCallbacks.get(sessionId) ?? new Set();
+      callbacks.add(resolve);
+      this.subscribeCallbacks.set(sessionId, callbacks);
       this.subscribedSessions.add(sessionId);
       this.send({ type: 'subscribe', sessionId });
     });
@@ -1159,9 +1282,11 @@ export class WebSocketChatTransport implements ChatTransport<UIMessage> {
   }: Parameters<ChatTransport<UIMessage>['sendMessages']>[0]
   ): Promise<ReadableStream<UIMessageChunk>> {
     await wsManager.connect(this.wsUrl);
+    // send_message auto-subscribes on the server; explicit subscribe is optional
 
     let unsubscribeStream: (() => void) | null = null;
     let unsubscribeLifecycle: (() => void) | null = null;
+    let sawFinish = false;
 
     return new ReadableStream<UIMessageChunk>({
       start: (controller) => {
@@ -1169,6 +1294,9 @@ export class WebSocketChatTransport implements ChatTransport<UIMessage> {
         unsubscribeStream = wsManager.subscribeToStream(
           this.sessionId,
           (chunk) => {
+            if (chunk.type === 'finish') {
+              sawFinish = true;
+            }
             controller.enqueue(chunk);
           }
         );
@@ -1178,12 +1306,14 @@ export class WebSocketChatTransport implements ChatTransport<UIMessage> {
           this.sessionId,
           (event) => {
             if (event.type === 'session_stopped') {
-              // Enqueue finish event based on reason
-              const finishChunk: UIMessageChunk = {
-                type: 'finish',
-                finishReason: event.reason === 'completed' ? 'stop' : 'error',
-              };
-              controller.enqueue(finishChunk);
+              // Only synthesize finish if the stream never emitted one
+              if (!sawFinish) {
+                const finishChunk: UIMessageChunk = {
+                  type: 'finish',
+                  finishReason: event.reason === 'completed' ? 'stop' : 'error',
+                };
+                controller.enqueue(finishChunk);
+              }
               controller.close();
               cleanup();
             }
@@ -1202,6 +1332,7 @@ export class WebSocketChatTransport implements ChatTransport<UIMessage> {
           type: 'send_message',
           sessionId: this.sessionId,
           content,
+          parts: lastMessage.parts,
           clientMessageId: lastMessage.id,
         });
 
@@ -1240,18 +1371,25 @@ export class WebSocketChatTransport implements ChatTransport<UIMessage> {
 
       let unsubscribeStream: (() => void) | null = null;
       let unsubscribeLifecycle: (() => void) | null = null;
+      let sawFinish = false;
 
       return new ReadableStream<UIMessageChunk>({
         start: (controller) => {
           // First, enqueue all buffered events (catch-up)
-          for (const chunk of subscribed.buffer) {
-            controller.enqueue(chunk);
+          for (const envelope of subscribed.buffer) {
+            if (envelope.event.type === 'finish') {
+              sawFinish = true;
+            }
+            controller.enqueue(envelope.event);
           }
 
           // Then subscribe to live events
           unsubscribeStream = wsManager.subscribeToStream(
             this.sessionId,
             (chunk) => {
+              if (chunk.type === 'finish') {
+                sawFinish = true;
+              }
               controller.enqueue(chunk);
             }
           );
@@ -1260,11 +1398,13 @@ export class WebSocketChatTransport implements ChatTransport<UIMessage> {
             this.sessionId,
             (event) => {
               if (event.type === 'session_stopped') {
-                const finishChunk: UIMessageChunk = {
-                  type: 'finish',
-                  finishReason: event.reason === 'completed' ? 'stop' : 'error',
-                };
-                controller.enqueue(finishChunk);
+                if (!sawFinish) {
+                  const finishChunk: UIMessageChunk = {
+                    type: 'finish',
+                    finishReason: event.reason === 'completed' ? 'stop' : 'error',
+                  };
+                  controller.enqueue(finishChunk);
+                }
                 controller.close();
                 unsubscribeStream?.();
                 unsubscribeLifecycle?.();
@@ -1504,6 +1644,8 @@ export function useSessionMessages(sessionId: string) {
 }
 ```
 
+After subscribing, compare `historyCursor.lastMessageId` with the last history item and fetch any gap using `?after=<lastMessageId>`.
+
 ### Multi-Session Multiplexing Flow
 
 How multiple `useChat()` instances share one WebSocket:
@@ -1546,6 +1688,16 @@ How multiple `useChat()` instances share one WebSocket:
 | Event mapping | `ChatStreamEvent` → `UIMessageChunk` | Backend adapter |
 | History loading | RPC endpoint for completed messages | Existing |
 
+### Test Plan (MVP)
+
+- **Subscribe/send ordering**: Send `send_message` without prior subscribe → auto-subscribe and start stream; `interrupt` without subscribe → `NOT_SUBSCRIBED`.
+- **Reconnect catch-up**: Disconnect mid-stream, reconnect, verify buffer replay + live events with no gaps.
+- **Dedup/order**: Ensure `turnId` + `seq` ordering, drop duplicates on resubscribe.
+- **Interrupt**: Interrupt mid-stream, verify partial save, `session_stopped` reason, and no stuck UI.
+- **Queue semantics**: Send while streaming, verify `message_queued` (no DB write), auto-dequeue and persist on next turn.
+- **History reconciliation**: Load history, subscribe, detect `historyCursor` newer than `lastMessageId`, fetch gap.
+- **Backpressure**: Simulate slow client; ensure stream ingestion does not stall other subscribers.
+
 ### Key Benefits
 
 1. **Reuses AI SDK**: State management, message accumulation, tool handling all work
@@ -1562,7 +1714,7 @@ How multiple `useChat()` instances share one WebSocket:
 |---------|----------|
 | Real-time delivery | WebSocket with per-session PubSub |
 | Multi-client sync | Server broadcasts to all subscribers |
-| Mid-stream catch-up | Buffer stores current turn events |
+| Mid-stream catch-up | Buffer stores current turn events with `turnId` + `seq` |
 | Message queuing | FIFO queue with auto-send on idle |
 | Interruption | `QueryObject.interrupt()` + partial save |
 | Client subscriptions | Client-side LRU (max 3) |
@@ -1580,3 +1732,6 @@ How multiple `useChat()` instances share one WebSocket:
 5. **Effect.ts patterns**: PubSub, Fibers, Streams throughout
 6. **Leverage existing libraries**: AI SDK handles message accumulation, tool correlation
 7. **Single multiplexed connection**: One WebSocket per client, events routed by sessionId
+8. **Serialized session updates**: Per-session command loop avoids races
+9. **Ordered stream events**: `turnId` + `seq` enforce deterministic replay
+10. **Trusted deployment**: No auth; rely on local/VPN access control
