@@ -3,7 +3,7 @@ import type {
 	CreateRepositoryInput,
 	Repository,
 	UpdateRepositoryInput,
-} from "@sandcastle/rpc";
+} from "@sandcastle/schemas";
 import { REPOSITORY_LIST_KEY, RepositoryClient } from "./repository-client";
 
 // Re-export types for consumers

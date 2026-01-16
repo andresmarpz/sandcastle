@@ -63,7 +63,9 @@ function WorktreePageContent({ worktreeId }: { worktreeId: string }) {
 			[...sessions].sort((a, b) => {
 				const aTime = Date.parse(a.lastActivityAt);
 				const bTime = Date.parse(b.lastActivityAt);
-				return (Number.isNaN(bTime) ? 0 : bTime) - (Number.isNaN(aTime) ? 0 : aTime);
+				return (
+					(Number.isNaN(bTime) ? 0 : bTime) - (Number.isNaN(aTime) ? 0 : aTime)
+				);
 			}),
 		[sessions],
 	);
@@ -79,8 +81,8 @@ function WorktreePageContent({ worktreeId }: { worktreeId: string }) {
 		[sortedSessions],
 	);
 
-	const [activeTab, setActiveTab] = useState<string | null>(() =>
-		tabs[0]?.id ?? null,
+	const [activeTab, setActiveTab] = useState<string | null>(
+		() => tabs[0]?.id ?? null,
 	);
 
 	// Keep activeTab in sync with available tabs

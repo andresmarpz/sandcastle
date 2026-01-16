@@ -1,10 +1,5 @@
 import { Atom, Result } from "@effect-atom/atom-react";
-import type {
-	CreateWorktreeRequest,
-	CreateWorktreeResponse,
-	UpdateWorktreeInput,
-	Worktree,
-} from "@sandcastle/rpc";
+import type { UpdateWorktreeInput, Worktree } from "@sandcastle/schemas";
 import { WORKTREE_LIST_KEY, WorktreeClient } from "./worktree-client";
 
 /**
@@ -109,12 +104,7 @@ export const worktreeByPathAtomFamily = Atom.family((path: string) =>
 	),
 );
 
-export type {
-	CreateWorktreeRequest,
-	CreateWorktreeResponse,
-	UpdateWorktreeInput,
-	Worktree,
-};
+export type { UpdateWorktreeInput, Worktree };
 
 /**
  * Mutation atom for creating a new worktree.
