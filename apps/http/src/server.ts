@@ -23,6 +23,11 @@ import {
 	WorktreeRpcHandlersLive,
 } from "./handlers";
 import { StartupTasksLive } from "./startup";
+import {
+	layerProtocolWebsocketWithMetrics,
+	WebSocketMetricsLive,
+	WebSocketMetricsService,
+} from "./websocket";
 
 const CorsMiddleware = HttpMiddleware.cors({
 	allowedOrigins: ["*"], // In production, specify exact origins like ["https://your-app.com"]
@@ -73,7 +78,7 @@ const RpcHandlersLive = Layer.mergeAll(
 );
 
 // HTTP RPC Server at /api/rpc
-const HttpRpcLayer = RpcServer.layer(SandcastleRpc).pipe(
+const HttpRpcServer = RpcServer.layer(SandcastleRpc).pipe(
 	Layer.provide(RpcHandlersLive),
 	Layer.provide(
 		RpcServer.layerProtocolHttp({ path: "/api/rpc" }).pipe(
@@ -82,21 +87,40 @@ const HttpRpcLayer = RpcServer.layer(SandcastleRpc).pipe(
 	),
 );
 
-// WebSocket RPC Server at /ws
-const WebSocketRpcLayer = RpcServer.layer(SandcastleRpc).pipe(
+// WebSocket RPC Server at /ws (with connection metrics)
+// Note: WebSocketMetricsLive is provided externally so it can be shared with CustomRoutes
+const WebSocketRpcServer = RpcServer.layer(SandcastleRpc).pipe(
 	Layer.provide(RpcHandlersLive),
 	Layer.provide(
-		RpcServer.layerProtocolWebsocket({ path: "/ws" }).pipe(
+		layerProtocolWebsocketWithMetrics({ path: "/ws" }).pipe(
 			Layer.provide(RpcSerialization.layerNdjson),
 		),
 	),
 );
 
+// Combined RPC layer (both HTTP and WebSocket)
+const RpcLayers = Layer.mergeAll(HttpRpcServer, WebSocketRpcServer);
+
 // ─── Custom Routes ───────────────────────────────────────────
 
 const CustomRoutes = HttpRouter.Default.use((router) =>
 	Effect.gen(function* () {
-		yield* router.get("/api/health", HttpServerResponse.json({ status: "ok" }));
+		const metrics = yield* WebSocketMetricsService;
+
+		// Health endpoint with WebSocket connection stats
+		yield* router.get(
+			"/api/health",
+			Effect.gen(function* () {
+				const stats = yield* metrics.getStats;
+				return yield* HttpServerResponse.json({
+					status: "ok",
+					websocket: {
+						activeConnections: stats.activeConnections,
+						totalConnections: stats.totalConnections,
+					},
+				});
+			}),
+		);
 	}),
 );
 
@@ -109,8 +133,8 @@ export const makeServerLayer = (options?: { port?: number }) =>
 		CorsMiddleware(LoggingMiddleware(httpApp)),
 	).pipe(
 		Layer.provide(CustomRoutes),
-		Layer.provide(HttpRpcLayer),
-		Layer.provide(WebSocketRpcLayer),
+		Layer.provide(RpcLayers),
+		Layer.provide(WebSocketMetricsLive),
 		Layer.provide(
 			BunHttpServer.layer({ port: options?.port ?? port, idleTimeout: 30 }),
 		),

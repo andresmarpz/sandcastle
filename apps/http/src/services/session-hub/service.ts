@@ -1,9 +1,3 @@
-import { Context, type Effect, type Mailbox, type Scope } from "effect";
-import type {
-	MessagePart,
-	SessionEvent,
-	SessionSnapshot,
-} from "@sandcastle/schemas";
 import type {
 	ChatOperationRpcError,
 	ChatSessionNotFoundRpcError,
@@ -11,6 +5,12 @@ import type {
 	InterruptResult,
 	SendMessageResult,
 } from "@sandcastle/rpc";
+import type {
+	MessagePart,
+	SessionEvent,
+	SessionSnapshot,
+} from "@sandcastle/schemas";
+import { Context, type Effect, type Mailbox, type Scope } from "effect";
 
 /**
  * SessionHub service interface.
@@ -104,6 +104,32 @@ export interface SessionHubInterface {
 	readonly getState: (
 		sessionId: string,
 	) => Effect.Effect<SessionSnapshot, ChatSessionNotFoundRpcError>;
+
+	/**
+	 * Delete a session from the hub.
+	 *
+	 * This method:
+	 * 1. Broadcasts SessionDeleted event to all subscribers via PubSub
+	 * 2. Interrupts any active stream (if streaming)
+	 * 3. Removes session from in-memory sessions map
+	 *
+	 * Note: Does NOT handle storage deletion - that's the caller's responsibility.
+	 * If the session doesn't exist in the hub, this is a no-op (succeeds silently).
+	 */
+	readonly deleteSession: (sessionId: string) => Effect.Effect<void>;
+
+	/**
+	 * Gracefully shutdown the SessionHub.
+	 *
+	 * This method:
+	 * 1. Iterates all sessions in the sessions map
+	 * 2. For each streaming session, interrupts the stream and saves partial progress
+	 * 3. Logs shutdown progress
+	 *
+	 * Called automatically via Effect's finalizer system when the server shuts down.
+	 * The BunRuntime handles SIGTERM/SIGINT signals automatically.
+	 */
+	readonly shutdown: () => Effect.Effect<void>;
 }
 
 /**
