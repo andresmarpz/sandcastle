@@ -7,8 +7,6 @@ import { StorageService, StorageServiceDefault } from "@sandcastle/storage";
 import { Effect, Layer } from "effect";
 import { SessionHub, SessionHubLive } from "../services/session-hub";
 
-const DEFAULT_HISTORY_LIMIT = 50;
-
 export const ChatRpcHandlers = ChatRpc.toLayer(
 	Effect.gen(function* () {
 		const hub = yield* SessionHub;
@@ -35,8 +33,6 @@ export const ChatRpcHandlers = ChatRpc.toLayer(
 
 			"chat.getHistory": (params) =>
 				Effect.gen(function* () {
-					const limit = params.limit ?? DEFAULT_HISTORY_LIMIT;
-
 					// Verify session exists
 					yield* storage.sessions.get(params.sessionId).pipe(
 						Effect.mapError(
@@ -59,11 +55,7 @@ export const ChatRpcHandlers = ChatRpc.toLayer(
 							),
 						);
 
-					// Apply limit and determine hasMore
-					const messages = allMessages.slice(0, limit);
-					const hasMore = allMessages.length > limit;
-
-					return new GetHistoryResult({ messages, hasMore });
+					return new GetHistoryResult({ messages: allMessages });
 				}),
 		});
 	}),
