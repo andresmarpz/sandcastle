@@ -538,6 +538,10 @@ export const SessionEvent = Schema.Union(
 			clientMessageId: Schema.String,
 		}),
 	}),
+	Schema.Struct({
+		_tag: Schema.Literal("SessionDeleted"),
+		sessionId: Schema.String,
+	}),
 );
 export type SessionEvent = typeof SessionEvent.Type;
 
