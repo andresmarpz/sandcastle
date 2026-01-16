@@ -137,13 +137,19 @@ function processAssistantMessage(
 		if (block.type === "text" && "text" in block && block.text) {
 			// For non-streaming mode, emit complete text as single delta
 			const textId = config.generateId();
-			events.push({ type: "text-start", id: textId } satisfies StreamEventTextStart);
+			events.push({
+				type: "text-start",
+				id: textId,
+			} satisfies StreamEventTextStart);
 			events.push({
 				type: "text-delta",
 				id: textId,
 				delta: block.text,
 			} satisfies StreamEventTextDelta);
-			events.push({ type: "text-end", id: textId } satisfies StreamEventTextEnd);
+			events.push({
+				type: "text-end",
+				id: textId,
+			} satisfies StreamEventTextEnd);
 		} else if (
 			block.type === "tool_use" &&
 			"id" in block &&
@@ -179,7 +185,10 @@ function processAssistantMessage(
 				id: reasoningId,
 				delta: block.thinking,
 			} satisfies StreamEventReasoningDelta);
-			events.push({ type: "reasoning-end", id: reasoningId } satisfies StreamEventReasoningEnd);
+			events.push({
+				type: "reasoning-end",
+				id: reasoningId,
+			} satisfies StreamEventReasoningEnd);
 		}
 	}
 
