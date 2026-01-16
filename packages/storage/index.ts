@@ -18,6 +18,7 @@ export {
 	ToolCallPart,
 	ToolCallState,
 } from "@sandcastle/schemas";
+export * from "./src/cursor/schema";
 export * from "./src/errors";
 export {
 	makeStorageService,
@@ -25,7 +26,6 @@ export {
 	StorageServiceDefault,
 	StorageServiceLive,
 } from "./src/live";
-export * from "./src/cursor/schema";
 export * from "./src/repository/schema";
 export { StorageService } from "./src/service";
 export * from "./src/session/schema";
