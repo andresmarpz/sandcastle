@@ -4,7 +4,7 @@ import type { Worktree } from "@sandcastle/schemas";
 import { IconDots, IconGitBranch, IconTrash } from "@tabler/icons-react";
 import { formatDistanceToNow } from "date-fns";
 import * as React from "react";
-import { useLocation } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -41,6 +41,7 @@ function formatRelativeTime(iso: string) {
 
 export function SidebarWorktreeItem({ worktree }: SidebarWorktreeItemProps) {
 	const location = useLocation();
+	const navigate = useNavigate();
 
 	const [isDialogOpen, setIsDialogOpen] = React.useState(false);
 	const createdAtLabel = React.useMemo(
@@ -53,9 +54,11 @@ export function SidebarWorktreeItem({ worktree }: SidebarWorktreeItemProps) {
 		setIsDialogOpen(false);
 	};
 
-	const isActive = location.pathname.startsWith(`/worktrees/${worktree.id}`);
+	const isActive = location.pathname.startsWith(`/worktree/${worktree.id}`);
 
-	function handleSelect() {}
+	function handleSelect() {
+		navigate(`/worktree/${worktree.id}`);
+	}
 
 	return (
 		<>
