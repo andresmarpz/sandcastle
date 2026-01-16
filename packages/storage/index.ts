@@ -2,21 +2,21 @@
 export {
 	ChatMessage,
 	CreateChatMessageInput,
+	DataPart,
+	FilePart,
 	MessageMetadata,
 	MessagePart,
 	MessageRole,
-	TextPart,
+	ProviderMetadata,
 	ReasoningPart,
+	SourceDocumentPart,
+	SourceUrlPart,
+	StepStartPart,
+	StreamingState,
+	TextPart,
+	ToolApproval,
 	ToolCallPart,
 	ToolCallState,
-	ToolApproval,
-	FilePart,
-	SourceUrlPart,
-	SourceDocumentPart,
-	StepStartPart,
-	DataPart,
-	ProviderMetadata,
-	StreamingState,
 } from "@sandcastle/schemas";
 export * from "./src/errors";
 export {
@@ -25,7 +25,9 @@ export {
 	StorageServiceDefault,
 	StorageServiceLive,
 } from "./src/live";
+export * from "./src/cursor/schema";
 export * from "./src/repository/schema";
 export { StorageService } from "./src/service";
 export * from "./src/session/schema";
+export * from "./src/turn/schema";
 export * from "./src/worktree/schema";

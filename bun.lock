@@ -121,6 +121,7 @@
       "version": "0.1.0",
       "dependencies": {
         "@effect/rpc": "^0.73.0",
+        "@sandcastle/schemas": "workspace:*",
         "@sandcastle/storage": "workspace:*",
         "effect": "^3.19.14",
       },

@@ -1,0 +1,629 @@
+import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
+import {
+	ChatOperationRpcError,
+	ChatSessionNotFoundRpcError,
+	DequeueResult,
+	InterruptResult,
+	SendMessageResult,
+} from "@sandcastle/rpc";
+import {
+	type ChatMessage,
+	type ChatStreamEvent,
+	HistoryCursor,
+	type MessagePart,
+	QueuedMessage,
+	type SessionEvent,
+	SessionSnapshot,
+} from "@sandcastle/schemas";
+import { StorageService, StorageServiceDefault } from "@sandcastle/storage";
+import { Effect, Fiber, Layer, Mailbox, PubSub, Ref, Stream } from "effect";
+import {
+	ClaudeCodeAgentAdapter,
+	createStreamState,
+	type MessageAccumulator,
+	processMessageDual,
+	type SessionMetadata,
+	type StreamState,
+} from "../../adapters/claude";
+import {
+	ClaudeSDKService,
+	ClaudeSDKServiceLive,
+	type QueryHandle,
+} from "../../agents/claude";
+import { SessionHub, type SessionHubInterface } from "./service";
+import type { HistoryCursor as HistoryCursorType, SessionState } from "./types";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// State Factory
+// ─────────────────────────────────────────────────────────────────────────────
+
+const createSessionState = (
+	initialCursor?: HistoryCursorType,
+): Effect.Effect<SessionState> =>
+	Effect.gen(function* () {
+		const pubsub = yield* PubSub.unbounded<SessionEvent>();
+		const statusRef = yield* Ref.make<"idle" | "streaming">("idle");
+		const activeTurnIdRef = yield* Ref.make<string | null>(null);
+		const bufferRef = yield* Ref.make<ChatStreamEvent[]>([]);
+		const queueRef = yield* Ref.make<QueuedMessage[]>([]);
+		const historyCursorRef = yield* Ref.make<HistoryCursorType>(
+			initialCursor ?? { lastMessageId: null, lastMessageAt: null },
+		);
+		const fiberRef = yield* Ref.make<Fiber.RuntimeFiber<void, never> | null>(
+			null,
+		);
+		const queryHandleRef = yield* Ref.make<QueryHandle | null>(null);
+		const accumulatorRef = yield* Ref.make<MessageAccumulator<
+			SDKMessage,
+			SessionMetadata
+		> | null>(null);
+		const streamStateRef = yield* Ref.make<StreamState>(createStreamState());
+		const claudeSessionIdRef = yield* Ref.make<string | null>(null);
+
+		return {
+			pubsub,
+			statusRef,
+			activeTurnIdRef,
+			bufferRef,
+			queueRef,
+			historyCursorRef,
+			fiberRef,
+			queryHandleRef,
+			accumulatorRef,
+			streamStateRef,
+			claudeSessionIdRef,
+		} satisfies SessionState;
+	});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SessionHub Implementation
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const makeSessionHub = Effect.gen(function* () {
+	const storage = yield* StorageService;
+	const claudeSDK = yield* ClaudeSDKService;
+
+	// Map of sessionId -> SessionState (in-memory)
+	const sessionsRef = yield* Ref.make<Map<string, SessionState>>(new Map());
+
+	// ─── Helper: Get or Create Session State ─────────────────────────────────
+
+	const getOrCreateSession = (
+		sessionId: string,
+	): Effect.Effect<SessionState, ChatSessionNotFoundRpcError> =>
+		Effect.gen(function* () {
+			// First check if already exists
+			const sessions = yield* Ref.get(sessionsRef);
+			const existing = sessions.get(sessionId);
+			if (existing) return existing;
+
+			// Verify session exists in storage
+			yield* storage.sessions
+				.get(sessionId)
+				.pipe(
+					Effect.mapError(() => new ChatSessionNotFoundRpcError({ sessionId })),
+				);
+
+			// Load history cursor from storage
+			const cursor = yield* storage.cursors
+				.get(sessionId)
+				.pipe(Effect.catchAll(() => Effect.succeed(null)));
+
+			// Create new session state
+			const newState = yield* createSessionState(
+				cursor
+					? {
+							lastMessageId: cursor.lastMessageId,
+							lastMessageAt: cursor.lastMessageAt,
+						}
+					: undefined,
+			);
+
+			// Atomically add to map (check again in case of race)
+			const result = yield* Ref.modify(sessionsRef, (m) => {
+				const raceExisting = m.get(sessionId);
+				if (raceExisting) {
+					return [raceExisting, m] as const;
+				}
+				const updated = new Map(m);
+				updated.set(sessionId, newState);
+				return [newState, updated] as const;
+			});
+
+			return result;
+		});
+
+	// ─── Helper: Broadcast Event ─────────────────────────────────────────────
+
+	const broadcast = (session: SessionState, event: SessionEvent) =>
+		PubSub.publish(session.pubsub, event);
+
+	// ─── Helper: Reset Session to Idle ───────────────────────────────────────
+
+	const resetToIdle = (session: SessionState) =>
+		Effect.all([
+			Ref.set(session.statusRef, "idle" as const),
+			Ref.set(session.activeTurnIdRef, null),
+			Ref.set(session.bufferRef, []),
+			Ref.set(session.fiberRef, null),
+			Ref.set(session.queryHandleRef, null),
+			Ref.set(session.accumulatorRef, null),
+			Ref.set(session.streamStateRef, createStreamState()),
+		]);
+
+	// ─── Helper: Auto-Dequeue ────────────────────────────────────────────────
+
+	const autoDequeue = (
+		session: SessionState,
+		sessionId: string,
+	): Effect.Effect<void, never> =>
+		Effect.gen(function* () {
+			const queue = yield* Ref.get(session.queueRef);
+			if (queue.length === 0) return;
+
+			// Take first message from queue
+			const nextMessage = queue[0];
+			if (!nextMessage) return;
+
+			const remainingQueue = queue.slice(1);
+			yield* Ref.set(session.queueRef, remainingQueue);
+
+			// Broadcast dequeue event
+			yield* broadcast(session, {
+				_tag: "MessageDequeued",
+				messageId: nextMessage.id,
+			});
+
+			// Process as new message - need to call startStreaming directly
+			yield* startStreaming(
+				session,
+				sessionId,
+				nextMessage.content,
+				nextMessage.clientMessageId ?? nextMessage.id,
+				nextMessage.parts,
+			);
+		}).pipe(Effect.catchAll(() => Effect.void));
+
+	// ─── Helper: On Stream Complete ──────────────────────────────────────────
+
+	const onStreamComplete = (
+		session: SessionState,
+		turnId: string,
+		sessionId: string,
+		reason: "completed" | "interrupted" | "error",
+	): Effect.Effect<void, never> =>
+		Effect.gen(function* () {
+			const accumulator = yield* Ref.get(session.accumulatorRef);
+
+			// 1. Persist accumulated messages
+			if (accumulator) {
+				const messages = accumulator.getMessages() as ChatMessage[];
+				if (messages.length > 0) {
+					yield* storage.chatMessages
+						.createMany(
+							messages.map((msg, index) => ({
+								id: msg.id,
+								sessionId,
+								role: msg.role,
+								parts: msg.parts,
+								turnId,
+								seq: index,
+								metadata: msg.metadata,
+							})),
+						)
+						.pipe(Effect.catchAll(() => Effect.succeed([])));
+
+					// 2. Update history cursor
+					const lastMessage = messages[messages.length - 1];
+					if (lastMessage) {
+						yield* storage.cursors
+							.upsert(sessionId, lastMessage.id, lastMessage.createdAt)
+							.pipe(Effect.catchAll(() => Effect.void));
+
+						yield* Ref.set(session.historyCursorRef, {
+							lastMessageId: lastMessage.id,
+							lastMessageAt: lastMessage.createdAt,
+						});
+					}
+				}
+
+				// 3. Update session metadata from accumulator
+				const metadata = accumulator.getSessionMetadata();
+				if (metadata) {
+					yield* storage.sessions
+						.update(sessionId, {
+							claudeSessionId: metadata.claudeSessionId,
+							totalCostUsd: metadata.totalCostUsd,
+							inputTokens: metadata.inputTokens,
+							outputTokens: metadata.outputTokens,
+						})
+						.pipe(Effect.catchAll(() => Effect.void));
+
+					yield* Ref.set(session.claudeSessionIdRef, metadata.claudeSessionId);
+				}
+			}
+
+			// 4. Complete turn in storage
+			yield* storage.turns
+				.complete(turnId, reason)
+				.pipe(Effect.catchAll(() => Effect.void));
+
+			// 5. Broadcast SessionStopped
+			yield* broadcast(session, {
+				_tag: "SessionStopped",
+				turnId,
+				reason,
+			});
+
+			// 6. Reset session state
+			yield* resetToIdle(session);
+
+			// 7. Auto-dequeue next message
+			yield* autoDequeue(session, sessionId);
+		}).pipe(Effect.catchAll(() => Effect.void));
+
+	// ─── Helper: Process Stream ──────────────────────────────────────────────
+
+	const processStream = (
+		session: SessionState,
+		queryHandle: QueryHandle,
+		turnId: string,
+		sessionId: string,
+	): Effect.Effect<void, never> =>
+		Effect.gen(function* () {
+			const adapterConfig = { generateId: () => crypto.randomUUID() };
+
+			// Process SDK stream
+			yield* queryHandle.stream.pipe(
+				Stream.tap((message: SDKMessage) =>
+					Effect.gen(function* () {
+						const accumulator = yield* Ref.get(session.accumulatorRef);
+						if (!accumulator) return;
+
+						const currentState = yield* Ref.get(session.streamStateRef);
+
+						// Process through adapter (both streaming and accumulation)
+						const { events, newState } = processMessageDual(
+							message,
+							currentState,
+							adapterConfig,
+							accumulator,
+						);
+
+						yield* Ref.set(session.streamStateRef, newState);
+
+						// Update Claude session ID if available
+						if (
+							message.type === "system" &&
+							"subtype" in message &&
+							message.subtype === "init" &&
+							"session_id" in message
+						) {
+							yield* Ref.set(
+								session.claudeSessionIdRef,
+								message.session_id as string,
+							);
+						}
+
+						// Buffer events and broadcast
+						for (const event of events) {
+							yield* Ref.update(session.bufferRef, (b) => [...b, event]);
+							yield* broadcast(session, {
+								_tag: "StreamEvent",
+								turnId,
+								event,
+							});
+						}
+					}),
+				),
+				Stream.runDrain,
+			);
+
+			// Stream completed successfully
+			yield* onStreamComplete(session, turnId, sessionId, "completed");
+		}).pipe(
+			// Handle stream errors
+			Effect.catchAll(() =>
+				Effect.gen(function* () {
+					const turnId = yield* Ref.get(session.activeTurnIdRef);
+					if (turnId) {
+						yield* onStreamComplete(session, turnId, sessionId, "error");
+					} else {
+						yield* resetToIdle(session);
+					}
+				}),
+			),
+		);
+
+	// ─── Helper: Start Streaming ─────────────────────────────────────────────
+
+	const startStreaming = (
+		session: SessionState,
+		sessionId: string,
+		content: string,
+		clientMessageId: string,
+		parts?: readonly MessagePart[],
+	): Effect.Effect<SendMessageResult, ChatOperationRpcError> =>
+		Effect.gen(function* () {
+			const turnId = crypto.randomUUID();
+			const messageId = crypto.randomUUID();
+
+			yield* Ref.set(session.statusRef, "streaming");
+			yield* Ref.set(session.activeTurnIdRef, turnId);
+			yield* Ref.set(session.bufferRef, []);
+			yield* Ref.set(session.streamStateRef, createStreamState());
+
+			// 1. Create turn in storage
+			yield* storage.turns.create({ sessionId }).pipe(
+				Effect.mapError(
+					(e) =>
+						new ChatOperationRpcError({
+							message: `Failed to create turn: ${e._tag}`,
+							code: "TURN_CREATE_ERROR",
+						}),
+				),
+			);
+
+			// 2. Persist user message
+			yield* storage.chatMessages
+				.create({
+					id: messageId,
+					sessionId,
+					role: "user",
+					parts: parts ?? [{ type: "text", text: content }],
+				})
+				.pipe(
+					Effect.mapError(
+						(e) =>
+							new ChatOperationRpcError({
+								message: `Failed to save user message: ${e._tag}`,
+								code: "MESSAGE_CREATE_ERROR",
+							}),
+					),
+				);
+
+			// 3. Broadcast UserMessage and SessionStarted
+			yield* broadcast(session, {
+				_tag: "UserMessage",
+				message: { id: messageId, content, parts, clientMessageId },
+			});
+			yield* broadcast(session, {
+				_tag: "SessionStarted",
+				turnId,
+				messageId,
+			});
+
+			// 4. Get worktree path for Claude SDK
+			const dbSession = yield* storage.sessions.get(sessionId).pipe(
+				Effect.mapError(
+					() =>
+						new ChatOperationRpcError({
+							message: "Session not found in storage",
+							code: "SESSION_NOT_FOUND",
+						}),
+				),
+			);
+			const worktree = yield* storage.worktrees.get(dbSession.worktreeId).pipe(
+				Effect.mapError(
+					() =>
+						new ChatOperationRpcError({
+							message: "Worktree not found",
+							code: "WORKTREE_NOT_FOUND",
+						}),
+				),
+			);
+
+			// 5. Start Claude stream
+			const claudeSessionId = yield* Ref.get(session.claudeSessionIdRef);
+			const queryHandle = yield* claudeSDK
+				.query(content, {
+					cwd: worktree.path,
+					resume: claudeSessionId ?? undefined,
+					permissionMode: "bypassPermissions",
+				})
+				.pipe(
+					Effect.mapError(
+						(e) =>
+							new ChatOperationRpcError({
+								message: `Claude SDK error: ${e.message}`,
+								code: "CLAUDE_SDK_ERROR",
+							}),
+					),
+				);
+
+			yield* Ref.set(session.queryHandleRef, queryHandle);
+
+			// 6. Create accumulator for persistence
+			const accumulator = ClaudeCodeAgentAdapter.createAccumulator({
+				generateId: () => crypto.randomUUID(),
+				storageSessionId: sessionId,
+			});
+			yield* Ref.set(session.accumulatorRef, accumulator);
+
+			// 7. Fork stream processing fiber
+			const fiber = yield* Effect.fork(
+				processStream(session, queryHandle, turnId, sessionId),
+			);
+			yield* Ref.set(session.fiberRef, fiber);
+
+			return new SendMessageResult({
+				status: "started",
+				messageId,
+			});
+		});
+
+	// ─── Service Implementation ──────────────────────────────────────────────
+
+	const service: SessionHubInterface = {
+		sendMessage: (sessionId, content, clientMessageId, parts) =>
+			Effect.gen(function* () {
+				const session = yield* getOrCreateSession(sessionId);
+
+				// Atomic status check
+				const wasStreaming = yield* Ref.modify(session.statusRef, (status) => {
+					if (status === "streaming") {
+						return [true, status] as const;
+					}
+					// Don't transition yet - startStreaming will do it
+					return [false, status] as const;
+				});
+
+				if (wasStreaming) {
+					// Queue the message
+					const queuedMessage = new QueuedMessage({
+						id: crypto.randomUUID(),
+						content,
+						parts: parts ? [...parts] : undefined,
+						queuedAt: new Date().toISOString(),
+						clientMessageId,
+					});
+
+					yield* Ref.update(session.queueRef, (q) => [...q, queuedMessage]);
+
+					// Broadcast MessageQueued event
+					yield* broadcast(session, {
+						_tag: "MessageQueued",
+						message: queuedMessage,
+					});
+
+					return new SendMessageResult({
+						status: "queued",
+						queuedMessage,
+					});
+				}
+
+				// Start streaming
+				return yield* startStreaming(
+					session,
+					sessionId,
+					content,
+					clientMessageId,
+					parts,
+				);
+			}),
+
+		subscribe: (sessionId) =>
+			Effect.gen(function* () {
+				const session = yield* getOrCreateSession(sessionId);
+
+				// Create mailbox for this subscriber
+				const mailbox = yield* Mailbox.make<SessionEvent>();
+
+				// Capture current state for InitialState
+				const status = yield* Ref.get(session.statusRef);
+				const activeTurnId = yield* Ref.get(session.activeTurnIdRef);
+				const queue = yield* Ref.get(session.queueRef);
+				const historyCursor = yield* Ref.get(session.historyCursorRef);
+				const buffer = yield* Ref.get(session.bufferRef);
+
+				const initialState: SessionEvent = {
+					_tag: "InitialState",
+					snapshot: new SessionSnapshot({
+						status,
+						activeTurnId,
+						queue: [...queue],
+						historyCursor: new HistoryCursor(historyCursor),
+					}),
+					buffer: [...buffer],
+				};
+
+				// Send initial state
+				yield* mailbox.offer(initialState);
+
+				// Subscribe to PubSub and forward events to mailbox
+				yield* Stream.fromPubSub(session.pubsub).pipe(
+					Stream.runForEach((event) => mailbox.offer(event)),
+					Effect.forkScoped, // Runs until subscriber disconnects
+				);
+
+				return mailbox;
+			}),
+
+		interrupt: (sessionId) =>
+			Effect.gen(function* () {
+				const session = yield* getOrCreateSession(sessionId);
+
+				const status = yield* Ref.get(session.statusRef);
+				if (status === "idle") {
+					return new InterruptResult({ interrupted: false });
+				}
+
+				// 1. Get the running fiber and query handle
+				const fiber = yield* Ref.get(session.fiberRef);
+				const queryHandle = yield* Ref.get(session.queryHandleRef);
+				const turnId = yield* Ref.get(session.activeTurnIdRef);
+
+				// 2. Interrupt Claude SDK (graceful)
+				if (queryHandle) {
+					yield* queryHandle.interrupt.pipe(Effect.ignore);
+				}
+
+				// 3. Interrupt the processing fiber
+				if (fiber) {
+					yield* Fiber.interrupt(fiber);
+				}
+
+				// 4. Save partial progress and cleanup
+				if (turnId) {
+					yield* onStreamComplete(session, turnId, sessionId, "interrupted");
+				} else {
+					yield* resetToIdle(session);
+				}
+
+				return new InterruptResult({ interrupted: true });
+			}),
+
+		dequeueMessage: (sessionId, messageId) =>
+			Effect.gen(function* () {
+				const session = yield* getOrCreateSession(sessionId);
+
+				const removed = yield* Ref.modify(
+					session.queueRef,
+					(queue): [boolean, QueuedMessage[]] => {
+						const index = queue.findIndex((m) => m.id === messageId);
+						if (index === -1) {
+							return [false, queue];
+						}
+						const newQueue: QueuedMessage[] = [
+							...queue.slice(0, index),
+							...queue.slice(index + 1),
+						];
+						return [true, newQueue];
+					},
+				);
+
+				if (removed) {
+					yield* broadcast(session, {
+						_tag: "MessageDequeued",
+						messageId,
+					});
+				}
+
+				return new DequeueResult({ removed });
+			}),
+
+		getState: (sessionId) =>
+			Effect.gen(function* () {
+				const session = yield* getOrCreateSession(sessionId);
+
+				const status = yield* Ref.get(session.statusRef);
+				const activeTurnId = yield* Ref.get(session.activeTurnIdRef);
+				const queue = yield* Ref.get(session.queueRef);
+				const historyCursor = yield* Ref.get(session.historyCursorRef);
+
+				return new SessionSnapshot({
+					status,
+					activeTurnId,
+					queue: [...queue],
+					historyCursor: new HistoryCursor(historyCursor),
+				});
+			}),
+	};
+
+	return service;
+});
+
+export const SessionHubLive = Layer.effect(SessionHub, makeSessionHub).pipe(
+	Layer.provide(StorageServiceDefault),
+	Layer.provide(ClaudeSDKServiceLive),
+);

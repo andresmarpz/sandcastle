@@ -470,77 +470,76 @@ export type ChatStreamEvent = typeof ChatStreamEvent.Type;
 // Section 5: Session Coordination Types
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Initial snapshot for a new subscription */
-export class SessionSnapshotEvent extends Schema.Class<SessionSnapshotEvent>(
-	"SessionSnapshotEvent",
-)({
-	type: Schema.Literal("session-snapshot"),
-	epoch: Schema.String,
-	status: StreamingStatus,
-	claudeSessionId: Schema.NullOr(Schema.String),
-	bufferMinSeq: Schema.NullOr(Schema.Number),
-	bufferMaxSeq: Schema.NullOr(Schema.Number),
-	latestSeq: Schema.Number,
-	needsHistory: Schema.Boolean,
-}) {}
-
-/** Wrapper with sequence number for replay/ordering */
-export class SequencedStreamEvent extends Schema.Class<SequencedStreamEvent>(
-	"SequencedStreamEvent",
-)({
-	seq: Schema.Number,
-	timestamp: Schema.String,
-	event: ChatStreamEvent,
-}) {}
-
-/** Events emitted on chat.subscribe */
-export const SubscribeEvent = Schema.Union(
-	SessionSnapshotEvent,
-	SequencedStreamEvent,
-);
-export type SubscribeEvent = typeof SubscribeEvent.Type;
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Section 6: RPC Input Types
-// ─────────────────────────────────────────────────────────────────────────────
-
-/** Input for starting or continuing a chat stream */
-export class ChatStreamInput extends Schema.Class<ChatStreamInput>(
-	"ChatStreamInput",
-)({
-	sessionId: Schema.String,
-	worktreeId: Schema.String,
-	prompt: Schema.String,
-	claudeSessionId: Schema.optional(Schema.NullOr(Schema.String)),
-	autonomous: Schema.optional(Schema.Boolean),
-}) {}
-
-/** Input for subscribing to session events */
-export class ChatSubscribeInput extends Schema.Class<ChatSubscribeInput>(
-	"ChatSubscribeInput",
-)({
-	sessionId: Schema.String,
-	lastSeenSeq: Schema.optional(Schema.Number),
-	epoch: Schema.optional(Schema.String),
-}) {}
-
-/** Input for sending a user message (non-streaming RPC) */
-export class ChatSendInput extends Schema.Class<ChatSendInput>("ChatSendInput")(
+/** Message queued while session is streaming */
+export class QueuedMessage extends Schema.Class<QueuedMessage>("QueuedMessage")(
 	{
-		sessionId: Schema.String,
-		worktreeId: Schema.String,
-		prompt: Schema.String,
-		claudeSessionId: Schema.optional(Schema.NullOr(Schema.String)),
-		autonomous: Schema.optional(Schema.Boolean),
+		id: Schema.String,
+		content: Schema.String,
+		parts: Schema.optional(Schema.Array(MessagePart)),
+		queuedAt: Schema.String,
+		clientMessageId: Schema.optional(Schema.String),
 	},
 ) {}
 
-/** Input for fetching current session state */
-export class ChatGetSessionStateInput extends Schema.Class<ChatGetSessionStateInput>(
-	"ChatGetSessionStateInput",
+/** Cursor for tracking last persisted message (for gap detection) */
+export class HistoryCursor extends Schema.Class<HistoryCursor>("HistoryCursor")(
+	{
+		lastMessageId: Schema.NullOr(Schema.String),
+		lastMessageAt: Schema.NullOr(Schema.String),
+	},
+) {}
+
+/** Current session state snapshot */
+export class SessionSnapshot extends Schema.Class<SessionSnapshot>(
+	"SessionSnapshot",
 )({
-	sessionId: Schema.String,
+	status: StreamingStatus,
+	activeTurnId: Schema.NullOr(Schema.String),
+	queue: Schema.Array(QueuedMessage),
+	historyCursor: HistoryCursor,
 }) {}
+
+/** Session events streamed to subscribers */
+export const SessionEvent = Schema.Union(
+	Schema.Struct({
+		_tag: Schema.Literal("InitialState"),
+		snapshot: SessionSnapshot,
+		buffer: Schema.Array(ChatStreamEvent),
+	}),
+	Schema.Struct({
+		_tag: Schema.Literal("SessionStarted"),
+		turnId: Schema.String,
+		messageId: Schema.String,
+	}),
+	Schema.Struct({
+		_tag: Schema.Literal("SessionStopped"),
+		turnId: Schema.String,
+		reason: Schema.Literal("completed", "interrupted", "error"),
+	}),
+	Schema.Struct({
+		_tag: Schema.Literal("StreamEvent"),
+		turnId: Schema.String,
+		event: ChatStreamEvent,
+	}),
+	Schema.Struct({
+		_tag: Schema.Literal("MessageQueued"),
+		message: QueuedMessage,
+	}),
+	Schema.Struct({
+		_tag: Schema.Literal("MessageDequeued"),
+		messageId: Schema.String,
+	}),
+	Schema.Struct({
+		_tag: Schema.Literal("UserMessage"),
+		message: Schema.Struct({
+			id: Schema.String,
+			content: Schema.String,
+			parts: Schema.optional(Schema.Array(MessagePart)),
+			clientMessageId: Schema.String,
+		}),
+	}),
+);
+export type SessionEvent = typeof SessionEvent.Type;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Section 7: RPC Error Types

@@ -72,6 +72,37 @@ const migrations: Migration[] = [
 			CREATE INDEX IF NOT EXISTS idx_chat_messages_sessionId ON chat_messages(sessionId);
 		`,
 	},
+	{
+		version: 2,
+		name: "streaming_support",
+		up: `
+			-- Turns table: tracks individual conversation turns within a session
+			CREATE TABLE IF NOT EXISTS turns (
+				id TEXT PRIMARY KEY,
+				sessionId TEXT NOT NULL,
+				status TEXT NOT NULL CHECK (status IN ('streaming', 'completed', 'interrupted', 'error')),
+				startedAt TEXT NOT NULL,
+				completedAt TEXT,
+				reason TEXT,
+				FOREIGN KEY (sessionId) REFERENCES sessions(id) ON DELETE CASCADE
+			);
+			CREATE INDEX IF NOT EXISTS idx_turns_sessionId ON turns(sessionId);
+
+			-- Add turn tracking columns to chat_messages
+			ALTER TABLE chat_messages ADD COLUMN turnId TEXT REFERENCES turns(id) ON DELETE CASCADE;
+			ALTER TABLE chat_messages ADD COLUMN seq INTEGER NOT NULL DEFAULT 0;
+			CREATE INDEX IF NOT EXISTS idx_chat_messages_turnId ON chat_messages(turnId);
+
+			-- Session cursors table: tracks history cursor for gap loading
+			CREATE TABLE IF NOT EXISTS session_cursors (
+				sessionId TEXT PRIMARY KEY,
+				lastMessageId TEXT,
+				lastMessageAt TEXT,
+				updatedAt TEXT NOT NULL,
+				FOREIGN KEY (sessionId) REFERENCES sessions(id) ON DELETE CASCADE
+			);
+		`,
+	},
 ];
 
 const ensureMigrationsTable = (db: Database): void => {

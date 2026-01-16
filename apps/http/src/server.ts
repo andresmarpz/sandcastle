@@ -72,13 +72,25 @@ const RpcHandlersLive = Layer.mergeAll(
 	FilesRpcHandlersLive,
 );
 
-const RpcLayer = RpcServer.layer(SandcastleRpc).pipe(
+// HTTP RPC Server at /api/rpc
+const HttpRpcLayer = RpcServer.layer(SandcastleRpc).pipe(
 	Layer.provide(RpcHandlersLive),
+	Layer.provide(
+		RpcServer.layerProtocolHttp({ path: "/api/rpc" }).pipe(
+			Layer.provide(RpcSerialization.layerNdjson),
+		),
+	),
 );
 
-const HttpProtocol = RpcServer.layerProtocolHttp({
-	path: "/api/rpc",
-}).pipe(Layer.provide(RpcSerialization.layerNdjson));
+// WebSocket RPC Server at /ws
+const WebSocketRpcLayer = RpcServer.layer(SandcastleRpc).pipe(
+	Layer.provide(RpcHandlersLive),
+	Layer.provide(
+		RpcServer.layerProtocolWebsocket({ path: "/ws" }).pipe(
+			Layer.provide(RpcSerialization.layerNdjson),
+		),
+	),
+);
 
 // ─── Custom Routes ───────────────────────────────────────────
 
@@ -97,8 +109,8 @@ export const makeServerLayer = (options?: { port?: number }) =>
 		CorsMiddleware(LoggingMiddleware(httpApp)),
 	).pipe(
 		Layer.provide(CustomRoutes),
-		Layer.provide(RpcLayer),
-		Layer.provide(HttpProtocol),
+		Layer.provide(HttpRpcLayer),
+		Layer.provide(WebSocketRpcLayer),
 		Layer.provide(
 			BunHttpServer.layer({ port: options?.port ?? port, idleTimeout: 30 }),
 		),

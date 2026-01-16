@@ -3,9 +3,8 @@ import {
 	CreateRepositoryInput,
 	Repository,
 	UpdateRepositoryInput,
-} from "@sandcastle/storage/entities";
+} from "@sandcastle/storage";
 import { Schema } from "effect";
-
 import { DatabaseRpcError } from "../common/errors";
 import {
 	RepositoryNotFoundRpcError,
