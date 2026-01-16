@@ -18,6 +18,7 @@ import { StorageService, StorageServiceDefault } from "@sandcastle/storage";
 import { Effect, Fiber, Layer, Mailbox, PubSub, Ref, Stream } from "effect";
 import {
 	ClaudeCodeAgentAdapter,
+	type ClaudeMessageAccumulator,
 	createStreamState,
 	type MessageAccumulator,
 	processMessageDual,
@@ -71,6 +72,7 @@ const structuredLog = (
 
 const createSessionState = (
 	initialCursor?: HistoryCursorType,
+	claudeSessionId?: string | null,
 ): Effect.Effect<SessionState> =>
 	Effect.gen(function* () {
 		const pubsub = yield* PubSub.unbounded<SessionEvent>();
@@ -90,7 +92,9 @@ const createSessionState = (
 			SessionMetadata
 		> | null>(null);
 		const streamStateRef = yield* Ref.make<StreamState>(createStreamState());
-		const claudeSessionIdRef = yield* Ref.make<string | null>(null);
+		const claudeSessionIdRef = yield* Ref.make<string | null>(
+			claudeSessionId ?? null,
+		);
 		const activeTurnContextRef = yield* Ref.make<ActiveTurnContext | null>(
 			null,
 		);
@@ -133,8 +137,8 @@ export const makeSessionHub = Effect.gen(function* () {
 			const existing = sessions.get(sessionId);
 			if (existing) return existing;
 
-			// Verify session exists in storage
-			yield* storage.sessions
+			// Load session from storage (also verifies it exists)
+			const storedSession = yield* storage.sessions
 				.get(sessionId)
 				.pipe(
 					Effect.mapError(() => new ChatSessionNotFoundRpcError({ sessionId })),
@@ -145,7 +149,7 @@ export const makeSessionHub = Effect.gen(function* () {
 				.get(sessionId)
 				.pipe(Effect.catchAll(() => Effect.succeed(null)));
 
-			// Create new session state
+			// Create new session state with claudeSessionId from storage
 			const newState = yield* createSessionState(
 				cursor
 					? {
@@ -153,6 +157,7 @@ export const makeSessionHub = Effect.gen(function* () {
 							lastMessageAt: cursor.lastMessageAt,
 						}
 					: undefined,
+				storedSession.claudeSessionId,
 			);
 
 			structuredLog("INFO", "get_or_create_result", { cursor, newState });
@@ -301,19 +306,25 @@ export const makeSessionHub = Effect.gen(function* () {
 					}
 				}
 
-				// 3. Update session metadata from accumulator
+				// 3. Update session usage stats from accumulator
+				// Note: claudeSessionId is persisted immediately when captured from init message
 				const metadata = accumulator.getSessionMetadata();
 				if (metadata) {
 					yield* storage.sessions
 						.update(sessionId, {
-							claudeSessionId: metadata.claudeSessionId,
 							totalCostUsd: metadata.totalCostUsd,
 							inputTokens: metadata.inputTokens,
 							outputTokens: metadata.outputTokens,
 						})
 						.pipe(Effect.catchAll(() => Effect.void));
+				}
 
-					yield* Ref.set(session.claudeSessionIdRef, metadata.claudeSessionId);
+				// Update in-memory ref if we have a session ID from metadata
+				const claudeSessionId =
+					metadata?.claudeSessionId ??
+					(accumulator as ClaudeMessageAccumulator).getClaudeSessionId();
+				if (claudeSessionId) {
+					yield* Ref.set(session.claudeSessionIdRef, claudeSessionId);
 				}
 			}
 
@@ -411,15 +422,18 @@ export const makeSessionHub = Effect.gen(function* () {
 							message.subtype === "init" &&
 							"session_id" in message
 						) {
+							const claudeSessionId = message.session_id as string;
 							structuredLog("INFO", "claude_session_id_captured", {
 								sessionId,
 								turnId,
-								claudeSessionId: message.session_id as string,
+								claudeSessionId,
 							});
-							yield* Ref.set(
-								session.claudeSessionIdRef,
-								message.session_id as string,
-							);
+							yield* Ref.set(session.claudeSessionIdRef, claudeSessionId);
+
+							// Persist immediately to database so it survives restarts/interrupts
+							yield* storage.sessions
+								.update(sessionId, { claudeSessionId })
+								.pipe(Effect.catchAll(() => Effect.void));
 						}
 
 						// Buffer events and broadcast
