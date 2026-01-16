@@ -168,7 +168,7 @@ function ChatViewContent({
 
 	return (
 		<div className="flex h-full min-w-0 flex-col max-w-4xl w-full m-auto">
-			<header className="border-border flex items-center justify-between border-b px-4 py-3">
+			<header className="border-border flex items-center justify-between px-4 py-3">
 				<div className="flex items-center gap-2">
 					<Badge
 						variant={sessionStatus === "streaming" ? "default" : "secondary"}
