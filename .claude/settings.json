@@ -1,25 +1,50 @@
 {
-  "attribution": {
-    "commit": "🧙🏼 Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>",
-    "pr": "🧙 Generated with assistance from [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"
-  },
-  "permissions": {
-    "allow": [
-      "mcp__ide__getDiagnostics",
-      "Bash(bun:*)",
-      "Bash(find:*)",
-      "Bash(cat:*)",
-      "Bash(grep:*)",
-      "Bash(bunx tsc:*)",
-      "Bash(bun test:*)",
-      "Bash(bun install:*)",
-      "Bash(git checkout:*)",
-      "Bash(git add:*)",
-      "Bash(git commit:*)",
-      "Bash(gh pr:*)"
-    ]
-  },
-  "enabledPlugins": {
-    "code-simplifier@claude-plugins-official": true
-  }
+	"attribution": {
+		"commit": "🧙🏼 Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>",
+		"pr": "🧙 Generated with assistance from [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"
+	},
+	"permissions": {
+		"allow": [
+			"mcp__ide__getDiagnostics",
+			"Bash(bun:*)",
+			"Bash(find:*)",
+			"Bash(cat:*)",
+			"Bash(grep:*)",
+			"Bash(bunx tsc:*)",
+			"Bash(bun test:*)",
+			"Bash(bun install:*)",
+			"Bash(git commit:*)",
+			"Bash(git log:*)",
+			"Bash(git diff:*)",
+			"Bash(git push:*)",
+			"Bash(git status:*)",
+			"Bash(git switch:*)",
+			"Bash(git add:*)",
+			"Bash(gh:*)",
+			"Bash(bunx effect-solutions:*)",
+			"Bash(curl:*)",
+			"Bash(ls:*)",
+			"Bash(bunx biome:*)",
+			"Bash(bunx turbo:*)",
+			"Bash(lsof:*)",
+			"Bash(tree:*)",
+			"Bash(xargs cat:*)",
+			"Bash(xargs:*)",
+			"Bash(npm view:*)",
+			"WebSearch",
+			"WebFetch(domain:www.typeonce.dev)",
+			"WebFetch(domain:effect-ts.github.io)",
+			"WebFetch(domain:github.com)",
+			"WebFetch(domain:v2.tauri.app)",
+			"WebFetch(domain:docs.anthropic.com)",
+			"WebFetch(domain:www.npmjs.com)",
+			"WebFetch(domain:docs.claude.com)",
+			"WebFetch(domain:www.anthropic.com)",
+			"WebFetch(domain:ai-sdk.dev)",
+			"WebFetch(domain:v6.ai-sdk.dev)"
+		]
+	},
+	"enabledPlugins": {
+		"code-simplifier@claude-plugins-official": true
+	}
 }
