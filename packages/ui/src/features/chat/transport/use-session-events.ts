@@ -38,8 +38,8 @@ import {
 	forkWithStreamingClient,
 	onStreamingConnectionEvent,
 	StreamingChatClient,
-} from "@/lib/rpc-websocket-client";
-import { subscriptionManager } from "@/lib/subscription-manager";
+} from "@/features/chat/transport/rpc-websocket-client";
+import { subscriptionManager } from "@/features/chat/transport/subscription-manager";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types

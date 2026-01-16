@@ -1,6 +1,6 @@
 "use client";
 
-import type { Worktree } from "@sandcastle/rpc";
+import type { Worktree } from "@sandcastle/schemas";
 import { IconDots, IconGitBranch, IconTrash } from "@tabler/icons-react";
 import { formatDistanceToNow } from "date-fns";
 import * as React from "react";
@@ -29,7 +29,6 @@ interface SidebarWorktreeItemProps {
 	worktree: Worktree;
 	onSelect: (worktree: Worktree) => void;
 	onDelete: (worktree: Worktree) => void | Promise<void>;
-	isDeleting?: boolean;
 	className?: string;
 }
 
@@ -47,7 +46,6 @@ export function SidebarWorktreeItem({
 	worktree,
 	onSelect,
 	onDelete,
-	isDeleting = false,
 	className,
 }: SidebarWorktreeItemProps) {
 	const location = useLocation();
@@ -109,7 +107,6 @@ export function SidebarWorktreeItem({
 								event.stopPropagation();
 								setIsDialogOpen(true);
 							}}
-							disabled={isDeleting}
 						>
 							<IconTrash className="size-4" />
 							Delete worktree
@@ -128,13 +125,9 @@ export function SidebarWorktreeItem({
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter className="mt-6">
-						<AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-						<AlertDialogAction
-							variant="destructive"
-							onClick={handleDelete}
-							disabled={isDeleting}
-						>
-							{isDeleting ? "Deleting..." : "Delete worktree"}
+						<AlertDialogCancel>Cancel</AlertDialogCancel>
+						<AlertDialogAction variant="destructive" onClick={handleDelete}>
+							Delete worktree
 						</AlertDialogAction>
 					</AlertDialogFooter>
 				</AlertDialogContent>

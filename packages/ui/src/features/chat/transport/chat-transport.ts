@@ -18,7 +18,6 @@
 import type { ChatStreamEvent, SessionEvent } from "@sandcastle/schemas";
 import type { ChatTransport, UIMessage, UIMessageChunk } from "ai";
 import { Cause, Effect, Exit, Fiber, Stream } from "effect";
-
 import {
 	forkWithStreamingClient,
 	getStreamingConnectionState,

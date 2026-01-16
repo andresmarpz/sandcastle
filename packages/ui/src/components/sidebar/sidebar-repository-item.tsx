@@ -1,6 +1,6 @@
 "use client";
 
-import type { Repository, Worktree } from "@sandcastle/rpc";
+import type { Repository, Worktree } from "@sandcastle/schemas";
 import {
 	IconChevronRight,
 	IconDots,
@@ -37,7 +37,6 @@ interface SidebarRepositoryItemProps {
 	isCreatingWorktree?: boolean;
 	onWorktreeSelect: (worktree: Worktree) => void;
 	onWorktreeDelete: (worktree: Worktree) => void | Promise<void>;
-	deletingWorktreeId?: string | null;
 }
 
 export function SidebarRepositoryItem({
@@ -49,7 +48,6 @@ export function SidebarRepositoryItem({
 	isCreatingWorktree = false,
 	onWorktreeSelect,
 	onWorktreeDelete,
-	deletingWorktreeId = null,
 }: SidebarRepositoryItemProps) {
 	const [isOpen, setIsOpen] = React.useState(true);
 
@@ -134,17 +132,15 @@ export function SidebarRepositoryItem({
 						) : null}
 					</SidebarMenuButton>
 				</SidebarMenuItem>
-				{worktrees.length === 0
-					? null
-					: worktrees.map((worktree) => (
-							<SidebarWorktreeItem
-								key={worktree.id}
-								worktree={worktree}
-								onSelect={onWorktreeSelect}
-								onDelete={onWorktreeDelete}
-								isDeleting={deletingWorktreeId === worktree.id}
-							/>
-						))}
+
+				{worktrees.map((worktree) => (
+					<SidebarWorktreeItem
+						key={`sidebar_${worktree.id}`}
+						worktree={worktree}
+						onSelect={onWorktreeSelect}
+						onDelete={onWorktreeDelete}
+					/>
+				))}
 			</CollapsiblePanel>
 		</Collapsible>
 	);
