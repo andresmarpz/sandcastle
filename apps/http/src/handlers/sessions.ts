@@ -14,6 +14,7 @@ import {
 	Turn,
 } from "@sandcastle/storage";
 import { Effect, Layer } from "effect";
+import { SessionHub, SessionHubLive } from "../services/session-hub";
 
 // ─── Error Mapping ───────────────────────────────────────────
 
@@ -95,6 +96,7 @@ const toTurn = (turn: {
 export const SessionRpcHandlers = SessionRpc.toLayer(
 	Effect.gen(function* () {
 		const storage = yield* StorageService;
+		const sessionHub = yield* SessionHub;
 
 		return SessionRpc.of({
 			"session.list": () =>
@@ -139,9 +141,12 @@ export const SessionRpcHandlers = SessionRpc.toLayer(
 					.pipe(Effect.map(toSession), Effect.mapError(mapNotFoundError)),
 
 			"session.delete": (params) =>
-				storage.sessions
-					.delete(params.id)
-					.pipe(Effect.mapError(mapNotFoundError)),
+				Effect.gen(function* () {
+					// Notify subscribers and clean up hub state BEFORE storage deletion
+					yield* sessionHub.deleteSession(params.id);
+					// Delete from storage
+					yield* storage.sessions.delete(params.id);
+				}).pipe(Effect.mapError(mapNotFoundError)),
 
 			"session.touch": (params) =>
 				storage.sessions
@@ -162,4 +167,5 @@ export const SessionRpcHandlers = SessionRpc.toLayer(
 
 export const SessionRpcHandlersLive = SessionRpcHandlers.pipe(
 	Layer.provide(StorageServiceDefault),
+	Layer.provide(SessionHubLive),
 );

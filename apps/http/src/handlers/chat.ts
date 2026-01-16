@@ -1,4 +1,8 @@
-import { ChatRpc, ChatSessionNotFoundRpcError, GetHistoryResult } from "@sandcastle/rpc";
+import {
+	ChatRpc,
+	ChatSessionNotFoundRpcError,
+	GetHistoryResult,
+} from "@sandcastle/rpc";
 import { StorageService, StorageServiceDefault } from "@sandcastle/storage";
 import { Effect, Layer } from "effect";
 import { SessionHub, SessionHubLive } from "../services/session-hub";
@@ -35,7 +39,10 @@ export const ChatRpcHandlers = ChatRpc.toLayer(
 					// Verify session exists
 					yield* storage.sessions.get(params.sessionId).pipe(
 						Effect.mapError(
-							() => new ChatSessionNotFoundRpcError({ sessionId: params.sessionId }),
+							() =>
+								new ChatSessionNotFoundRpcError({
+									sessionId: params.sessionId,
+								}),
 						),
 					);
 
@@ -44,7 +51,10 @@ export const ChatRpcHandlers = ChatRpc.toLayer(
 						.getMessagesSince(params.sessionId, params.afterMessageId)
 						.pipe(
 							Effect.mapError(
-								() => new ChatSessionNotFoundRpcError({ sessionId: params.sessionId }),
+								() =>
+									new ChatSessionNotFoundRpcError({
+										sessionId: params.sessionId,
+									}),
 							),
 						);
 
@@ -60,4 +70,5 @@ export const ChatRpcHandlers = ChatRpc.toLayer(
 
 export const ChatRpcHandlersLive = ChatRpcHandlers.pipe(
 	Layer.provide(SessionHubLive),
+	Layer.provide(StorageServiceDefault),
 );

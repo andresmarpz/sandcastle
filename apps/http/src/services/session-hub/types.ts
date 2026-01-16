@@ -1,17 +1,17 @@
-import type { Fiber, PubSub, Ref } from "effect";
+import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import type {
 	ChatStreamEvent,
 	QueuedMessage,
 	SessionEvent,
 	StreamingStatus,
 } from "@sandcastle/schemas";
-import type { QueryHandle } from "../../agents/claude";
-import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
+import type { Fiber, PubSub, Ref } from "effect";
 import type {
 	MessageAccumulator,
 	SessionMetadata,
 	StreamState,
 } from "../../adapters/claude";
+import type { QueryHandle } from "../../agents/claude";
 
 /**
  * History cursor for tracking last persisted message.

@@ -4,9 +4,12 @@
  * This mock allows tests to control the stream of SDK messages,
  * simulate errors, and verify interactions.
  */
-import type { SDKMessage, SDKResultMessage } from "@anthropic-ai/claude-agent-sdk";
-import { Effect, Layer, Queue, Stream } from "effect";
-import { ClaudeSDKError } from "./errors";
+import type {
+	SDKMessage,
+	SDKResultMessage,
+} from "@anthropic-ai/claude-agent-sdk";
+import { Deferred, Effect, Layer, Option, Queue, Stream } from "effect";
+import type { ClaudeSDKError } from "./errors";
 import { ClaudeSDKService } from "./service";
 import type { QueryHandle, QueryOptions } from "./types";
 
@@ -95,7 +98,12 @@ export const MockMessages = {
 		isError = false,
 	): SDKMessage =>
 		MockMessages.user([
-			{ type: "tool_result", tool_use_id: toolUseId, content, is_error: isError },
+			{
+				type: "tool_result",
+				tool_use_id: toolUseId,
+				content,
+				is_error: isError,
+			},
 		]),
 
 	result: (
@@ -148,6 +156,11 @@ interface MockState {
 	}>;
 }
 
+type QueueItem =
+	| { _tag: "message"; message: SDKMessage }
+	| { _tag: "complete" }
+	| { _tag: "fail"; error: ClaudeSDKError };
+
 /**
  * Creates a mock ClaudeSDKService with controllable streams
  *
@@ -176,44 +189,51 @@ export function createMockClaudeSDKService(): {
 	const service: typeof ClaudeSDKService.Service = {
 		query: (prompt, options) =>
 			Effect.gen(function* () {
-				// Create a bounded queue for controlling the stream
-				const messageQueue = yield* Queue.bounded<
-					| { _tag: "message"; message: SDKMessage }
-					| { _tag: "complete" }
-					| { _tag: "fail"; error: ClaudeSDKError }
-				>(100);
+				// Create an unbounded queue for controlling the stream
+				const messageQueue = yield* Queue.unbounded<QueueItem>();
 
 				let interrupted = false;
 
 				const controller: MockQueryController = {
-					emit: (message) => Queue.offer(messageQueue, { _tag: "message", message }),
+					emit: (message) =>
+						Queue.offer(messageQueue, { _tag: "message", message }).pipe(
+							Effect.asVoid,
+						),
 					emitMany: (messages) =>
 						Effect.forEach(messages, (message) =>
 							Queue.offer(messageQueue, { _tag: "message", message }),
 						).pipe(Effect.asVoid),
-					complete: () => Queue.offer(messageQueue, { _tag: "complete" }),
-					fail: (error) => Queue.offer(messageQueue, { _tag: "fail", error }),
+					complete: () =>
+						Queue.offer(messageQueue, { _tag: "complete" }).pipe(Effect.asVoid),
+					fail: (error) =>
+						Queue.offer(messageQueue, { _tag: "fail", error }).pipe(
+							Effect.asVoid,
+						),
 					wasInterrupted: () => interrupted,
 				};
 
 				state.queries.push({ prompt, options, controller });
 
-				// Create stream from queue
-				const stream = Stream.repeatEffectOption(
-					Queue.take(messageQueue).pipe(
-						Effect.flatMap((item) => {
-							switch (item._tag) {
-								case "message":
-									return Effect.succeed(item.message);
-								case "complete":
-									return Effect.fail(new Option.None());
-								case "fail":
-									return Effect.fail(new Option.Some(item.error));
-							}
-						}),
-						Effect.catchTag("None", () => Effect.fail(Option.none())),
-					),
-				);
+				// Create stream from queue using Effect's repeatEffectOption pattern
+				const stream: Stream.Stream<SDKMessage, ClaudeSDKError> =
+					Stream.repeatEffectOption(
+						Queue.take(messageQueue).pipe(
+							Effect.flatMap(
+								(
+									item,
+								): Effect.Effect<SDKMessage, Option.Option<ClaudeSDKError>> => {
+									switch (item._tag) {
+										case "message":
+											return Effect.succeed(item.message);
+										case "complete":
+											return Effect.fail(Option.none());
+										case "fail":
+											return Effect.fail(Option.some(item.error));
+									}
+								},
+							),
+						),
+					);
 
 				const handle: QueryHandle = {
 					stream,
@@ -245,16 +265,15 @@ export function createMockClaudeSDKService(): {
 				waited += interval;
 			}
 
-			throw new Error(`Query at index ${index} was not made within ${maxWait}ms`);
+			throw new Error(
+				`Query at index ${index} was not made within ${maxWait}ms`,
+			);
 		},
 		getQueries: () =>
 			state.queries.map(({ prompt, options }) => ({ prompt, options })),
 		getQueryCount: () => state.queries.length,
 	};
 }
-
-// Need Option for the stream implementation
-import { Option } from "effect";
 
 /**
  * Create a Layer for the mock service

@@ -34,6 +34,35 @@ import { SessionHub, type SessionHubInterface } from "./service";
 import type { HistoryCursor as HistoryCursorType, SessionState } from "./types";
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Structured Logging
+// ─────────────────────────────────────────────────────────────────────────────
+
+type LogLevel = "INFO" | "WARN" | "ERROR";
+
+interface LogContext {
+	sessionId?: string;
+	turnId?: string;
+	error?: { type: string; message: string };
+	reason?: string;
+	[key: string]: unknown;
+}
+
+const structuredLog = (
+	level: LogLevel,
+	event: string,
+	context: LogContext = {},
+): void => {
+	const logEntry = {
+		timestamp: new Date().toISOString(),
+		level,
+		event,
+		...context,
+	};
+	const logFn = level === "ERROR" ? console.error : console.log;
+	logFn(JSON.stringify(logEntry));
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // State Factory
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -193,6 +222,13 @@ export const makeSessionHub = Effect.gen(function* () {
 		reason: "completed" | "interrupted" | "error",
 	): Effect.Effect<void, never> =>
 		Effect.gen(function* () {
+			// Log turn completion with reason
+			structuredLog("INFO", "turn_completed", {
+				sessionId,
+				turnId,
+				reason,
+			});
+
 			const accumulator = yield* Ref.get(session.accumulatorRef);
 
 			// 1. Persist accumulated messages
@@ -323,9 +359,23 @@ export const makeSessionHub = Effect.gen(function* () {
 			yield* onStreamComplete(session, turnId, sessionId, "completed");
 		}).pipe(
 			// Handle stream errors
-			Effect.catchAll(() =>
+			Effect.catchAll((error) =>
 				Effect.gen(function* () {
 					const turnId = yield* Ref.get(session.activeTurnIdRef);
+
+					// Log stream error with context
+					structuredLog("ERROR", "stream_error", {
+						sessionId,
+						turnId: turnId ?? undefined,
+						error: {
+							type:
+								error instanceof Error
+									? error.constructor.name
+									: "UnknownError",
+							message: error instanceof Error ? error.message : String(error),
+						},
+					});
+
 					if (turnId) {
 						yield* onStreamComplete(session, turnId, sessionId, "error");
 					} else {
@@ -422,6 +472,18 @@ export const makeSessionHub = Effect.gen(function* () {
 					permissionMode: "bypassPermissions",
 				})
 				.pipe(
+					Effect.tapError((e) =>
+						Effect.sync(() => {
+							structuredLog("ERROR", "sdk_initialization_error", {
+								sessionId,
+								turnId,
+								error: {
+									type: e.constructor.name,
+									message: e.message,
+								},
+							});
+						}),
+					),
 					Effect.mapError(
 						(e) =>
 							new ChatOperationRpcError({
@@ -553,6 +615,12 @@ export const makeSessionHub = Effect.gen(function* () {
 				const queryHandle = yield* Ref.get(session.queryHandleRef);
 				const turnId = yield* Ref.get(session.activeTurnIdRef);
 
+				// Log interrupt operation
+				structuredLog("WARN", "session_interrupted", {
+					sessionId,
+					turnId: turnId ?? undefined,
+				});
+
 				// 2. Interrupt Claude SDK (graceful)
 				if (queryHandle) {
 					yield* queryHandle.interrupt.pipe(Effect.ignore);
@@ -618,12 +686,127 @@ export const makeSessionHub = Effect.gen(function* () {
 					historyCursor: new HistoryCursor(historyCursor),
 				});
 			}),
+
+		deleteSession: (sessionId) =>
+			Effect.gen(function* () {
+				// Check if session exists in hub (if not, this is a no-op)
+				const sessions = yield* Ref.get(sessionsRef);
+				const session = sessions.get(sessionId);
+
+				if (!session) {
+					// Session not in hub - nothing to clean up
+					return;
+				}
+
+				// 1. Broadcast SessionDeleted to all subscribers
+				yield* broadcast(session, {
+					_tag: "SessionDeleted",
+					sessionId,
+				});
+
+				// 2. Interrupt any active stream
+				const status = yield* Ref.get(session.statusRef);
+				if (status === "streaming") {
+					const fiber = yield* Ref.get(session.fiberRef);
+					const queryHandle = yield* Ref.get(session.queryHandleRef);
+
+					// Interrupt Claude SDK (graceful)
+					if (queryHandle) {
+						yield* queryHandle.interrupt.pipe(Effect.ignore);
+					}
+
+					// Interrupt the processing fiber
+					if (fiber) {
+						yield* Fiber.interrupt(fiber);
+					}
+				}
+
+				// 3. Remove session from in-memory map
+				yield* Ref.update(sessionsRef, (m) => {
+					const updated = new Map(m);
+					updated.delete(sessionId);
+					return updated;
+				});
+			}),
+
+		shutdown: () =>
+			Effect.gen(function* () {
+				structuredLog("INFO", "session_hub_shutdown_started", {});
+
+				const sessions = yield* Ref.get(sessionsRef);
+				const sessionIds = Array.from(sessions.keys());
+				let interruptedCount = 0;
+
+				structuredLog("INFO", "session_hub_shutdown_sessions", {
+					totalSessions: sessionIds.length,
+				});
+
+				// Interrupt all streaming sessions in parallel with timeout protection
+				const interruptEffects = sessionIds.map((sessionId) =>
+					Effect.gen(function* () {
+						const session = sessions.get(sessionId);
+						if (!session) return false;
+
+						const status = yield* Ref.get(session.statusRef);
+						if (status !== "streaming") return false;
+
+						// Get the running fiber and query handle
+						const fiber = yield* Ref.get(session.fiberRef);
+						const queryHandle = yield* Ref.get(session.queryHandleRef);
+						const turnId = yield* Ref.get(session.activeTurnIdRef);
+
+						structuredLog("INFO", "session_hub_shutdown_interrupting", {
+							sessionId,
+							turnId: turnId ?? undefined,
+						});
+
+						// Interrupt Claude SDK (graceful)
+						if (queryHandle) {
+							yield* queryHandle.interrupt.pipe(Effect.ignore);
+						}
+
+						// Interrupt the processing fiber
+						if (fiber) {
+							yield* Fiber.interrupt(fiber);
+						}
+
+						// Save partial progress
+						if (turnId) {
+							yield* onStreamComplete(
+								session,
+								turnId,
+								sessionId,
+								"interrupted",
+							);
+						}
+
+						return true;
+					}).pipe(
+						// Add timeout protection per session (5 seconds)
+						Effect.timeout("5 seconds"),
+						Effect.catchAll(() => Effect.succeed(false)),
+					),
+				);
+
+				const results = yield* Effect.all(interruptEffects, {
+					concurrency: "unbounded",
+				});
+				interruptedCount = results.filter((r) => r === true).length;
+
+				structuredLog("INFO", "session_hub_shutdown_complete", {
+					interruptedSessions: interruptedCount,
+					totalSessions: sessionIds.length,
+				});
+			}),
 	};
+
+	// Register shutdown as a finalizer - runs when the scope closes (server shutdown)
+	yield* Effect.addFinalizer(() => service.shutdown());
 
 	return service;
 });
 
-export const SessionHubLive = Layer.effect(SessionHub, makeSessionHub).pipe(
+export const SessionHubLive = Layer.scoped(SessionHub, makeSessionHub).pipe(
 	Layer.provide(StorageServiceDefault),
 	Layer.provide(ClaudeSDKServiceLive),
 );
