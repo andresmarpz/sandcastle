@@ -1,5 +1,6 @@
 "use client";
 
+import { Result, useAtomValue } from "@effect-atom/atom-react";
 import type { Repository, Worktree } from "@sandcastle/schemas";
 import {
 	IconChevronRight,
@@ -10,7 +11,9 @@ import {
 	IconPlus,
 	IconTrash,
 } from "@tabler/icons-react";
+import * as Option from "effect/Option";
 import * as React from "react";
+import { worktreeListByRepositoryAtomFamily } from "@/api/worktree-atoms";
 import { Button } from "@/components/button";
 import {
 	Collapsible,
@@ -24,32 +27,36 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/dropdown-menu";
 import { SidebarMenuButton, SidebarMenuItem } from "@/components/sidebar";
+import { Skeleton } from "@/components/skeleton";
 import { Spinner } from "@/components/spinner";
 import { cn } from "@/lib/utils";
 import { SidebarWorktreeItem } from "./sidebar-worktree-item";
 
 interface SidebarRepositoryItemProps {
 	repository: Repository;
-	worktrees: Worktree[];
-	onPin: () => void;
-	onDelete: () => void;
-	onCreateWorktree: () => void;
-	isCreatingWorktree?: boolean;
-	onWorktreeSelect: (worktree: Worktree) => void;
-	onWorktreeDelete: (worktree: Worktree) => void | Promise<void>;
 }
 
 export function SidebarRepositoryItem({
 	repository,
-	worktrees,
-	onPin,
-	onDelete,
-	onCreateWorktree,
-	isCreatingWorktree = false,
-	onWorktreeSelect,
-	onWorktreeDelete,
 }: SidebarRepositoryItemProps) {
 	const [isOpen, setIsOpen] = React.useState(true);
+	const worktreesResult = useAtomValue(
+		worktreeListByRepositoryAtomFamily(repository.id),
+	);
+	const worktrees = React.useMemo(
+		() => Option.getOrElse(Result.value(worktreesResult), () => []),
+		[worktreesResult],
+	);
+	const hasWorktreesCache = Option.isSome(Result.value(worktreesResult));
+
+	function handleRepositoryDelete() {}
+	function handleRepositoryPin() {}
+
+	function handleWorktreeCreate() {}
+	function handleWorktreeSelect() {}
+	function handleWorktreeDelete() {}
+
+	const isCreatingWorktree = false;
 
 	return (
 		<Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -92,7 +99,7 @@ export function SidebarRepositoryItem({
 						<DropdownMenuItem
 							onClick={(e) => {
 								e.stopPropagation();
-								onPin();
+								handleRepositoryPin();
 							}}
 						>
 							{repository.pinned ? (
@@ -104,9 +111,9 @@ export function SidebarRepositoryItem({
 						</DropdownMenuItem>
 						<DropdownMenuItem
 							variant="destructive"
-							onClick={(e) => {
+							onSelect={(e) => {
 								e.stopPropagation();
-								onDelete();
+								handleRepositoryDelete();
 							}}
 						>
 							<IconTrash className="size-4" />
@@ -120,7 +127,7 @@ export function SidebarRepositoryItem({
 				<SidebarMenuItem>
 					<SidebarMenuButton
 						className="w-full justify-start gap-2 px-2 text-muted-foreground"
-						onClick={onCreateWorktree}
+						onClick={handleWorktreeCreate}
 						disabled={isCreatingWorktree}
 					>
 						<IconPlus className="text-muted-foreground size-3 shrink-0" />
@@ -133,15 +140,62 @@ export function SidebarRepositoryItem({
 					</SidebarMenuButton>
 				</SidebarMenuItem>
 
-				{worktrees.map((worktree) => (
-					<SidebarWorktreeItem
-						key={`sidebar_${worktree.id}`}
-						worktree={worktree}
-						onSelect={onWorktreeSelect}
-						onDelete={onWorktreeDelete}
-					/>
-				))}
+				{Result.matchWithWaiting(worktreesResult, {
+					onWaiting: () =>
+						hasWorktreesCache ? (
+							<WorktreeList worktrees={worktrees} />
+						) : (
+							<WorktreeListSkeleton />
+						),
+					onError: () =>
+						hasWorktreesCache ? (
+							<WorktreeList worktrees={worktrees} />
+						) : (
+							<WorktreeListError />
+						),
+					onDefect: () =>
+						hasWorktreesCache ? (
+							<WorktreeList worktrees={worktrees} />
+						) : (
+							<WorktreeListError />
+						),
+					onSuccess: () => <WorktreeList worktrees={worktrees} />,
+				})}
 			</CollapsiblePanel>
 		</Collapsible>
+	);
+}
+
+interface WorktreeListProps {
+	worktrees: readonly Worktree[];
+}
+
+function WorktreeList({ worktrees }: WorktreeListProps) {
+	return (
+		<>
+			{worktrees.map((worktree) => (
+				<SidebarWorktreeItem
+					key={`sidebar_${worktree.id}`}
+					worktree={worktree}
+				/>
+			))}
+		</>
+	);
+}
+
+function WorktreeListSkeleton() {
+	return (
+		<div className="space-y-1 px-2 py-1">
+			<Skeleton className="h-6 w-full" />
+			<Skeleton className="h-6 w-full" />
+		</div>
+	);
+}
+
+function WorktreeListError() {
+	return (
+		<div className="text-destructive text-xs px-2 py-1">
+			Failed to load worktrees
+		</div>
 	);
 }

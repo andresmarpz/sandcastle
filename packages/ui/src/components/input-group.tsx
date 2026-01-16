@@ -1,3 +1,4 @@
+/** biome-ignore-all lint/a11y/noNoninteractiveElementInteractions: library, it's okay */
 import { cva, type VariantProps } from "class-variance-authority";
 import type * as React from "react";
 import { Button } from "@/components/button";

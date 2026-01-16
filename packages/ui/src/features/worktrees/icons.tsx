@@ -1,3 +1,4 @@
+/** biome-ignore-all lint/a11y/noSvgWithoutTitle: TODO */
 import type * as React from "react";
 
 type IconProps = React.ComponentProps<"svg">;
