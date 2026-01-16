@@ -17,19 +17,21 @@ export default function Layout() {
 				<BrowserRouter>
 					<SidebarProvider>
 						<Sidebar />
-						<SidebarInset className="relative">
+						<SidebarInset className="relative h-screen overflow-hidden">
 							<div
 								data-tauri-drag-region
-								className="border-border flex-row items-center justify-between border-b h-12 min-h-12 bg-sidebar sticky top-0 z-20"
+								className="border-border flex-row items-center justify-between border-b h-12 min-h-12 bg-sidebar flex-shrink-0"
 							/>
 
-							<Routes>
-								<Route path="/" element={<HomePage />} />
-								<Route
-									path="/worktree/:worktreeId"
-									element={<WorktreePage />}
-								/>
-							</Routes>
+							<div className="flex-1 min-h-0 overflow-hidden">
+								<Routes>
+									<Route path="/" element={<HomePage />} />
+									<Route
+										path="/worktree/:worktreeId"
+										element={<WorktreePage />}
+									/>
+								</Routes>
+							</div>
 						</SidebarInset>
 					</SidebarProvider>
 				</BrowserRouter>
