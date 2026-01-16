@@ -42,7 +42,6 @@ export class GetHistoryResult extends Schema.Class<GetHistoryResult>(
 	"GetHistoryResult",
 )({
 	messages: Schema.Array(ChatMessage),
-	hasMore: Schema.Boolean,
 }) {}
 
 // ─────────────────────────────────────────────────────────────────────────────
