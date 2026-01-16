@@ -4,9 +4,9 @@ import type {
 	SDKResultMessage,
 	SDKUserMessage,
 } from "@anthropic-ai/claude-agent-sdk";
-import {
-	type ChatStreamEvent,
-	type FinishReason,
+import type {
+	ChatStreamEvent,
+	FinishReason,
 	StreamEventFinish,
 	StreamEventReasoningDelta,
 	StreamEventReasoningEnd,
@@ -52,13 +52,11 @@ export function processMessage(
 				newState = setSessionId(newState, message.session_id);
 				const messageId = config.generateId();
 				newState = setMessageId(newState, messageId);
-				events.push(
-					new StreamEventStart({
-						type: "start",
-						messageId,
-						claudeSessionId: message.session_id,
-					}),
-				);
+				events.push({
+					type: "start",
+					messageId,
+					claudeSessionId: message.session_id,
+				} satisfies StreamEventStart);
 			}
 			break;
 
@@ -99,13 +97,11 @@ export function processMessage(
 						}
 					: undefined;
 
-			events.push(
-				new StreamEventFinish({
-					type: "finish",
-					finishReason,
-					metadata,
-				}),
-			);
+			events.push({
+				type: "finish",
+				finishReason,
+				metadata,
+			} satisfies StreamEventFinish);
 			break;
 		}
 
@@ -129,13 +125,11 @@ function processAssistantMessage(
 	// If no message started yet, start one
 	if (!newState.messageId) {
 		newState = setMessageId(newState, message.uuid);
-		events.push(
-			new StreamEventStart({
-				type: "start",
-				messageId: message.uuid,
-				claudeSessionId: newState.sessionId ?? undefined,
-			}),
-		);
+		events.push({
+			type: "start",
+			messageId: message.uuid,
+			claudeSessionId: newState.sessionId ?? undefined,
+		} satisfies StreamEventStart);
 	}
 
 	// Process each content block
@@ -143,15 +137,13 @@ function processAssistantMessage(
 		if (block.type === "text" && "text" in block && block.text) {
 			// For non-streaming mode, emit complete text as single delta
 			const textId = config.generateId();
-			events.push(new StreamEventTextStart({ type: "text-start", id: textId }));
-			events.push(
-				new StreamEventTextDelta({
-					type: "text-delta",
-					id: textId,
-					delta: block.text,
-				}),
-			);
-			events.push(new StreamEventTextEnd({ type: "text-end", id: textId }));
+			events.push({ type: "text-start", id: textId } satisfies StreamEventTextStart);
+			events.push({
+				type: "text-delta",
+				id: textId,
+				delta: block.text,
+			} satisfies StreamEventTextDelta);
+			events.push({ type: "text-end", id: textId } satisfies StreamEventTextEnd);
 		} else if (
 			block.type === "tool_use" &&
 			"id" in block &&
@@ -161,43 +153,33 @@ function processAssistantMessage(
 			const toolInput = block.input as Record<string, unknown>;
 
 			// Emit tool input events
-			events.push(
-				new StreamEventToolInputStart({
-					type: "tool-input-start",
-					toolCallId: block.id,
-					toolName: block.name,
-				}),
-			);
-			events.push(
-				new StreamEventToolInputAvailable({
-					type: "tool-input-available",
-					toolCallId: block.id,
-					toolName: block.name,
-					input: toolInput,
-				}),
-			);
+			events.push({
+				type: "tool-input-start",
+				toolCallId: block.id,
+				toolName: block.name,
+			} satisfies StreamEventToolInputStart);
+			events.push({
+				type: "tool-input-available",
+				toolCallId: block.id,
+				toolName: block.name,
+				input: toolInput,
+			} satisfies StreamEventToolInputAvailable);
 
 			// Track the tool call in state
 			newState = registerToolCall(newState, block.id, block.name, toolInput);
 		} else if (block.type === "thinking" && "thinking" in block) {
 			// Emit reasoning events for thinking blocks
 			const reasoningId = config.generateId();
-			events.push(
-				new StreamEventReasoningStart({
-					type: "reasoning-start",
-					id: reasoningId,
-				}),
-			);
-			events.push(
-				new StreamEventReasoningDelta({
-					type: "reasoning-delta",
-					id: reasoningId,
-					delta: block.thinking,
-				}),
-			);
-			events.push(
-				new StreamEventReasoningEnd({ type: "reasoning-end", id: reasoningId }),
-			);
+			events.push({
+				type: "reasoning-start",
+				id: reasoningId,
+			} satisfies StreamEventReasoningStart);
+			events.push({
+				type: "reasoning-delta",
+				id: reasoningId,
+				delta: block.thinking,
+			} satisfies StreamEventReasoningDelta);
+			events.push({ type: "reasoning-end", id: reasoningId } satisfies StreamEventReasoningEnd);
 		}
 	}
 
@@ -237,22 +219,18 @@ function processUserMessage(
 					typeof block.content === "string"
 						? block.content
 						: JSON.stringify(block.content);
-				events.push(
-					new StreamEventToolOutputError({
-						type: "tool-output-error",
-						toolCallId: block.tool_use_id,
-						errorText,
-					}),
-				);
+				events.push({
+					type: "tool-output-error",
+					toolCallId: block.tool_use_id,
+					errorText,
+				} satisfies StreamEventToolOutputError);
 			} else {
 				// Emit success event for completed tool execution
-				events.push(
-					new StreamEventToolOutputAvailable({
-						type: "tool-output-available",
-						toolCallId: block.tool_use_id,
-						output: block.content,
-					}),
-				);
+				events.push({
+					type: "tool-output-available",
+					toolCallId: block.tool_use_id,
+					output: block.content,
+				} satisfies StreamEventToolOutputAvailable);
 			}
 
 			// Update state with tool result

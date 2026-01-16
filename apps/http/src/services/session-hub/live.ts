@@ -6,13 +6,12 @@ import {
 	InterruptResult,
 	SendMessageResult,
 } from "@sandcastle/rpc";
-import {
-	type ChatMessage,
-	type ChatStreamEvent,
-	HistoryCursor,
-	type MessagePart,
+import type {
+	ChatMessage,
+	ChatStreamEvent,
+	MessagePart,
 	QueuedMessage,
-	type SessionEvent,
+	SessionEvent,
 	SessionSnapshot,
 } from "@sandcastle/schemas";
 import { StorageService, StorageServiceDefault } from "@sandcastle/storage";
@@ -31,7 +30,11 @@ import {
 	type QueryHandle,
 } from "../../agents/claude";
 import { SessionHub, type SessionHubInterface } from "./service";
-import type { HistoryCursor as HistoryCursorType, SessionState } from "./types";
+import type {
+	ActiveTurnContext,
+	HistoryCursor as HistoryCursorType,
+	SessionState,
+} from "./types";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Structured Logging
@@ -88,6 +91,9 @@ const createSessionState = (
 		> | null>(null);
 		const streamStateRef = yield* Ref.make<StreamState>(createStreamState());
 		const claudeSessionIdRef = yield* Ref.make<string | null>(null);
+		const activeTurnContextRef = yield* Ref.make<ActiveTurnContext | null>(
+			null,
+		);
 
 		return {
 			pubsub,
@@ -101,6 +107,7 @@ const createSessionState = (
 			accumulatorRef,
 			streamStateRef,
 			claudeSessionIdRef,
+			activeTurnContextRef,
 		} satisfies SessionState;
 	});
 
@@ -148,6 +155,8 @@ export const makeSessionHub = Effect.gen(function* () {
 					: undefined,
 			);
 
+			structuredLog("INFO", "get_or_create_result", { cursor, newState });
+
 			// Atomically add to map (check again in case of race)
 			const result = yield* Ref.modify(sessionsRef, (m) => {
 				const raceExisting = m.get(sessionId);
@@ -165,7 +174,17 @@ export const makeSessionHub = Effect.gen(function* () {
 	// ─── Helper: Broadcast Event ─────────────────────────────────────────────
 
 	const broadcast = (session: SessionState, event: SessionEvent) =>
-		PubSub.publish(session.pubsub, event);
+		Effect.gen(function* () {
+			structuredLog("INFO", "broadcast_publishing", {
+				eventTag: event._tag,
+			});
+			const result = yield* PubSub.publish(session.pubsub, event);
+			structuredLog("INFO", "broadcast_published", {
+				eventTag: event._tag,
+				result,
+			});
+			return result;
+		});
 
 	// ─── Helper: Reset Session to Idle ───────────────────────────────────────
 
@@ -178,6 +197,7 @@ export const makeSessionHub = Effect.gen(function* () {
 			Ref.set(session.queryHandleRef, null),
 			Ref.set(session.accumulatorRef, null),
 			Ref.set(session.streamStateRef, createStreamState()),
+			Ref.set(session.activeTurnContextRef, null),
 		]);
 
 	// ─── Helper: Auto-Dequeue ────────────────────────────────────────────────
@@ -247,7 +267,25 @@ export const makeSessionHub = Effect.gen(function* () {
 								metadata: msg.metadata,
 							})),
 						)
-						.pipe(Effect.catchAll(() => Effect.succeed([])));
+						.pipe(
+							Effect.catchAll((error) =>
+								Effect.sync(() => {
+									structuredLog("ERROR", "messages_persist_failed", {
+										sessionId,
+										turnId,
+										error: {
+											type:
+												error instanceof Error
+													? error.constructor.name
+													: "UnknownError",
+											message:
+												error instanceof Error ? error.message : String(error),
+										},
+									});
+									return [];
+								}),
+							),
+						);
 
 					// 2. Update history cursor
 					const lastMessage = messages[messages.length - 1];
@@ -305,16 +343,46 @@ export const makeSessionHub = Effect.gen(function* () {
 		queryHandle: QueryHandle,
 		turnId: string,
 		sessionId: string,
-	): Effect.Effect<void, never> =>
-		Effect.gen(function* () {
+	): Effect.Effect<void, never> => {
+		// Sync log to verify function is called
+		structuredLog("INFO", "process_stream_effect_created", {
+			sessionId,
+			turnId,
+		});
+
+		return Effect.gen(function* () {
 			const adapterConfig = { generateId: () => crypto.randomUUID() };
+
+			structuredLog("INFO", "process_stream_started", {
+				sessionId,
+				turnId,
+			});
+
+			let messageCount = 0;
 
 			// Process SDK stream
 			yield* queryHandle.stream.pipe(
 				Stream.tap((message: SDKMessage) =>
 					Effect.gen(function* () {
+						messageCount++;
+						structuredLog("INFO", "sdk_message_received", {
+							sessionId,
+							turnId,
+							messageCount,
+							messageType: message.type,
+							messageSubtype:
+								"subtype" in message ? (message.subtype as string) : undefined,
+						});
+
 						const accumulator = yield* Ref.get(session.accumulatorRef);
-						if (!accumulator) return;
+						if (!accumulator) {
+							structuredLog("WARN", "accumulator_missing", {
+								sessionId,
+								turnId,
+								messageCount,
+							});
+							return;
+						}
 
 						const currentState = yield* Ref.get(session.streamStateRef);
 
@@ -326,6 +394,14 @@ export const makeSessionHub = Effect.gen(function* () {
 							accumulator,
 						);
 
+						structuredLog("INFO", "adapter_processed", {
+							sessionId,
+							turnId,
+							messageCount,
+							eventsGenerated: events.length,
+							eventTypes: events.map((e) => e.type),
+						});
+
 						yield* Ref.set(session.streamStateRef, newState);
 
 						// Update Claude session ID if available
@@ -335,6 +411,11 @@ export const makeSessionHub = Effect.gen(function* () {
 							message.subtype === "init" &&
 							"session_id" in message
 						) {
+							structuredLog("INFO", "claude_session_id_captured", {
+								sessionId,
+								turnId,
+								claudeSessionId: message.session_id as string,
+							});
 							yield* Ref.set(
 								session.claudeSessionIdRef,
 								message.session_id as string,
@@ -355,18 +436,32 @@ export const makeSessionHub = Effect.gen(function* () {
 				Stream.runDrain,
 			);
 
+			structuredLog("INFO", "process_stream_completed", {
+				sessionId,
+				turnId,
+				totalMessages: messageCount,
+			});
+
 			// Stream completed successfully
 			yield* onStreamComplete(session, turnId, sessionId, "completed");
 		}).pipe(
+			Effect.onInterrupt(() =>
+				Effect.sync(() => {
+					structuredLog("WARN", "process_stream_fiber_interrupted", {
+						sessionId,
+						turnId,
+					});
+				}),
+			),
 			// Handle stream errors
 			Effect.catchAll((error) =>
 				Effect.gen(function* () {
-					const turnId = yield* Ref.get(session.activeTurnIdRef);
+					const activeTurnId = yield* Ref.get(session.activeTurnIdRef);
 
 					// Log stream error with context
 					structuredLog("ERROR", "stream_error", {
 						sessionId,
-						turnId: turnId ?? undefined,
+						turnId: activeTurnId ?? undefined,
 						error: {
 							type:
 								error instanceof Error
@@ -375,15 +470,20 @@ export const makeSessionHub = Effect.gen(function* () {
 							message: error instanceof Error ? error.message : String(error),
 						},
 					});
+					// Log stack trace separately for debugging
+					if (error instanceof Error && error.stack) {
+						console.error("Stack trace:", error.stack);
+					}
 
-					if (turnId) {
-						yield* onStreamComplete(session, turnId, sessionId, "error");
+					if (activeTurnId) {
+						yield* onStreamComplete(session, activeTurnId, sessionId, "error");
 					} else {
 						yield* resetToIdle(session);
 					}
 				}),
 			),
 		);
+	};
 
 	// ─── Helper: Start Streaming ─────────────────────────────────────────────
 
@@ -395,16 +495,10 @@ export const makeSessionHub = Effect.gen(function* () {
 		parts?: readonly MessagePart[],
 	): Effect.Effect<SendMessageResult, ChatOperationRpcError> =>
 		Effect.gen(function* () {
-			const turnId = crypto.randomUUID();
 			const messageId = crypto.randomUUID();
 
-			yield* Ref.set(session.statusRef, "streaming");
-			yield* Ref.set(session.activeTurnIdRef, turnId);
-			yield* Ref.set(session.bufferRef, []);
-			yield* Ref.set(session.streamStateRef, createStreamState());
-
-			// 1. Create turn in storage
-			yield* storage.turns.create({ sessionId }).pipe(
+			// 1. Create turn in storage first to get the actual turn ID
+			const turn = yield* storage.turns.create({ sessionId }).pipe(
 				Effect.mapError(
 					(e) =>
 						new ChatOperationRpcError({
@@ -413,6 +507,20 @@ export const makeSessionHub = Effect.gen(function* () {
 						}),
 				),
 			);
+			const turnId = turn.id;
+
+			structuredLog("INFO", "start_streaming_begin", {
+				sessionId,
+				turnId,
+				messageId,
+				clientMessageId,
+				contentLength: content.length,
+			});
+
+			yield* Ref.set(session.statusRef, "streaming");
+			yield* Ref.set(session.activeTurnIdRef, turnId);
+			yield* Ref.set(session.bufferRef, []);
+			yield* Ref.set(session.streamStateRef, createStreamState());
 
 			// 2. Persist user message
 			yield* storage.chatMessages
@@ -441,6 +549,15 @@ export const makeSessionHub = Effect.gen(function* () {
 				_tag: "SessionStarted",
 				turnId,
 				messageId,
+			});
+
+			// 3b. Store turn context for late subscriber catch-up
+			yield* Ref.set(session.activeTurnContextRef, {
+				turnId,
+				messageId,
+				content,
+				clientMessageId,
+				...(parts && parts.length > 0 ? { parts } : {}),
 			});
 
 			// 4. Get worktree path for Claude SDK
@@ -495,6 +612,12 @@ export const makeSessionHub = Effect.gen(function* () {
 
 			yield* Ref.set(session.queryHandleRef, queryHandle);
 
+			structuredLog("INFO", "claude_sdk_query_started", {
+				sessionId,
+				turnId,
+				resumeSessionId: claudeSessionId ?? undefined,
+			});
+
 			// 6. Create accumulator for persistence
 			const accumulator = ClaudeCodeAgentAdapter.createAccumulator({
 				generateId: () => crypto.randomUUID(),
@@ -502,11 +625,22 @@ export const makeSessionHub = Effect.gen(function* () {
 			});
 			yield* Ref.set(session.accumulatorRef, accumulator);
 
-			// 7. Fork stream processing fiber
-			const fiber = yield* Effect.fork(
+			// 7. Fork stream processing fiber (use forkDaemon so it's not tied to request scope)
+			structuredLog("INFO", "forking_stream_fiber", {
+				sessionId,
+				turnId,
+			});
+
+			const fiber = yield* Effect.forkDaemon(
 				processStream(session, queryHandle, turnId, sessionId),
 			);
 			yield* Ref.set(session.fiberRef, fiber);
+
+			structuredLog("INFO", "stream_fiber_forked", {
+				sessionId,
+				turnId,
+				fiberId: fiber.id().toString(),
+			});
 
 			return new SendMessageResult({
 				status: "started",
@@ -519,7 +653,15 @@ export const makeSessionHub = Effect.gen(function* () {
 	const service: SessionHubInterface = {
 		sendMessage: (sessionId, content, clientMessageId, parts) =>
 			Effect.gen(function* () {
+				structuredLog("INFO", "send_message_begin", {
+					sessionId,
+					clientMessageId,
+					contentLength: content.length,
+				});
+
 				const session = yield* getOrCreateSession(sessionId);
+
+				structuredLog("INFO", "send_message_session_acquired", { sessionId });
 
 				// Atomic status check
 				const wasStreaming = yield* Ref.modify(session.statusRef, (status) => {
@@ -530,15 +672,20 @@ export const makeSessionHub = Effect.gen(function* () {
 					return [false, status] as const;
 				});
 
+				structuredLog("INFO", "send_message_status_check", {
+					sessionId,
+					wasStreaming,
+				});
+
 				if (wasStreaming) {
 					// Queue the message
-					const queuedMessage = new QueuedMessage({
+					const queuedMessage: QueuedMessage = {
 						id: crypto.randomUUID(),
 						content,
 						parts: parts ? [...parts] : undefined,
 						queuedAt: new Date().toISOString(),
 						clientMessageId,
-					});
+					};
 
 					yield* Ref.update(session.queueRef, (q) => [...q, queuedMessage]);
 
@@ -566,7 +713,11 @@ export const makeSessionHub = Effect.gen(function* () {
 
 		subscribe: (sessionId) =>
 			Effect.gen(function* () {
+				structuredLog("INFO", "subscribe_begin", { sessionId });
+
 				const session = yield* getOrCreateSession(sessionId);
+
+				structuredLog("INFO", "subscribe_session_acquired", { sessionId });
 
 				// Create mailbox for this subscriber
 				const mailbox = yield* Mailbox.make<SessionEvent>();
@@ -577,26 +728,77 @@ export const makeSessionHub = Effect.gen(function* () {
 				const queue = yield* Ref.get(session.queueRef);
 				const historyCursor = yield* Ref.get(session.historyCursorRef);
 				const buffer = yield* Ref.get(session.bufferRef);
+				const turnContext = yield* Ref.get(session.activeTurnContextRef);
 
 				const initialState: SessionEvent = {
 					_tag: "InitialState",
-					snapshot: new SessionSnapshot({
+					snapshot: {
 						status,
 						activeTurnId,
 						queue: [...queue],
-						historyCursor: new HistoryCursor(historyCursor),
-					}),
+						historyCursor,
+					},
 					buffer: [...buffer],
+					...(turnContext ? { turnContext } : {}),
 				};
+
+				structuredLog("INFO", "subscribe_initial_state", {
+					sessionId,
+					status,
+					activeTurnId,
+					queueLength: queue.length,
+					bufferLength: buffer.length,
+					hasTurnContext: turnContext !== null,
+				});
 
 				// Send initial state
 				yield* mailbox.offer(initialState);
 
+				structuredLog("INFO", "subscribe_initial_state_sent", { sessionId });
+
 				// Subscribe to PubSub and forward events to mailbox
-				yield* Stream.fromPubSub(session.pubsub).pipe(
-					Stream.runForEach((event) => mailbox.offer(event)),
+				const fiber = yield* Stream.fromPubSub(session.pubsub).pipe(
+					Stream.tap((event) =>
+						Effect.sync(() => {
+							structuredLog("INFO", "pubsub_event_received", {
+								sessionId,
+								eventTag: event._tag,
+							});
+						}),
+					),
+					Stream.runForEach((event) =>
+						Effect.gen(function* () {
+							structuredLog("INFO", "forwarding_to_mailbox", {
+								sessionId,
+								eventTag: event._tag,
+							});
+							yield* mailbox.offer(event);
+							structuredLog("INFO", "forwarded_to_mailbox", {
+								sessionId,
+								eventTag: event._tag,
+							});
+						}),
+					),
+					Effect.onInterrupt(() =>
+						Effect.sync(() => {
+							structuredLog("WARN", "pubsub_subscription_interrupted", {
+								sessionId,
+							});
+						}),
+					),
+					Effect.ensuring(
+						Effect.sync(() => {
+							structuredLog("INFO", "pubsub_subscription_ended", {
+								sessionId,
+							});
+						}),
+					),
 					Effect.forkScoped, // Runs until subscriber disconnects
 				);
+
+				structuredLog("INFO", "subscribe_pubsub_forked", {
+					sessionId,
+				});
 
 				return mailbox;
 			}),
@@ -679,12 +881,12 @@ export const makeSessionHub = Effect.gen(function* () {
 				const queue = yield* Ref.get(session.queueRef);
 				const historyCursor = yield* Ref.get(session.historyCursorRef);
 
-				return new SessionSnapshot({
+				return {
 					status,
 					activeTurnId,
 					queue: [...queue],
-					historyCursor: new HistoryCursor(historyCursor),
-				});
+					historyCursor,
+				} satisfies SessionSnapshot;
 			}),
 
 		deleteSession: (sessionId) =>

@@ -15,6 +15,7 @@ export const ChatRpcHandlers = ChatRpc.toLayer(
 		const storage = yield* StorageService;
 
 		return ChatRpc.of({
+			// NOTE: The Rpc layer automatically converts Mailbox to Stream
 			"chat.subscribe": (params) => hub.subscribe(params.sessionId),
 
 			"chat.send": (params) =>

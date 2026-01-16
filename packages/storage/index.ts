@@ -1,7 +1,13 @@
-// Re-export chat schemas from the centralized schemas package
+// Re-export all schemas from the centralized schemas package
 export {
+	// Chat schemas
 	ChatMessage,
 	CreateChatMessageInput,
+	// Entity schemas
+	CreateRepositoryInput,
+	CreateSessionInput,
+	CreateTurnInput,
+	CreateWorktreeInput,
 	DataPart,
 	FilePart,
 	MessageMetadata,
@@ -9,6 +15,10 @@ export {
 	MessageRole,
 	ProviderMetadata,
 	ReasoningPart,
+	Repository,
+	Session,
+	SessionCursor,
+	SessionStatus,
 	SourceDocumentPart,
 	SourceUrlPart,
 	StepStartPart,
@@ -17,8 +27,15 @@ export {
 	ToolApproval,
 	ToolCallPart,
 	ToolCallState,
+	Turn,
+	TurnStatus,
+	UpdateRepositoryInput,
+	UpdateSessionInput,
+	UpdateWorktreeInput,
+	Worktree,
+	WorktreeStatus,
 } from "@sandcastle/schemas";
-export * from "./src/cursor/schema";
+
 export * from "./src/errors";
 export {
 	makeStorageService,
@@ -26,8 +43,4 @@ export {
 	StorageServiceDefault,
 	StorageServiceLive,
 } from "./src/live";
-export * from "./src/repository/schema";
 export { StorageService } from "./src/service";
-export * from "./src/session/schema";
-export * from "./src/turn/schema";
-export * from "./src/worktree/schema";

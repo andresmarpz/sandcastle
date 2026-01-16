@@ -1,5 +1,5 @@
 import {
-	ChatMessage,
+	type ChatMessage,
 	MessagePart,
 	type MessageRole,
 } from "@sandcastle/schemas";
@@ -21,14 +21,14 @@ const rowToChatMessage = (row: Record<string, unknown>): ChatMessage => {
 	const metadataJson = row.metadata as string | null;
 	const metadata = metadataJson ? JSON.parse(metadataJson) : undefined;
 
-	return new ChatMessage({
+	return {
 		id: row.id as string,
-		sessionId: row.session_id as string,
+		sessionId: row.sessionId as string,
 		role: row.role as MessageRole,
 		parts,
-		createdAt: row.created_at as string,
+		createdAt: row.createdAt as string,
 		metadata,
-	});
+	};
 };
 
 export const createChatMessagesService = (db: DbInstance) => ({
@@ -36,7 +36,7 @@ export const createChatMessagesService = (db: DbInstance) => ({
 		tryDb("chatMessages.listBySession", () =>
 			db
 				.query<Record<string, unknown>, [string]>(
-					"SELECT * FROM chat_messages WHERE session_id = ? ORDER BY created_at ASC",
+					"SELECT * FROM chat_messages WHERE sessionId = ? ORDER BY createdAt ASC",
 				)
 				.all(sessionId)
 				.map(rowToChatMessage),
@@ -95,20 +95,20 @@ export const createChatMessagesService = (db: DbInstance) => ({
 
 			yield* tryDb("chatMessages.create", () =>
 				db.run(
-					`INSERT INTO chat_messages (id, session_id, role, parts, created_at, metadata)
+					`INSERT INTO chat_messages (id, sessionId, role, parts, createdAt, metadata)
 					 VALUES (?, ?, ?, ?, ?, ?)`,
 					[id, input.sessionId, input.role, partsJson, now, metadataJson],
 				),
 			);
 
-			return new ChatMessage({
+			return {
 				id,
 				sessionId: input.sessionId,
 				role: input.role,
 				parts: input.parts,
 				createdAt: now,
 				metadata: input.metadata,
-			});
+			};
 		}),
 
 	delete: (
@@ -126,7 +126,7 @@ export const createChatMessagesService = (db: DbInstance) => ({
 
 	deleteBySession: (sessionId: string) =>
 		tryDb("chatMessages.deleteBySession", () =>
-			db.run("DELETE FROM chat_messages WHERE session_id = ?", [sessionId]),
+			db.run("DELETE FROM chat_messages WHERE sessionId = ?", [sessionId]),
 		),
 
 	createMany: (
@@ -155,7 +155,7 @@ export const createChatMessagesService = (db: DbInstance) => ({
 
 				yield* tryDb("chatMessages.createMany", () =>
 					db.run(
-						`INSERT INTO chat_messages (id, session_id, role, parts, created_at, metadata, turnId, seq)
+						`INSERT INTO chat_messages (id, sessionId, role, parts, createdAt, metadata, turnId, seq)
 						 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 						[
 							id,
@@ -170,16 +170,14 @@ export const createChatMessagesService = (db: DbInstance) => ({
 					),
 				);
 
-				results.push(
-					new ChatMessage({
-						id,
-						sessionId: input.sessionId,
-						role: input.role,
-						parts: input.parts,
-						createdAt: now,
-						metadata: input.metadata,
-					}),
-				);
+				results.push({
+					id,
+					sessionId: input.sessionId,
+					role: input.role,
+					parts: input.parts,
+					createdAt: now,
+					metadata: input.metadata,
+				});
 			}
 
 			return results;
@@ -189,7 +187,7 @@ export const createChatMessagesService = (db: DbInstance) => ({
 		tryDb("chatMessages.listByTurn", () =>
 			db
 				.query<Record<string, unknown>, [string]>(
-					"SELECT * FROM chat_messages WHERE turnId = ? ORDER BY seq ASC, created_at ASC",
+					"SELECT * FROM chat_messages WHERE turnId = ? ORDER BY seq ASC, createdAt ASC",
 				)
 				.all(turnId)
 				.map(rowToChatMessage),
@@ -201,7 +199,7 @@ export const createChatMessagesService = (db: DbInstance) => ({
 				return yield* tryDb("chatMessages.getMessagesSince.all", () =>
 					db
 						.query<Record<string, unknown>, [string]>(
-							"SELECT * FROM chat_messages WHERE session_id = ? ORDER BY created_at ASC",
+							"SELECT * FROM chat_messages WHERE sessionId = ? ORDER BY createdAt ASC",
 						)
 						.all(sessionId)
 						.map(rowToChatMessage),
@@ -213,7 +211,7 @@ export const createChatMessagesService = (db: DbInstance) => ({
 				() =>
 					db
 						.query<Record<string, unknown>, [string]>(
-							"SELECT created_at FROM chat_messages WHERE id = ?",
+							"SELECT createdAt FROM chat_messages WHERE id = ?",
 						)
 						.get(afterMessageId),
 			);
@@ -222,7 +220,7 @@ export const createChatMessagesService = (db: DbInstance) => ({
 				return yield* tryDb("chatMessages.getMessagesSince.noCursor", () =>
 					db
 						.query<Record<string, unknown>, [string]>(
-							"SELECT * FROM chat_messages WHERE session_id = ? ORDER BY created_at ASC",
+							"SELECT * FROM chat_messages WHERE sessionId = ? ORDER BY createdAt ASC",
 						)
 						.all(sessionId)
 						.map(rowToChatMessage),
@@ -233,13 +231,13 @@ export const createChatMessagesService = (db: DbInstance) => ({
 				db
 					.query<Record<string, unknown>, [string, string, string, string]>(
 						`SELECT * FROM chat_messages
-						 WHERE session_id = ? AND (created_at > ? OR (created_at = ? AND id > ?))
-						 ORDER BY created_at ASC`,
+						 WHERE sessionId = ? AND (createdAt > ? OR (createdAt = ? AND id > ?))
+						 ORDER BY createdAt ASC`,
 					)
 					.all(
 						sessionId,
-						cursorRow.created_at as string,
-						cursorRow.created_at as string,
+						cursorRow.createdAt as string,
+						cursorRow.createdAt as string,
 						afterMessageId,
 					)
 					.map(rowToChatMessage),
@@ -250,7 +248,7 @@ export const createChatMessagesService = (db: DbInstance) => ({
 		tryDb("chatMessages.getLatestBySession", () => {
 			const row = db
 				.query<Record<string, unknown>, [string]>(
-					"SELECT * FROM chat_messages WHERE session_id = ? ORDER BY created_at DESC LIMIT 1",
+					"SELECT * FROM chat_messages WHERE sessionId = ? ORDER BY createdAt DESC LIMIT 1",
 				)
 				.get(sessionId);
 			return row ? rowToChatMessage(row) : null;

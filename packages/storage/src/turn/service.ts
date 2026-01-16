@@ -1,3 +1,4 @@
+import { Turn, type TurnStatus } from "@sandcastle/schemas";
 import { Effect } from "effect";
 import {
 	type DatabaseError,
@@ -5,7 +6,6 @@ import {
 	TurnNotFoundError,
 } from "../errors";
 import { type DbInstance, generateId, nowIso, tryDb } from "../utils";
-import { Turn, type TurnStatus } from "./schema";
 
 const rowToTurn = (row: Record<string, unknown>): Turn =>
 	new Turn({

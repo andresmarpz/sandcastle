@@ -3,7 +3,7 @@ import {
 	CreateRepositoryInput,
 	Repository,
 	UpdateRepositoryInput,
-} from "@sandcastle/storage";
+} from "@sandcastle/schemas";
 import { Schema } from "effect";
 import { DatabaseRpcError } from "../common/errors";
 import {

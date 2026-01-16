@@ -1,9 +1,10 @@
 import { Atom } from "@effect-atom/atom-react";
-import type { ChatMessage } from "@sandcastle/rpc";
+import type { GetHistoryResult } from "@sandcastle/rpc";
+import type { ChatMessage } from "@sandcastle/schemas";
 import { CHAT_HISTORY_KEY, ChatClient } from "./chat-client";
 
 // Re-export types for consumers
-export type { ChatMessage };
+export type { ChatMessage, GetHistoryResult };
 
 // Re-export the client and key for direct use
 export { CHAT_HISTORY_KEY, ChatClient };
@@ -12,11 +13,11 @@ export { CHAT_HISTORY_KEY, ChatClient };
 
 /**
  * Family of atoms for chat history by session ID.
- * Returns an array of ChatMessage objects for a given session.
+ * Returns a GetHistoryResult (messages + pagination info).
  */
 export const chatHistoryAtomFamily = Atom.family((sessionId: string) =>
 	ChatClient.query(
-		"chat.history",
+		"chat.getHistory",
 		{ sessionId },
 		{
 			reactivityKeys: [CHAT_HISTORY_KEY, `chat:history:${sessionId}`],

@@ -1,7 +1,7 @@
+import { SessionCursor } from "@sandcastle/schemas";
 import { Effect } from "effect";
 import { ForeignKeyViolationError } from "../errors";
 import { type DbInstance, nowIso, tryDb } from "../utils";
-import { SessionCursor } from "./schema";
 
 const rowToSessionCursor = (row: Record<string, unknown>): SessionCursor =>
 	new SessionCursor({

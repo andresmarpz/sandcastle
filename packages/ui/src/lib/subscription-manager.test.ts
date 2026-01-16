@@ -1,4 +1,4 @@
-import { test, expect, describe, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 
 // We need to test a fresh instance each time, so we'll create the class directly
 const MAX_SUBSCRIPTIONS = 3;
@@ -18,7 +18,7 @@ class SubscriptionManager {
 
 	visit(sessionId: string): VisitResult {
 		const existingIndex = this.subscriptions.findIndex(
-			(entry) => entry.sessionId === sessionId
+			(entry) => entry.sessionId === sessionId,
 		);
 
 		if (existingIndex !== -1) {
@@ -42,7 +42,7 @@ class SubscriptionManager {
 
 	leave(sessionId: string): void {
 		const index = this.subscriptions.findIndex(
-			(entry) => entry.sessionId === sessionId
+			(entry) => entry.sessionId === sessionId,
 		);
 
 		if (index !== -1) {
@@ -53,7 +53,7 @@ class SubscriptionManager {
 
 	getController(sessionId: string): AbortController | undefined {
 		const entry = this.subscriptions.find(
-			(entry) => entry.sessionId === sessionId
+			(entry) => entry.sessionId === sessionId,
 		);
 		return entry?.controller;
 	}

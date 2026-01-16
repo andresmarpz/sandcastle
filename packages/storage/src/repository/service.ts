@@ -1,3 +1,4 @@
+import { Repository } from "@sandcastle/schemas";
 import { Effect } from "effect";
 import {
 	type DatabaseError,
@@ -11,17 +12,16 @@ import {
 	type SQLQueryBindings,
 	tryDb,
 } from "../utils";
-import { Repository } from "./schema";
 
 const rowToRepository = (row: Record<string, unknown>): Repository =>
 	new Repository({
 		id: row.id as string,
 		label: row.label as string,
-		directoryPath: row.directory_path as string,
-		defaultBranch: row.default_branch as string,
+		directoryPath: row.directoryPath as string,
+		defaultBranch: row.defaultBranch as string,
 		pinned: Boolean(row.pinned),
-		createdAt: row.created_at as string,
-		updatedAt: row.updated_at as string,
+		createdAt: row.createdAt as string,
+		updatedAt: row.updatedAt as string,
 	});
 
 export const createRepositoriesService = (db: DbInstance) => ({
@@ -29,7 +29,7 @@ export const createRepositoriesService = (db: DbInstance) => ({
 		tryDb("repositories.list", () =>
 			db
 				.query<Record<string, unknown>, []>(
-					"SELECT * FROM repositories ORDER BY pinned DESC, created_at DESC",
+					"SELECT * FROM repositories ORDER BY pinned DESC, createdAt DESC",
 				)
 				.all()
 				.map(rowToRepository),
@@ -55,7 +55,7 @@ export const createRepositoriesService = (db: DbInstance) => ({
 			const row = yield* tryDb("repositories.getByPath", () =>
 				db
 					.query<Record<string, unknown>, [string]>(
-						"SELECT * FROM repositories WHERE directory_path = ?",
+						"SELECT * FROM repositories WHERE directoryPath = ?",
 					)
 					.get(directoryPath),
 			);
@@ -80,7 +80,7 @@ export const createRepositoriesService = (db: DbInstance) => ({
 			const existing = yield* tryDb("repositories.create.check", () =>
 				db
 					.query<Record<string, unknown>, [string]>(
-						"SELECT id FROM repositories WHERE directory_path = ?",
+						"SELECT id FROM repositories WHERE directoryPath = ?",
 					)
 					.get(input.directoryPath),
 			);
@@ -95,7 +95,7 @@ export const createRepositoriesService = (db: DbInstance) => ({
 
 			yield* tryDb("repositories.create", () =>
 				db.run(
-					`INSERT INTO repositories (id, label, directory_path, default_branch, pinned, created_at, updated_at)
+					`INSERT INTO repositories (id, label, directoryPath, defaultBranch, pinned, createdAt, updatedAt)
 					 VALUES (?, ?, ?, ?, ?, ?, ?)`,
 					[id, input.label, input.directoryPath, defaultBranch, 0, now, now],
 				),
@@ -123,7 +123,7 @@ export const createRepositoriesService = (db: DbInstance) => ({
 			const existing = yield* getRepository(id);
 			const now = nowIso();
 
-			const updates: string[] = ["updated_at = ?"];
+			const updates: string[] = ["updatedAt = ?"];
 			const values: SQLQueryBindings[] = [now];
 
 			if (input.label !== undefined) {
@@ -131,7 +131,7 @@ export const createRepositoriesService = (db: DbInstance) => ({
 				values.push(input.label);
 			}
 			if (input.defaultBranch !== undefined) {
-				updates.push("default_branch = ?");
+				updates.push("defaultBranch = ?");
 				values.push(input.defaultBranch);
 			}
 			if (input.pinned !== undefined) {

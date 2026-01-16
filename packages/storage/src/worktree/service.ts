@@ -1,3 +1,4 @@
+import { Worktree } from "@sandcastle/schemas";
 import { Effect } from "effect";
 import {
 	type DatabaseError,
@@ -12,19 +13,18 @@ import {
 	type SQLQueryBindings,
 	tryDb,
 } from "../utils";
-import { Worktree } from "./schema";
 
 const rowToWorktree = (row: Record<string, unknown>): Worktree =>
 	new Worktree({
 		id: row.id as string,
-		repositoryId: row.repository_id as string,
+		repositoryId: row.repositoryId as string,
 		path: row.path as string,
 		branch: row.branch as string,
 		name: row.name as string,
-		baseBranch: row.base_branch as string,
+		baseBranch: row.baseBranch as string,
 		status: row.status as "active" | "stale" | "archived",
-		createdAt: row.created_at as string,
-		lastAccessedAt: row.last_accessed_at as string,
+		createdAt: row.createdAt as string,
+		lastAccessedAt: row.lastAccessedAt as string,
 	});
 
 export const createWorktreesService = (db: DbInstance) => ({
@@ -32,7 +32,7 @@ export const createWorktreesService = (db: DbInstance) => ({
 		tryDb("worktrees.list", () =>
 			db
 				.query<Record<string, unknown>, []>(
-					"SELECT * FROM worktrees ORDER BY created_at DESC",
+					"SELECT * FROM worktrees ORDER BY createdAt DESC",
 				)
 				.all()
 				.map(rowToWorktree),
@@ -42,7 +42,7 @@ export const createWorktreesService = (db: DbInstance) => ({
 		tryDb("worktrees.listByRepository", () =>
 			db
 				.query<Record<string, unknown>, [string]>(
-					"SELECT * FROM worktrees WHERE repository_id = ? ORDER BY created_at DESC",
+					"SELECT * FROM worktrees WHERE repositoryId = ? ORDER BY createdAt DESC",
 				)
 				.all(repositoryId)
 				.map(rowToWorktree),
@@ -127,7 +127,7 @@ export const createWorktreesService = (db: DbInstance) => ({
 
 			yield* tryDb("worktrees.create", () =>
 				db.run(
-					`INSERT INTO worktrees (id, repository_id, path, branch, name, base_branch, status, created_at, last_accessed_at)
+					`INSERT INTO worktrees (id, repositoryId, path, branch, name, baseBranch, status, createdAt, lastAccessedAt)
 					 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 					[
 						id,
@@ -177,7 +177,7 @@ export const createWorktreesService = (db: DbInstance) => ({
 				values.push(input.status);
 			}
 			if (input.lastAccessedAt !== undefined) {
-				updates.push("last_accessed_at = ?");
+				updates.push("lastAccessedAt = ?");
 				values.push(input.lastAccessedAt);
 			}
 
@@ -221,7 +221,7 @@ export const createWorktreesService = (db: DbInstance) => ({
 		Effect.gen(function* () {
 			yield* getWorktree(id);
 			yield* tryDb("worktrees.touch", () =>
-				db.run("UPDATE worktrees SET last_accessed_at = ? WHERE id = ?", [
+				db.run("UPDATE worktrees SET lastAccessedAt = ? WHERE id = ?", [
 					nowIso(),
 					id,
 				]),

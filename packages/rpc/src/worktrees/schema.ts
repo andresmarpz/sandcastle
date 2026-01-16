@@ -1,5 +1,5 @@
 import { Rpc, RpcGroup } from "@effect/rpc";
-import { UpdateWorktreeInput, Worktree } from "@sandcastle/storage";
+import { UpdateWorktreeInput, Worktree } from "@sandcastle/schemas";
 import { Schema } from "effect";
 
 import {

@@ -15,20 +15,16 @@
  * ```
  */
 
+import type { ChatStreamEvent, SessionEvent } from "@sandcastle/schemas";
 import type { ChatTransport, UIMessage, UIMessageChunk } from "ai";
-import { Effect, Stream } from "effect";
-
-import type {
-	ChatStreamEvent,
-	SessionEvent,
-	MessagePart,
-	SessionSnapshot,
-} from "@sandcastle/schemas";
-import type { SendMessageResult } from "@sandcastle/rpc";
+import { Cause, Effect, Exit, Fiber, Stream } from "effect";
 
 import {
+	forkWithStreamingClient,
+	getStreamingConnectionState,
 	runWithStreamingClient,
 	StreamingChatClient,
+	waitForStreamingConnection,
 } from "./rpc-websocket-client";
 import { subscriptionManager } from "./subscription-manager";
 
@@ -95,37 +91,65 @@ export class RpcChatTransport implements ChatTransport<UIMessage> {
 		const content = lastMessage.parts
 			.filter(
 				(p): p is { type: "text"; text: string } =>
-					p.type === "text" && "text" in p
+					p.type === "text" && "text" in p,
 			)
 			.map((p) => p.text)
 			.join("");
 
 		// Register with subscription manager and get abort controller
 		subscriptionManager.visit(this.sessionId);
+		const subscriptionController = subscriptionManager.getController(
+			this.sessionId,
+		);
 
 		// Capture for use in Effect generator
 		const sessionId = this.sessionId;
-		const messageParts = lastMessage.parts as unknown as MessagePart[];
 		const clientMessageId = lastMessage.id;
 
+		// Extract file parts and transform to schema format
+		// Text parts are not needed since content already has the text
+		const fileParts = lastMessage.parts
+			.filter(
+				(
+					p,
+				): p is {
+					type: "file";
+					mediaType: string;
+					url: string;
+					filename?: string;
+				} =>
+					p.type === "file" &&
+					"mediaType" in p &&
+					typeof p.mediaType === "string" &&
+					"url" in p &&
+					typeof p.url === "string",
+			)
+			.map((p) => ({
+				type: "file" as const,
+				mediaType: p.mediaType,
+				url: p.url,
+				...(p.filename ? { filename: p.filename } : {}),
+			}));
+
 		// Send the message via RPC (returns immediately with status)
-		// Note: Type assertion needed due to RPC client typing limitations
 		await runWithStreamingClient(
 			StreamingChatClient.pipe(
 				Effect.flatMap((client) =>
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					(client as any)["chat.send"]({
+					client.chat.send({
 						sessionId,
 						content,
-						parts: messageParts,
 						clientMessageId,
-					}) as Effect.Effect<SendMessageResult, unknown, never>
-				)
-			)
+						...(fileParts.length > 0 ? { parts: fileParts } : {}),
+					}),
+				),
+			),
 		);
 
 		// Subscribe to session events
-		return this.createEventStream(abortSignal);
+		return this.createEventStream({
+			abortSignal,
+			subscriptionSignal: subscriptionController?.signal,
+		});
 	}
 
 	/**
@@ -147,16 +171,14 @@ export class RpcChatTransport implements ChatTransport<UIMessage> {
 			const sessionId = this.sessionId;
 
 			// Get session state to check if streaming
-			// Note: Type assertion needed due to RPC client typing limitations
 			const snapshot = await runWithStreamingClient(
 				StreamingChatClient.pipe(
 					Effect.flatMap((client) =>
-						// eslint-disable-next-line @typescript-eslint/no-explicit-any
-						(client as any)["chat.getState"]({
+						client.chat.getState({
 							sessionId,
-						}) as Effect.Effect<SessionSnapshot, unknown, never>
-					)
-				)
+						}),
+					),
+				),
 			);
 
 			// If idle with no active turn, return null (no stream to reconnect to)
@@ -166,7 +188,9 @@ export class RpcChatTransport implements ChatTransport<UIMessage> {
 
 			// Subscribe to session events
 			const controller = subscriptionManager.getController(this.sessionId);
-			return this.createEventStream(controller?.signal);
+			return this.createEventStream({
+				subscriptionSignal: controller?.signal,
+			});
 		} catch {
 			return null;
 		}
@@ -175,105 +199,272 @@ export class RpcChatTransport implements ChatTransport<UIMessage> {
 	/**
 	 * Creates a ReadableStream that converts SessionEvents to UIMessageChunks.
 	 */
-	private async createEventStream(
-		abortSignal?: AbortSignal
-	): Promise<ReadableStream<UIMessageChunk>> {
+	private async createEventStream({
+		abortSignal,
+		subscriptionSignal,
+	}: {
+		abortSignal?: AbortSignal;
+		subscriptionSignal?: AbortSignal;
+	} = {}): Promise<ReadableStream<UIMessageChunk>> {
 		const sessionId = this.sessionId;
 
 		// Subscribe to session events
-		// Note: Type assertion needed due to RPC client typing limitations
-		const eventStream = await runWithStreamingClient(
-			StreamingChatClient.pipe(
-				Effect.flatMap((client) =>
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					(client as any)["chat.subscribe"]({
-						sessionId,
-					}) as Effect.Effect<Stream.Stream<SessionEvent>, unknown, never>
-				)
-			)
-		);
-
 		// Track state for deduplication and finish detection
 		let sawFinish = false;
 		let activeTurnId: string | null = null;
+		let hadActiveTurn = false;
+		let reconnecting = false;
+		let connectionId = getStreamingConnectionState().connectionId;
+		let streamClosed = false;
+		let aborted = false;
+		let currentFiber: Fiber.RuntimeFiber<void, unknown> | null = null;
+		let cleanupAbortListeners = () => {};
+		let closeStream = () => {};
+		let errorStream = (_error: unknown) => {};
+
+		const resetStreamState = () => {
+			activeTurnId = null;
+			sawFinish = false;
+			reconnecting = true;
+		};
+
+		const interruptCurrentFiber = () => {
+			if (!currentFiber) {
+				return;
+			}
+			const fiber = currentFiber;
+			currentFiber = null;
+			Effect.runPromise(Fiber.interrupt(fiber)).catch(() => {
+				// Ignore interruption errors
+			});
+		};
 
 		return new ReadableStream<UIMessageChunk>({
 			start: (controller) => {
-				// Handle abort signal
-				if (abortSignal) {
-					const onAbort = async () => {
-						try {
-							// Note: Type assertion needed due to RPC client typing limitations
-							await runWithStreamingClient(
-								StreamingChatClient.pipe(
-									Effect.flatMap((client) =>
-										// eslint-disable-next-line @typescript-eslint/no-explicit-any
-										(client as any)["chat.interrupt"]({
-											sessionId,
-										}) as Effect.Effect<{ interrupted: boolean }, unknown, never>
-									)
-								)
-							);
-						} catch {
-							// Ignore interrupt errors
-						}
-						controller.close();
-					};
+				const handleUserAbort = () => {
+					if (aborted || streamClosed) {
+						return;
+					}
+					aborted = true;
 
+					// Interrupt the current subscription fiber
+					interruptCurrentFiber();
+
+					// Interrupt the server-side stream
+					runWithStreamingClient(
+						StreamingChatClient.pipe(
+							Effect.flatMap((client) =>
+								client.chat.interrupt({
+									sessionId,
+								}),
+							),
+						),
+					).catch(() => {
+						// Ignore interrupt errors
+					});
+
+					closeStream();
+				};
+
+				const handleSubscriptionAbort = () => {
+					if (aborted || streamClosed) {
+						return;
+					}
+					aborted = true;
+					interruptCurrentFiber();
+					closeStream();
+				};
+
+				cleanupAbortListeners = () => {
+					if (abortSignal) {
+						abortSignal.removeEventListener("abort", handleUserAbort);
+					}
+					if (subscriptionSignal) {
+						subscriptionSignal.removeEventListener(
+							"abort",
+							handleSubscriptionAbort,
+						);
+					}
+				};
+
+				closeStream = () => {
+					if (streamClosed) {
+						return;
+					}
+					streamClosed = true;
+					cleanupAbortListeners();
+					controller.close();
+				};
+
+				errorStream = (error: unknown) => {
+					if (streamClosed) {
+						return;
+					}
+					streamClosed = true;
+					cleanupAbortListeners();
+					controller.error(
+						error instanceof Error ? error : new Error(String(error)),
+					);
+				};
+
+				if (abortSignal) {
 					if (abortSignal.aborted) {
-						onAbort();
+						handleUserAbort();
+						return;
+					}
+					abortSignal.addEventListener("abort", handleUserAbort, {
+						once: true,
+					});
+				}
+
+				if (subscriptionSignal) {
+					if (subscriptionSignal.aborted) {
+						handleSubscriptionAbort();
+						return;
+					}
+					subscriptionSignal.addEventListener(
+						"abort",
+						handleSubscriptionAbort,
+						{
+							once: true,
+						},
+					);
+				}
+
+				const processEvent = (event: SessionEvent) => {
+					if (aborted || streamClosed) {
 						return;
 					}
 
-					abortSignal.addEventListener("abort", onAbort, { once: true });
-				}
+					if (event._tag === "InitialState") {
+						if (event.snapshot.activeTurnId || event.buffer.length > 0) {
+							hadActiveTurn = true;
+						}
 
-				// Process the stream
-				const processStream = Stream.runForEach(
-					eventStream,
-					(event: SessionEvent) =>
-						Effect.sync(() => {
-							const chunks = processSessionEvent(
-								event,
-								activeTurnId,
-								sawFinish
-							);
-
-							// Update state based on event
-							if (event._tag === "InitialState") {
-								activeTurnId = event.snapshot.activeTurnId;
-							} else if (event._tag === "SessionStarted") {
-								activeTurnId = event.turnId;
-								sawFinish = false; // Reset for new turn
-							} else if (event._tag === "SessionStopped") {
-								// Check if we need to emit finish
-								if (!sawFinish) {
-									sawFinish = true;
-								}
-							} else if (
-								event._tag === "StreamEvent" &&
-								event.event.type === "finish"
-							) {
+						if (
+							reconnecting &&
+							hadActiveTurn &&
+							event.snapshot.status === "idle" &&
+							event.buffer.length === 0 &&
+							!event.snapshot.activeTurnId
+						) {
+							if (!sawFinish) {
+								controller.enqueue({
+									type: "finish",
+									finishReason: "stop",
+								});
 								sawFinish = true;
 							}
+							closeStream();
+							return;
+						}
 
-							// Enqueue all chunks
-							for (const chunk of chunks) {
-								controller.enqueue(chunk);
+						reconnecting = false;
+					} else if (event._tag === "SessionStarted") {
+						hadActiveTurn = true;
+					} else if (event._tag === "StreamEvent") {
+						hadActiveTurn = true;
+					}
+
+					const chunks = processSessionEvent(event, activeTurnId, sawFinish);
+
+					// Update state based on event
+					if (event._tag === "InitialState") {
+						activeTurnId = event.snapshot.activeTurnId;
+					} else if (event._tag === "SessionStarted") {
+						activeTurnId = event.turnId;
+						sawFinish = false; // Reset for new turn
+					} else if (event._tag === "SessionStopped") {
+						// Check if we need to emit finish
+						if (!sawFinish) {
+							sawFinish = true;
+						}
+					} else if (
+						event._tag === "StreamEvent" &&
+						event.event.type === "finish"
+					) {
+						sawFinish = true;
+					}
+
+					// Enqueue all chunks
+					for (const chunk of chunks) {
+						controller.enqueue(chunk);
+					}
+
+					// Close stream on SessionStopped or finish event
+					if (event._tag === "SessionStopped") {
+						closeStream();
+					} else if (
+						event._tag === "StreamEvent" &&
+						event.event.type === "finish"
+					) {
+						// Also close on finish event - SessionStopped may arrive later for cleanup
+						// but the client doesn't need to wait for it
+						closeStream();
+					}
+				};
+
+				const runSubscription = async () => {
+					while (!aborted && !streamClosed) {
+						const subscriptionEffect = StreamingChatClient.pipe(
+							Effect.flatMap((client) =>
+								client.chat
+									.subscribe({ sessionId })
+									.pipe(
+										Stream.runForEach((event) =>
+											Effect.sync(() => processEvent(event)),
+										),
+									),
+							),
+						);
+
+						currentFiber = forkWithStreamingClient(subscriptionEffect);
+						const exit = await Effect.runPromise(Fiber.await(currentFiber));
+						currentFiber = null;
+
+						if (aborted || streamClosed) {
+							return;
+						}
+
+						if (Exit.isFailure(exit)) {
+							if (Cause.isInterrupted(exit.cause)) {
+								return;
 							}
 
-							// Close stream on SessionStopped
-							if (event._tag === "SessionStopped") {
-								controller.close();
+							const failure = Cause.failureOption(exit.cause);
+							if (
+								failure._tag === "Some" &&
+								isReconnectableFailure(failure.value)
+							) {
+								const next = await waitForStreamingConnection(connectionId);
+								connectionId = next.connectionId;
+								resetStreamState();
+								continue;
 							}
-						})
-				);
 
-				// Run the stream processing
-				Effect.runPromise(processStream).catch((error) => {
-					console.error("Stream processing error:", error);
-					controller.error(error);
+							const errorValue =
+								failure._tag === "Some" ? failure.value : exit.cause;
+							errorStream(errorValue);
+							return;
+						}
+
+						const next = await waitForStreamingConnection(connectionId);
+						connectionId = next.connectionId;
+						resetStreamState();
+					}
+				};
+
+				runSubscription().catch((error) => {
+					if (!streamClosed) {
+						errorStream(error);
+					}
 				});
+			},
+			cancel: () => {
+				aborted = true;
+				streamClosed = true;
+				cleanupAbortListeners();
+				interruptCurrentFiber();
 			},
 		});
 	}
@@ -289,12 +480,19 @@ export class RpcChatTransport implements ChatTransport<UIMessage> {
 function processSessionEvent(
 	event: SessionEvent,
 	activeTurnId: string | null,
-	sawFinish: boolean
+	sawFinish: boolean,
 ): UIMessageChunk[] {
 	const chunks: UIMessageChunk[] = [];
 
 	switch (event._tag) {
 		case "InitialState": {
+			// If we have turn context, emit synthetic start chunk for late subscriber
+			if (event.turnContext) {
+				chunks.push({
+					type: "start",
+					messageId: event.turnContext.messageId,
+				});
+			}
 			// Replay buffer events for mid-stream catch-up
 			for (const bufferEvent of event.buffer) {
 				const chunk = mapChatStreamEventToChunk(bufferEvent);
@@ -354,7 +552,7 @@ function processSessionEvent(
  * properly narrowing the type in the switch statement.
  */
 function mapChatStreamEventToChunk(
-	event: ChatStreamEvent
+	event: ChatStreamEvent,
 ): UIMessageChunk | null {
 	// Cast to any to work around TypeScript union narrowing issues
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -571,11 +769,24 @@ function mapChatStreamEventToChunk(
 	}
 }
 
+function isReconnectableFailure(error: unknown): boolean {
+	if (!error || typeof error !== "object") {
+		return false;
+	}
+	if (
+		"_tag" in error &&
+		(error as { _tag?: string })._tag === "RpcClientError"
+	) {
+		return true;
+	}
+	return false;
+}
+
 /**
  * Maps SessionStopped reason to AI SDK FinishReason.
  */
 function mapStopReasonToFinishReason(
-	reason: "completed" | "interrupted" | "error"
+	reason: "completed" | "interrupted" | "error",
 ): "stop" | "error" | "other" {
 	switch (reason) {
 		case "completed":

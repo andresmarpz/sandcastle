@@ -2,20 +2,22 @@ import { Database } from "bun:sqlite";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import type {
+	UpdateRepositoryInput,
+	UpdateSessionInput,
+	UpdateWorktreeInput,
+} from "@sandcastle/schemas";
 import { Effect, Layer } from "effect";
 
 import { createChatMessagesService } from "./chat/service";
 import { createCursorsService } from "./cursor/service";
 import { DatabaseConnectionError } from "./errors";
 import { runMigrations } from "./migrations";
-import type { UpdateRepositoryInput } from "./repository/schema";
 import { createRepositoriesService } from "./repository/service";
 import { StorageService } from "./service";
-import type { UpdateSessionInput } from "./session/schema";
 import { createSessionsService } from "./session/service";
 import { createTurnsService } from "./turn/service";
 import { tryDb } from "./utils";
-import type { UpdateWorktreeInput } from "./worktree/schema";
 import { createWorktreesService } from "./worktree/service";
 
 export interface StorageConfig {
