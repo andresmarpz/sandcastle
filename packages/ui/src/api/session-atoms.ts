@@ -3,7 +3,7 @@ import type {
 	CreateSessionInput,
 	Session,
 	UpdateSessionInput,
-} from "@sandcastle/rpc";
+} from "@sandcastle/schemas";
 import { SESSION_LIST_KEY, SessionClient } from "./session-client";
 
 // Re-export types for consumers
