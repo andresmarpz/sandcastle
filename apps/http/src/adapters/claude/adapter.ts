@@ -56,7 +56,10 @@ export const ClaudeCodeAgentAdapter: AgentAdapter<
 							type: "error",
 							errorText: error.message,
 						} satisfies StreamEventError,
-						{ type: "finish", finishReason: "error" } satisfies StreamEventFinish,
+						{
+							type: "finish",
+							finishReason: "error",
+						} satisfies StreamEventFinish,
 					),
 				),
 			);
