@@ -207,7 +207,7 @@ function Panel({
 				data-slot="panel"
 				value={activeTab ?? undefined}
 				onValueChange={(value) => setActiveTab(value as string)}
-				className={cn("flex flex-col", className)}
+				className={cn("flex flex-col overflow-hidden", className)}
 			>
 				{children}
 			</TabsPrimitive.Root>
@@ -435,7 +435,7 @@ function PanelContent({
 			data-slot="panel-content"
 			value={value}
 			keepMounted={keepMounted}
-			className={cn("flex-1 outline-none", className)}
+			className={cn("h-full overflow-hidden outline-none", className)}
 		>
 			{children}
 		</TabsPrimitive.Panel>

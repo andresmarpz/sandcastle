@@ -167,69 +167,79 @@ function ChatViewContent({
 	].filter(Boolean) as Array<{ title: string; message: string }>;
 
 	return (
-		<div className="flex h-full min-w-0 flex-col max-w-4xl w-full m-auto">
-			<header className="border-border flex items-center justify-between px-4 py-3">
-				<div className="flex items-center gap-2">
-					<Badge
-						variant={sessionStatus === "streaming" ? "default" : "secondary"}
-					>
-						{sessionStatus === "streaming" ? "Streaming" : "Idle"}
-					</Badge>
-					<Badge variant={isConnected ? "outline" : "destructive"}>
-						{isConnected ? "Live" : "Offline"}
-					</Badge>
-					{historyStatus === "loading" && (
-						<span className="flex items-center gap-2 text-muted-foreground text-xs">
-							<Spinner className="size-3" />
-							Syncing history
-						</span>
-					)}
-				</div>
-				{queue.length > 0 && (
-					<Badge variant="outline">{queue.length} queued</Badge>
-				)}
-			</header>
-
-			{errors.length > 0 && (
-				<div className="flex flex-col gap-2 px-4 pt-3">
-					{errors.map((error) => (
-						<Alert key={error.title} variant="destructive">
-							<AlertTitle>{error.title}</AlertTitle>
-							<AlertDescription>{error.message}</AlertDescription>
-						</Alert>
-					))}
-				</div>
-			)}
-
-			<Conversation className="min-h-0">
-				<ConversationContent>
-					{showHistoryLoading ? (
-						<div className="flex min-h-[240px] items-center justify-center text-muted-foreground">
-							<Spinner className="mr-2" />
-							Loading chat history...
+		<div className="h-full w-full overflow-y-auto">
+			<div className="flex flex-col min-h-full">
+				<header className="sticky top-0 w-full bg-background">
+					<div className="flex items-center justify-between px-4 py-3 max-w-4xl w-full mx-auto">
+						<div className="flex items-center gap-2 z-10">
+							<Badge
+								variant={
+									sessionStatus === "streaming" ? "default" : "secondary"
+								}
+							>
+								{sessionStatus === "streaming" ? "Streaming" : "Idle"}
+							</Badge>
+							<Badge variant={isConnected ? "outline" : "destructive"}>
+								{isConnected ? "Live" : "Offline"}
+							</Badge>
+							{historyStatus === "loading" && (
+								<span className="flex items-center gap-2 text-muted-foreground text-xs">
+									<Spinner className="size-3" />
+									Syncing history
+								</span>
+							)}
 						</div>
-					) : messages.length > 0 ? (
-						<MessageList messages={messages} />
-					) : (
-						<ConversationEmptyState
-							title="No messages yet"
-							description="Send a message to start the session."
-						/>
+						{queue.length > 0 && (
+							<Badge variant="outline">{queue.length} queued</Badge>
+						)}
+					</div>
+					{errors.length > 0 && (
+						<div className="flex flex-col gap-2 px-4 pb-3 max-w-4xl w-full mx-auto">
+							{errors.map((error) => (
+								<Alert key={error.title} variant="destructive">
+									<AlertTitle>{error.title}</AlertTitle>
+									<AlertDescription>{error.message}</AlertDescription>
+								</Alert>
+							))}
+						</div>
 					)}
-				</ConversationContent>
-				<ConversationScrollButton />
-			</Conversation>
+				</header>
 
-			{queue.length > 0 && <QueuePanel queue={queue} />}
+				<div className="flex-1 max-w-4xl w-full mx-auto">
+					<Conversation>
+						<ConversationContent>
+							{showHistoryLoading ? (
+								<div className="flex min-h-[240px] items-center justify-center text-muted-foreground">
+									<Spinner className="mr-2" />
+									Loading chat history...
+								</div>
+							) : messages.length > 0 ? (
+								<MessageList messages={messages} />
+							) : (
+								<ConversationEmptyState
+									title="No messages yet"
+									description="Send a message to start the session."
+								/>
+							)}
+						</ConversationContent>
+						<ConversationScrollButton />
+					</Conversation>
+					{queue.length > 0 && <QueuePanel queue={queue} />}
+				</div>
 
-			<ChatInput
-				worktreeId={worktreeId}
-				onSend={sendMessage}
-				onStop={stop}
-				status={status}
-				autonomous={autonomous}
-				onAutonomousChange={setAutonomous}
-			/>
+				<footer className="sticky bottom-0 w-full bg-background">
+					<div className="max-w-4xl w-full mx-auto">
+						<ChatInput
+							worktreeId={worktreeId}
+							onSend={sendMessage}
+							onStop={stop}
+							status={status}
+							autonomous={autonomous}
+							onAutonomousChange={setAutonomous}
+						/>
+					</div>
+				</footer>
+			</div>
 		</div>
 	);
 }
