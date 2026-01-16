@@ -18,7 +18,6 @@ import type {
 	WorktreeNotFoundError,
 	WorktreePathExistsError,
 } from "./errors";
-import type { CreateTurnInput, Turn, TurnStatus } from "./turn/schema";
 import type {
 	CreateRepositoryInput,
 	Repository,
@@ -29,6 +28,7 @@ import type {
 	Session,
 	UpdateSessionInput,
 } from "./session/schema";
+import type { CreateTurnInput, Turn, TurnStatus } from "./turn/schema";
 import type {
 	CreateWorktreeInput,
 	UpdateWorktreeInput,
@@ -134,7 +134,9 @@ export class StorageService extends Context.Tag("StorageService")<
 					metadata?: Record<string, unknown>;
 				}>,
 			) => Effect.Effect<ChatMessage[], DatabaseError>;
-			listByTurn: (turnId: string) => Effect.Effect<ChatMessage[], DatabaseError>;
+			listByTurn: (
+				turnId: string,
+			) => Effect.Effect<ChatMessage[], DatabaseError>;
 			getMessagesSince: (
 				sessionId: string,
 				afterMessageId?: string,
@@ -178,7 +180,10 @@ export class StorageService extends Context.Tag("StorageService")<
 				sessionId: string,
 				lastMessageId: string,
 				lastMessageAt: string,
-			) => Effect.Effect<SessionCursor, ForeignKeyViolationError | DatabaseError>;
+			) => Effect.Effect<
+				SessionCursor,
+				ForeignKeyViolationError | DatabaseError
+			>;
 			delete: (sessionId: string) => Effect.Effect<void, DatabaseError>;
 		};
 	}
