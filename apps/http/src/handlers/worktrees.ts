@@ -7,7 +7,6 @@ import {
 	DatabaseRpcError,
 	ForeignKeyViolationRpcError,
 	GitOperationRpcError,
-	Worktree,
 	WorktreeNotFoundRpcError,
 	WorktreePathExistsRpcError,
 	WorktreeRpc,
@@ -18,6 +17,7 @@ import {
 	type RepositoryNotFoundError,
 	StorageService,
 	StorageServiceDefault,
+	Worktree,
 	type WorktreeNotFoundError as StorageWorktreeNotFoundError,
 	type WorktreePathExistsError,
 } from "@sandcastle/storage";

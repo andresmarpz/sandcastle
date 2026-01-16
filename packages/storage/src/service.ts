@@ -1,5 +1,11 @@
+import type {
+	ChatMessage,
+	CreateChatMessageInput,
+	MessagePart,
+	MessageRole,
+} from "@sandcastle/schemas";
 import { Context, type Effect } from "effect";
-import type { ChatMessage, CreateChatMessageInput } from "@sandcastle/schemas";
+import type { SessionCursor } from "./cursor/schema";
 import type {
 	ChatMessageNotFoundError,
 	DatabaseError,
@@ -8,9 +14,11 @@ import type {
 	RepositoryNotFoundError,
 	RepositoryPathExistsError,
 	SessionNotFoundError,
+	TurnNotFoundError,
 	WorktreeNotFoundError,
 	WorktreePathExistsError,
 } from "./errors";
+import type { CreateTurnInput, Turn, TurnStatus } from "./turn/schema";
 import type {
 	CreateRepositoryInput,
 	Repository,
@@ -115,12 +123,63 @@ export class StorageService extends Context.Tag("StorageService")<
 			create: (
 				input: CreateChatMessageInput,
 			) => Effect.Effect<ChatMessage, ForeignKeyViolationError | DatabaseError>;
+			createMany: (
+				inputs: Array<{
+					id?: string;
+					sessionId: string;
+					role: MessageRole;
+					parts: readonly (typeof MessagePart.Type)[];
+					turnId?: string;
+					seq?: number;
+					metadata?: Record<string, unknown>;
+				}>,
+			) => Effect.Effect<ChatMessage[], DatabaseError>;
+			listByTurn: (turnId: string) => Effect.Effect<ChatMessage[], DatabaseError>;
+			getMessagesSince: (
+				sessionId: string,
+				afterMessageId?: string,
+			) => Effect.Effect<ChatMessage[], DatabaseError>;
+			getLatestBySession: (
+				sessionId: string,
+			) => Effect.Effect<ChatMessage | null, DatabaseError>;
 			delete: (
 				id: string,
 			) => Effect.Effect<void, ChatMessageNotFoundError | DatabaseError>;
 			deleteBySession: (
 				sessionId: string,
 			) => Effect.Effect<void, DatabaseError>;
+		};
+
+		turns: {
+			list: () => Effect.Effect<Turn[], DatabaseError>;
+			listBySession: (
+				sessionId: string,
+			) => Effect.Effect<Turn[], DatabaseError>;
+			get: (
+				id: string,
+			) => Effect.Effect<Turn, TurnNotFoundError | DatabaseError>;
+			create: (
+				input: CreateTurnInput,
+			) => Effect.Effect<Turn, ForeignKeyViolationError | DatabaseError>;
+			complete: (
+				id: string,
+				reason: "completed" | "interrupted" | "error",
+			) => Effect.Effect<Turn, TurnNotFoundError | DatabaseError>;
+			delete: (
+				id: string,
+			) => Effect.Effect<void, TurnNotFoundError | DatabaseError>;
+		};
+
+		cursors: {
+			get: (
+				sessionId: string,
+			) => Effect.Effect<SessionCursor | null, DatabaseError>;
+			upsert: (
+				sessionId: string,
+				lastMessageId: string,
+				lastMessageAt: string,
+			) => Effect.Effect<SessionCursor, ForeignKeyViolationError | DatabaseError>;
+			delete: (sessionId: string) => Effect.Effect<void, DatabaseError>;
 		};
 	}
 >() {}

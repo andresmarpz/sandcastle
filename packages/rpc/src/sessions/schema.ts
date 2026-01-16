@@ -2,8 +2,9 @@ import { Rpc, RpcGroup } from "@effect/rpc";
 import {
 	CreateSessionInput,
 	Session,
+	Turn,
 	UpdateSessionInput,
-} from "@sandcastle/storage/entities";
+} from "@sandcastle/storage";
 import { Schema } from "effect";
 
 import {
@@ -55,6 +56,12 @@ export class SessionRpc extends RpcGroup.make(
 	Rpc.make("session.touch", {
 		payload: { id: Schema.String },
 		success: Schema.Void,
+		error: Schema.Union(SessionNotFoundRpcError, DatabaseRpcError),
+	}),
+
+	Rpc.make("session.listTurns", {
+		payload: { sessionId: Schema.String },
+		success: Schema.Struct({ turns: Schema.Array(Turn) }),
 		error: Schema.Union(SessionNotFoundRpcError, DatabaseRpcError),
 	}),
 ) {}

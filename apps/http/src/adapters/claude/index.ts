@@ -1,4 +1,20 @@
-export { adaptSDKStreamToEvents } from "./effect-stream-adapter";
+export type {
+	AccumulatorConfig,
+	AdapterConfig,
+	AgentAdapter,
+	MessageAccumulator,
+} from "../types";
+export {
+	ClaudeCodeAgentAdapter,
+	type DualProcessResult,
+	processMessageDual,
+} from "./adapter";
+export {
+	type AccumulatorConfig as ClaudeAccumulatorConfig,
+	createMessageAccumulator,
+	type MessageAccumulator as ClaudeMessageAccumulator,
+	type SessionMetadata,
+} from "./message-accumulator";
 export {
 	completeToolCall,
 	createStreamState,
@@ -7,32 +23,14 @@ export {
 	setMessageId,
 	setSessionId,
 } from "./state-tracker";
-export {
-	createClaudeToAISDKAdapter,
-	isAdapterError,
-} from "./stream-adapter";
-export {
-	mapFinishReason,
-	transformAssistantMessage,
-	transformContentBlocks,
-	transformTextBlock,
-	transformToolUseBlock,
-	transformUserMessage,
-} from "./transformer";
 export type {
-	AdapterConfig,
 	ContentBlock,
 	FinishReason,
 	SDKMessage,
 	StreamState,
 	TextContentBlock,
-	TextUIPart,
 	ThinkingContentBlock,
 	ToolCallState,
-	ToolCallUIPart,
 	ToolResultContentBlock,
 	ToolUseContentBlock,
-	UIMessage,
-	UIMessageChunk,
-	UIMessagePart,
 } from "./types";

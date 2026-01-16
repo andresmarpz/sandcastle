@@ -1,16 +1,17 @@
 import {
 	DatabaseRpcError,
 	ForeignKeyViolationRpcError,
-	Session,
 	SessionNotFoundRpcError,
 	SessionRpc,
 } from "@sandcastle/rpc";
 import {
 	type DatabaseError,
 	type ForeignKeyViolationError,
+	Session,
 	type SessionNotFoundError,
 	StorageService,
 	StorageServiceDefault,
+	Turn,
 } from "@sandcastle/storage";
 import { Effect, Layer } from "effect";
 
@@ -72,6 +73,23 @@ const toSession = (session: {
 		createdAt: session.createdAt,
 	});
 
+const toTurn = (turn: {
+	id: string;
+	sessionId: string;
+	status: "streaming" | "completed" | "interrupted" | "error";
+	startedAt: string;
+	completedAt: string | null;
+	reason: string | null;
+}): Turn =>
+	new Turn({
+		id: turn.id,
+		sessionId: turn.sessionId,
+		status: turn.status,
+		startedAt: turn.startedAt,
+		completedAt: turn.completedAt,
+		reason: turn.reason,
+	});
+
 // ─── Handlers ────────────────────────────────────────────────
 
 export const SessionRpcHandlers = SessionRpc.toLayer(
@@ -129,6 +147,15 @@ export const SessionRpcHandlers = SessionRpc.toLayer(
 				storage.sessions
 					.touch(params.id)
 					.pipe(Effect.mapError(mapNotFoundError)),
+
+			"session.listTurns": (params) =>
+				Effect.gen(function* () {
+					// Verify session exists first
+					yield* storage.sessions.get(params.sessionId);
+					// Fetch turns for the session
+					const turns = yield* storage.turns.listBySession(params.sessionId);
+					return { turns: turns.map(toTurn) };
+				}).pipe(Effect.mapError(mapNotFoundError)),
 		});
 	}),
 );

@@ -45,7 +45,7 @@ export function registerToolCall(
 		toolCallId,
 		toolName,
 		input,
-		state: input ? "input-available" : "partial",
+		state: input ? "input-available" : "input-streaming",
 	};
 
 	const newToolCalls = new Map(state.toolCalls);
@@ -70,7 +70,7 @@ export function completeToolCall(
 		...existing,
 		output,
 		isError,
-		state: isError ? "error" : "result",
+		state: isError ? "output-error" : "output-available",
 	};
 
 	const newToolCalls = new Map(state.toolCalls);

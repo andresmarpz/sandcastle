@@ -5,6 +5,7 @@ import * as path from "node:path";
 import { Effect, Layer } from "effect";
 
 import { createChatMessagesService } from "./chat/service";
+import { createCursorsService } from "./cursor/service";
 import { DatabaseConnectionError } from "./errors";
 import { runMigrations } from "./migrations";
 import type { UpdateRepositoryInput } from "./repository/schema";
@@ -12,6 +13,7 @@ import { createRepositoriesService } from "./repository/service";
 import { StorageService } from "./service";
 import type { UpdateSessionInput } from "./session/schema";
 import { createSessionsService } from "./session/service";
+import { createTurnsService } from "./turn/service";
 import { tryDb } from "./utils";
 import type { UpdateWorktreeInput } from "./worktree/schema";
 import { createWorktreesService } from "./worktree/service";
@@ -65,6 +67,8 @@ export const makeStorageService = (
 		const worktreesService = createWorktreesService(db);
 		const sessionsService = createSessionsService(db);
 		const chatMessagesService = createChatMessagesService(db);
+		const turnsService = createTurnsService(db);
+		const cursorsService = createCursorsService(db);
 
 		return {
 			initialize: () => Effect.void,
@@ -113,9 +117,29 @@ export const makeStorageService = (
 				listBySession: chatMessagesService.listBySession,
 				get: chatMessagesService.get,
 				create: chatMessagesService.create,
+				createMany: chatMessagesService.createMany,
+				listByTurn: chatMessagesService.listByTurn,
+				getMessagesSince: chatMessagesService.getMessagesSince,
+				getLatestBySession: chatMessagesService.getLatestBySession,
 				delete: (id: string) =>
 					chatMessagesService.delete(id, chatMessagesService.get),
 				deleteBySession: chatMessagesService.deleteBySession,
+			},
+
+			turns: {
+				list: turnsService.list,
+				listBySession: turnsService.listBySession,
+				get: turnsService.get,
+				create: turnsService.create,
+				complete: (id: string, reason: "completed" | "interrupted" | "error") =>
+					turnsService.complete(id, reason, turnsService.get),
+				delete: (id: string) => turnsService.delete(id, turnsService.get),
+			},
+
+			cursors: {
+				get: cursorsService.get,
+				upsert: cursorsService.upsert,
+				delete: cursorsService.delete,
 			},
 		};
 	});

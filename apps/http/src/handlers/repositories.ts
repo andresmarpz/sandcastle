@@ -1,12 +1,12 @@
 import {
 	DatabaseRpcError,
-	Repository,
 	RepositoryNotFoundRpcError,
 	RepositoryPathExistsRpcError,
 	RepositoryRpc,
 } from "@sandcastle/rpc";
 import {
 	type DatabaseError,
+	Repository,
 	type RepositoryNotFoundError,
 	type RepositoryPathExistsError,
 	StorageService,

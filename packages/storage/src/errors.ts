@@ -37,6 +37,10 @@ export class SessionNotFoundError extends Data.TaggedError(
 	id: string;
 }> {}
 
+export class TurnNotFoundError extends Data.TaggedError("TurnNotFoundError")<{
+	id: string;
+}> {}
+
 export class AgentNotFoundError extends Data.TaggedError("AgentNotFoundError")<{
 	id: string;
 }> {}

@@ -1,133 +1,272 @@
 import type {
-	AdapterConfig,
-	ContentBlock,
-	FinishReason,
-	TextContentBlock,
-	TextUIPart,
-	ToolCallUIPart,
-	ToolUseContentBlock,
-	UIMessage,
-	UIMessagePart,
-} from "./types";
+	SDKAssistantMessage,
+	SDKMessage,
+	SDKResultMessage,
+	SDKUserMessage,
+} from "@anthropic-ai/claude-agent-sdk";
+import {
+	type ChatStreamEvent,
+	type FinishReason,
+	StreamEventFinish,
+	StreamEventReasoningDelta,
+	StreamEventReasoningEnd,
+	StreamEventReasoningStart,
+	StreamEventStart,
+	StreamEventTextDelta,
+	StreamEventTextEnd,
+	StreamEventTextStart,
+	StreamEventToolInputAvailable,
+	StreamEventToolInputStart,
+	StreamEventToolOutputAvailable,
+	StreamEventToolOutputError,
+} from "@sandcastle/schemas";
+import type { AdapterConfig } from "../types";
+import {
+	completeToolCall,
+	registerToolCall,
+	setMessageId,
+	setSessionId,
+} from "./state-tracker";
+import type { StreamState } from "./types";
 
-// ─── Content Block Transformers ───────────────────────────────
-
-/**
- * Transform a text content block to AI SDK text part
- */
-export function transformTextBlock(block: TextContentBlock): TextUIPart {
-	return { type: "text", text: block.text };
+interface ProcessResult {
+	events: ChatStreamEvent[];
+	newState: StreamState;
 }
 
 /**
- * Transform a tool_use block to AI SDK tool part
- * Returns a tool part with type `tool-{toolName}`
+ * Process a single SDK message and return ChatStreamEvents
  */
-export function transformToolUseBlock(
-	block: ToolUseContentBlock,
-): ToolCallUIPart {
-	return {
-		type: `tool-${block.name}`,
-		toolCallId: block.id,
-		toolName: block.name,
-		args: block.input,
-		state: "partial", // Will be updated when tool_result arrives
-	};
-}
-
-// ─── Content Block Array Transformer ──────────────────────────
-
-/**
- * Transform an array of content blocks to AI SDK parts
- * Filters out unsupported block types (thinking, etc.)
- */
-export function transformContentBlocks(
-	blocks: ContentBlock[],
-): UIMessagePart[] {
-	const parts: UIMessagePart[] = [];
-
-	for (const block of blocks) {
-		switch (block.type) {
-			case "text":
-				if (block.text) {
-					parts.push(transformTextBlock(block));
-				}
-				break;
-			case "tool_use":
-				parts.push(transformToolUseBlock(block));
-				break;
-			// Skip thinking and tool_result blocks for MVP
-			// tool_result is handled via stream events
-		}
-	}
-
-	return parts;
-}
-
-// ─── Message Transformers ─────────────────────────────────────
-
-interface AssistantMessageLike {
-	uuid: string;
-	session_id: string;
-	message: {
-		content: ContentBlock[];
-	};
-	parent_tool_use_id: string | null;
-}
-
-/**
- * Transform SDKAssistantMessage to UIMessage
- */
-export function transformAssistantMessage(
-	message: AssistantMessageLike,
-): UIMessage {
-	const parts = transformContentBlocks(message.message.content);
-
-	return {
-		id: message.uuid,
-		role: "assistant",
-		parts,
-		createdAt: new Date(),
-		metadata: {
-			sessionId: message.session_id,
-			parentToolUseId: message.parent_tool_use_id,
-		},
-	};
-}
-
-interface UserMessageLike {
-	uuid?: string;
-	session_id: string;
-	message: {
-		content: ContentBlock[];
-	};
-}
-
-/**
- * Transform SDKUserMessage to UIMessage
- */
-export function transformUserMessage(
-	message: UserMessageLike,
+export function processMessage(
+	message: SDKMessage,
+	state: StreamState,
 	config: AdapterConfig,
-): UIMessage {
-	// Filter to only text parts for user messages
-	const parts: UIMessagePart[] = [];
+): ProcessResult {
+	const events: ChatStreamEvent[] = [];
+	let newState = state;
 
+	switch (message.type) {
+		case "system":
+			if (message.subtype === "init") {
+				// Store session ID and emit start event
+				newState = setSessionId(newState, message.session_id);
+				const messageId = config.generateId();
+				newState = setMessageId(newState, messageId);
+				events.push(
+					new StreamEventStart({
+						type: "start",
+						messageId,
+						claudeSessionId: message.session_id,
+					}),
+				);
+			}
+			break;
+
+		case "assistant": {
+			const result = processAssistantMessage(
+				message as SDKAssistantMessage,
+				newState,
+				config,
+			);
+			events.push(...result.events);
+			newState = result.newState;
+			break;
+		}
+
+		case "user": {
+			const result = processUserMessage(
+				message as SDKUserMessage,
+				newState,
+				config,
+			);
+			events.push(...result.events);
+			newState = result.newState;
+			break;
+		}
+
+		case "result": {
+			const resultMsg = message as SDKResultMessage;
+			const finishReason = mapFinishReason(resultMsg.subtype);
+
+			// Extract metadata from result message
+			const metadata =
+				resultMsg.subtype === "success"
+					? {
+							claudeSessionId: resultMsg.session_id,
+							costUsd: resultMsg.total_cost_usd,
+							inputTokens: resultMsg.usage?.input_tokens,
+							outputTokens: resultMsg.usage?.output_tokens,
+						}
+					: undefined;
+
+			events.push(
+				new StreamEventFinish({
+					type: "finish",
+					finishReason,
+					metadata,
+				}),
+			);
+			break;
+		}
+
+		// Skip stream_event (partial messages) and compact_boundary for MVP
+	}
+
+	return { events, newState };
+}
+
+/**
+ * Process assistant message and emit text/tool events
+ */
+function processAssistantMessage(
+	message: SDKAssistantMessage,
+	state: StreamState,
+	config: AdapterConfig,
+): ProcessResult {
+	const events: ChatStreamEvent[] = [];
+	let newState = state;
+
+	// If no message started yet, start one
+	if (!newState.messageId) {
+		newState = setMessageId(newState, message.uuid);
+		events.push(
+			new StreamEventStart({
+				type: "start",
+				messageId: message.uuid,
+				claudeSessionId: newState.sessionId ?? undefined,
+			}),
+		);
+	}
+
+	// Process each content block
 	for (const block of message.message.content) {
-		if (block.type === "text" && block.text) {
-			parts.push(transformTextBlock(block));
+		if (block.type === "text" && "text" in block && block.text) {
+			// For non-streaming mode, emit complete text as single delta
+			const textId = config.generateId();
+			events.push(new StreamEventTextStart({ type: "text-start", id: textId }));
+			events.push(
+				new StreamEventTextDelta({
+					type: "text-delta",
+					id: textId,
+					delta: block.text,
+				}),
+			);
+			events.push(new StreamEventTextEnd({ type: "text-end", id: textId }));
+		} else if (
+			block.type === "tool_use" &&
+			"id" in block &&
+			"name" in block &&
+			"input" in block
+		) {
+			const toolInput = block.input as Record<string, unknown>;
+
+			// Emit tool input events
+			events.push(
+				new StreamEventToolInputStart({
+					type: "tool-input-start",
+					toolCallId: block.id,
+					toolName: block.name,
+				}),
+			);
+			events.push(
+				new StreamEventToolInputAvailable({
+					type: "tool-input-available",
+					toolCallId: block.id,
+					toolName: block.name,
+					input: toolInput,
+				}),
+			);
+
+			// Track the tool call in state
+			newState = registerToolCall(newState, block.id, block.name, toolInput);
+		} else if (block.type === "thinking" && "thinking" in block) {
+			// Emit reasoning events for thinking blocks
+			const reasoningId = config.generateId();
+			events.push(
+				new StreamEventReasoningStart({
+					type: "reasoning-start",
+					id: reasoningId,
+				}),
+			);
+			events.push(
+				new StreamEventReasoningDelta({
+					type: "reasoning-delta",
+					id: reasoningId,
+					delta: block.thinking,
+				}),
+			);
+			events.push(
+				new StreamEventReasoningEnd({ type: "reasoning-end", id: reasoningId }),
+			);
 		}
 	}
 
-	return {
-		id: message.uuid ?? config.generateId(),
-		role: "user",
-		parts,
-		createdAt: new Date(),
-	};
+	return { events, newState };
 }
 
-// ─── Result Mapping ───────────────────────────────────────────
+/**
+ * Process user message (primarily for tool results)
+ */
+function processUserMessage(
+	message: SDKUserMessage,
+	state: StreamState,
+	_config: AdapterConfig,
+): ProcessResult {
+	const events: ChatStreamEvent[] = [];
+	let newState = state;
+
+	// User message content can be string or array of content blocks
+	const content = message.message.content;
+	if (typeof content === "string") {
+		// Simple string content - nothing to process for tool results
+		return { events, newState };
+	}
+
+	// Process tool results from content array
+	for (const block of content) {
+		if (
+			block.type === "tool_result" &&
+			"tool_use_id" in block &&
+			"content" in block
+		) {
+			const isError = "is_error" in block ? (block.is_error ?? false) : false;
+
+			if (isError) {
+				// Emit error event for failed tool execution
+				const errorText =
+					typeof block.content === "string"
+						? block.content
+						: JSON.stringify(block.content);
+				events.push(
+					new StreamEventToolOutputError({
+						type: "tool-output-error",
+						toolCallId: block.tool_use_id,
+						errorText,
+					}),
+				);
+			} else {
+				// Emit success event for completed tool execution
+				events.push(
+					new StreamEventToolOutputAvailable({
+						type: "tool-output-available",
+						toolCallId: block.tool_use_id,
+						output: block.content,
+					}),
+				);
+			}
+
+			// Update state with tool result
+			newState = completeToolCall(
+				newState,
+				block.tool_use_id,
+				block.content,
+				isError,
+			);
+		}
+	}
+
+	return { events, newState };
+}
 
 /**
  * Map SDK result subtype to AI SDK finish reason
