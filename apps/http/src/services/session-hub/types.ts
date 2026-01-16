@@ -1,6 +1,7 @@
 import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import type {
 	ChatStreamEvent,
+	MessagePart,
 	QueuedMessage,
 	SessionEvent,
 	StreamingStatus,
@@ -12,6 +13,19 @@ import type {
 	StreamState,
 } from "../../adapters/claude";
 import type { QueryHandle } from "../../agents/claude";
+
+/**
+ * Context for the current active turn (for late subscriber catch-up).
+ * Stores the initial user message info so late subscribers can reconstruct
+ * the UserMessage and SessionStarted events they missed.
+ */
+export interface ActiveTurnContext {
+	readonly turnId: string;
+	readonly messageId: string;
+	readonly content: string;
+	readonly parts?: readonly MessagePart[];
+	readonly clientMessageId: string;
+}
 
 /**
  * History cursor for tracking last persisted message.
@@ -66,6 +80,9 @@ export interface SessionState {
 
 	/** Claude SDK session ID (for resume capability) */
 	readonly claudeSessionIdRef: Ref.Ref<string | null>;
+
+	/** Context for active turn (for late subscriber catch-up) */
+	readonly activeTurnContextRef: Ref.Ref<ActiveTurnContext | null>;
 }
 
 /**

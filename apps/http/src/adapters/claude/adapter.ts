@@ -2,8 +2,8 @@ import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import {
 	ChatRpcError,
 	type ChatStreamEvent,
-	StreamEventError,
-	StreamEventFinish,
+	type StreamEventError,
+	type StreamEventFinish,
 } from "@sandcastle/schemas";
 import { Chunk, Effect, Stream } from "effect";
 import type { ClaudeSDKError } from "../../agents/claude";
@@ -52,11 +52,11 @@ export const ClaudeCodeAgentAdapter: AgentAdapter<
 				// On error, emit error event before failing
 				Stream.catchAll((error) =>
 					Stream.make(
-						new StreamEventError({
+						{
 							type: "error",
 							errorText: error.message,
-						}),
-						new StreamEventFinish({ type: "finish", finishReason: "error" }),
+						} satisfies StreamEventError,
+						{ type: "finish", finishReason: "error" } satisfies StreamEventFinish,
 					),
 				),
 			);

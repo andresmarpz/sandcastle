@@ -40,7 +40,7 @@ class SubscriptionManager {
 	 */
 	visit(sessionId: string): VisitResult {
 		const existingIndex = this.subscriptions.findIndex(
-			(entry) => entry.sessionId === sessionId
+			(entry) => entry.sessionId === sessionId,
 		);
 
 		// Session already exists - move to front
@@ -72,7 +72,7 @@ class SubscriptionManager {
 	 */
 	leave(sessionId: string): void {
 		const index = this.subscriptions.findIndex(
-			(entry) => entry.sessionId === sessionId
+			(entry) => entry.sessionId === sessionId,
 		);
 
 		if (index !== -1) {
@@ -89,7 +89,7 @@ class SubscriptionManager {
 	 */
 	getController(sessionId: string): AbortController | undefined {
 		const entry = this.subscriptions.find(
-			(entry) => entry.sessionId === sessionId
+			(entry) => entry.sessionId === sessionId,
 		);
 		return entry?.controller;
 	}

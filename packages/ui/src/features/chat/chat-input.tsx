@@ -12,7 +12,6 @@ import {
 	PromptInputTextarea,
 } from "@/components/ai-elements/prompt-input";
 import { cn } from "@/lib/utils";
-import { useChatSessionContext } from "./context/chat-session-context";
 import { FilePickerPopover } from "./file-search";
 
 interface ChatInputProps {
@@ -21,6 +20,7 @@ interface ChatInputProps {
 	status: ChatStatus;
 	autonomous: boolean;
 	onAutonomousChange: (autonomous: boolean) => void;
+	worktreeId: string;
 }
 
 export function ChatInput({
@@ -29,10 +29,8 @@ export function ChatInput({
 	status,
 	autonomous,
 	onAutonomousChange,
+	worktreeId,
 }: ChatInputProps) {
-	const {
-		config: { worktreeId },
-	} = useChatSessionContext();
 	const isStreaming = status === "streaming";
 	const isSubmitted = status === "submitted";
 	const isDisabled = isStreaming || isSubmitted;

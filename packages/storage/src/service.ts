@@ -1,11 +1,23 @@
 import type {
 	ChatMessage,
 	CreateChatMessageInput,
+	CreateRepositoryInput,
+	CreateSessionInput,
+	CreateTurnInput,
+	CreateWorktreeInput,
 	MessagePart,
 	MessageRole,
+	Repository,
+	Session,
+	SessionCursor,
+	Turn,
+	TurnStatus,
+	UpdateRepositoryInput,
+	UpdateSessionInput,
+	UpdateWorktreeInput,
+	Worktree,
 } from "@sandcastle/schemas";
 import { Context, type Effect } from "effect";
-import type { SessionCursor } from "./cursor/schema";
 import type {
 	ChatMessageNotFoundError,
 	DatabaseError,
@@ -18,22 +30,6 @@ import type {
 	WorktreeNotFoundError,
 	WorktreePathExistsError,
 } from "./errors";
-import type {
-	CreateRepositoryInput,
-	Repository,
-	UpdateRepositoryInput,
-} from "./repository/schema";
-import type {
-	CreateSessionInput,
-	Session,
-	UpdateSessionInput,
-} from "./session/schema";
-import type { CreateTurnInput, Turn, TurnStatus } from "./turn/schema";
-import type {
-	CreateWorktreeInput,
-	UpdateWorktreeInput,
-	Worktree,
-} from "./worktree/schema";
 
 export class StorageService extends Context.Tag("StorageService")<
 	StorageService,

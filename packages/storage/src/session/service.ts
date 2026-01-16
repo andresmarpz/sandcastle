@@ -1,3 +1,4 @@
+import { Session } from "@sandcastle/schemas";
 import { Effect } from "effect";
 import {
 	type DatabaseError,
@@ -11,12 +12,11 @@ import {
 	type SQLQueryBindings,
 	tryDb,
 } from "../utils";
-import { Session } from "./schema";
 
 const rowToSession = (row: Record<string, unknown>): Session =>
 	new Session({
 		id: row.id as string,
-		worktreeId: row.worktree_id as string,
+		worktreeId: row.worktreeId as string,
 		title: row.title as string,
 		description: (row.description as string) ?? null,
 		status: row.status as
@@ -25,13 +25,13 @@ const rowToSession = (row: Record<string, unknown>): Session =>
 			| "paused"
 			| "completed"
 			| "failed",
-		claudeSessionId: (row.claude_session_id as string) ?? null,
+		claudeSessionId: (row.claudeSessionId as string) ?? null,
 		model: (row.model as string) ?? null,
-		totalCostUsd: (row.total_cost_usd as number) ?? 0,
-		inputTokens: (row.input_tokens as number) ?? 0,
-		outputTokens: (row.output_tokens as number) ?? 0,
-		createdAt: row.created_at as string,
-		lastActivityAt: row.last_activity_at as string,
+		totalCostUsd: (row.totalCostUsd as number) ?? 0,
+		inputTokens: (row.inputTokens as number) ?? 0,
+		outputTokens: (row.outputTokens as number) ?? 0,
+		createdAt: row.createdAt as string,
+		lastActivityAt: row.lastActivityAt as string,
 	});
 
 export const createSessionsService = (db: DbInstance) => ({
@@ -39,7 +39,7 @@ export const createSessionsService = (db: DbInstance) => ({
 		tryDb("sessions.list", () =>
 			db
 				.query<Record<string, unknown>, []>(
-					"SELECT * FROM sessions ORDER BY created_at DESC",
+					"SELECT * FROM sessions ORDER BY createdAt DESC",
 				)
 				.all()
 				.map(rowToSession),
@@ -49,7 +49,7 @@ export const createSessionsService = (db: DbInstance) => ({
 		tryDb("sessions.listByWorktree", () =>
 			db
 				.query<Record<string, unknown>, [string]>(
-					"SELECT * FROM sessions WHERE worktree_id = ? ORDER BY created_at DESC",
+					"SELECT * FROM sessions WHERE worktreeId = ? ORDER BY createdAt DESC",
 				)
 				.all(worktreeId)
 				.map(rowToSession),
@@ -104,7 +104,7 @@ export const createSessionsService = (db: DbInstance) => ({
 
 			yield* tryDb("sessions.create", () =>
 				db.run(
-					`INSERT INTO sessions (id, worktree_id, title, description, status, claude_session_id, model, total_cost_usd, input_tokens, output_tokens, created_at, last_activity_at)
+					`INSERT INTO sessions (id, worktreeId, title, description, status, claudeSessionId, model, totalCostUsd, inputTokens, outputTokens, createdAt, lastActivityAt)
 					 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 					[
 						id,
@@ -175,7 +175,7 @@ export const createSessionsService = (db: DbInstance) => ({
 				values.push(input.status);
 			}
 			if (input.claudeSessionId !== undefined) {
-				updates.push("claude_session_id = ?");
+				updates.push("claudeSessionId = ?");
 				values.push(input.claudeSessionId);
 			}
 			if (input.model !== undefined) {
@@ -183,19 +183,19 @@ export const createSessionsService = (db: DbInstance) => ({
 				values.push(input.model);
 			}
 			if (input.totalCostUsd !== undefined) {
-				updates.push("total_cost_usd = ?");
+				updates.push("totalCostUsd = ?");
 				values.push(input.totalCostUsd);
 			}
 			if (input.inputTokens !== undefined) {
-				updates.push("input_tokens = ?");
+				updates.push("inputTokens = ?");
 				values.push(input.inputTokens);
 			}
 			if (input.outputTokens !== undefined) {
-				updates.push("output_tokens = ?");
+				updates.push("outputTokens = ?");
 				values.push(input.outputTokens);
 			}
 			if (input.lastActivityAt !== undefined) {
-				updates.push("last_activity_at = ?");
+				updates.push("lastActivityAt = ?");
 				values.push(input.lastActivityAt);
 			}
 
@@ -252,7 +252,7 @@ export const createSessionsService = (db: DbInstance) => ({
 		Effect.gen(function* () {
 			yield* getSession(id);
 			yield* tryDb("sessions.touch", () =>
-				db.run("UPDATE sessions SET last_activity_at = ? WHERE id = ?", [
+				db.run("UPDATE sessions SET lastActivityAt = ? WHERE id = ?", [
 					nowIso(),
 					id,
 				]),

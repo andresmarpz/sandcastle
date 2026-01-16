@@ -4,7 +4,7 @@ import {
 	Session,
 	Turn,
 	UpdateSessionInput,
-} from "@sandcastle/storage";
+} from "@sandcastle/schemas";
 import { Schema } from "effect";
 
 import {

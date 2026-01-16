@@ -1,0 +1,336 @@
+"use client";
+
+import { useChat } from "@ai-sdk/react";
+import { Result, useAtomValue } from "@effect-atom/atom-react";
+import type { GetHistoryResult } from "@sandcastle/rpc";
+import type { ChatMessage, QueuedMessage } from "@sandcastle/schemas";
+import type { UIMessage } from "ai";
+import * as Option from "effect/Option";
+import { useEffect, useMemo, useState } from "react";
+import { chatHistoryQuery } from "@/api/chat-atoms";
+import {
+	Conversation,
+	ConversationContent,
+	ConversationEmptyState,
+	ConversationScrollButton,
+} from "@/components/ai-elements/conversation";
+import {
+	Queue,
+	QueueItem,
+	QueueItemAttachment,
+	QueueItemContent,
+	QueueItemFile,
+	QueueItemImage,
+	QueueItemIndicator,
+	QueueList,
+	QueueSection,
+	QueueSectionContent,
+	QueueSectionLabel,
+	QueueSectionTrigger,
+} from "@/components/ai-elements/queue";
+import { Alert, AlertDescription, AlertTitle } from "@/components/alert";
+import { Badge } from "@/components/badge";
+import { Spinner } from "@/components/spinner";
+import { useSessionEvents } from "@/hooks/use-session-events";
+import { RpcChatTransport } from "@/lib/chat-transport";
+import { subscriptionManager } from "@/lib/subscription-manager";
+import { ChatInput } from "./chat-input";
+import { MessageList } from "./message-list";
+
+interface ChatViewProps {
+	sessionId: string;
+	worktreeId: string;
+}
+
+type HistoryStatus = "loading" | "ready" | "error";
+
+type QueuePart = NonNullable<QueuedMessage["parts"]>[number];
+type QueueFilePart = Extract<QueuePart, { type: "file" }>;
+type QueueTextPart = Extract<QueuePart, { type: "text" }>;
+
+export function ChatView({ sessionId, worktreeId }: ChatViewProps) {
+	useEffect(() => {
+		subscriptionManager.visit(sessionId);
+		return () => {
+			subscriptionManager.leave(sessionId);
+		};
+	}, [sessionId]);
+
+	const historyResult = useAtomValue(chatHistoryQuery(sessionId));
+	const cachedHistory = useMemo(
+		() => Option.getOrElse(Result.value(historyResult), () => null),
+		[historyResult],
+	);
+	const initialMessages = useMemo(
+		() => mapHistoryToUiMessages(cachedHistory),
+		[cachedHistory],
+	);
+	const hasHistoryCache = cachedHistory !== null;
+
+	return Result.matchWithWaiting(historyResult, {
+		onWaiting: () =>
+			hasHistoryCache ? (
+				<ChatViewContent
+					sessionId={sessionId}
+					worktreeId={worktreeId}
+					initialMessages={initialMessages}
+					historyStatus="loading"
+				/>
+			) : (
+				<ChatHistoryLoading />
+			),
+		onError: () => (
+			<ChatViewContent
+				sessionId={sessionId}
+				worktreeId={worktreeId}
+				initialMessages={initialMessages}
+				historyStatus="error"
+			/>
+		),
+		onDefect: () => (
+			<ChatViewContent
+				sessionId={sessionId}
+				worktreeId={worktreeId}
+				initialMessages={initialMessages}
+				historyStatus="error"
+			/>
+		),
+		onSuccess: () => (
+			<ChatViewContent
+				sessionId={sessionId}
+				worktreeId={worktreeId}
+				initialMessages={initialMessages}
+				historyStatus="ready"
+			/>
+		),
+	});
+}
+
+interface ChatViewContentProps {
+	sessionId: string;
+	worktreeId: string;
+	initialMessages: UIMessage[];
+	historyStatus: HistoryStatus;
+}
+
+function ChatViewContent({
+	sessionId,
+	worktreeId,
+	initialMessages,
+	historyStatus,
+}: ChatViewContentProps) {
+	const [autonomous, setAutonomous] = useState(false);
+	const transport = useMemo(() => new RpcChatTransport(sessionId), [sessionId]);
+
+	const {
+		messages,
+		sendMessage,
+		status,
+		stop,
+		error: chatError,
+	} = useChat({
+		id: sessionId,
+		transport,
+		messages: initialMessages,
+	});
+
+	const {
+		queue,
+		sessionStatus,
+		isConnected,
+		error: sessionError,
+	} = useSessionEvents(sessionId);
+
+	const showHistoryLoading =
+		historyStatus === "loading" && messages.length === 0;
+
+	const errors = [
+		historyStatus === "error"
+			? {
+					title: "History unavailable",
+					message:
+						"Unable to load saved messages. New updates will still stream.",
+				}
+			: null,
+		sessionError
+			? {
+					title: "Session stream error",
+					message: sessionError.message,
+				}
+			: null,
+		chatError
+			? {
+					title: "Chat error",
+					message: chatError.message,
+				}
+			: null,
+	].filter(Boolean) as Array<{ title: string; message: string }>;
+
+	return (
+		<div className="flex h-full min-w-0 flex-col">
+			<header className="border-border flex items-center justify-between border-b px-4 py-3">
+				<div className="flex items-center gap-2">
+					<Badge
+						variant={sessionStatus === "streaming" ? "default" : "secondary"}
+					>
+						{sessionStatus === "streaming" ? "Streaming" : "Idle"}
+					</Badge>
+					<Badge variant={isConnected ? "outline" : "destructive"}>
+						{isConnected ? "Live" : "Offline"}
+					</Badge>
+					{historyStatus === "loading" && (
+						<span className="flex items-center gap-2 text-muted-foreground text-xs">
+							<Spinner className="size-3" />
+							Syncing history
+						</span>
+					)}
+				</div>
+				{queue.length > 0 && (
+					<Badge variant="outline">{queue.length} queued</Badge>
+				)}
+			</header>
+
+			{errors.length > 0 && (
+				<div className="flex flex-col gap-2 px-4 pt-3">
+					{errors.map((error) => (
+						<Alert key={error.title} variant="destructive">
+							<AlertTitle>{error.title}</AlertTitle>
+							<AlertDescription>{error.message}</AlertDescription>
+						</Alert>
+					))}
+				</div>
+			)}
+
+			<Conversation className="min-h-0">
+				<ConversationContent>
+					{showHistoryLoading ? (
+						<div className="flex min-h-[240px] items-center justify-center text-muted-foreground">
+							<Spinner className="mr-2" />
+							Loading chat history...
+						</div>
+					) : messages.length > 0 ? (
+						<MessageList messages={messages} />
+					) : (
+						<ConversationEmptyState
+							title="No messages yet"
+							description="Send a message to start the session."
+						/>
+					)}
+				</ConversationContent>
+				<ConversationScrollButton />
+			</Conversation>
+
+			{queue.length > 0 && <QueuePanel queue={queue} />}
+
+			<ChatInput
+				worktreeId={worktreeId}
+				onSend={sendMessage}
+				onStop={stop}
+				status={status}
+				autonomous={autonomous}
+				onAutonomousChange={setAutonomous}
+			/>
+		</div>
+	);
+}
+
+function QueuePanel({ queue }: { queue: QueuedMessage[] }) {
+	const label = queue.length === 1 ? "queued message" : "queued messages";
+
+	return (
+		<div className="px-4 pb-2">
+			<Queue>
+				<QueueSection defaultOpen={false}>
+					<QueueSectionTrigger>
+						<QueueSectionLabel count={queue.length} label={label} />
+					</QueueSectionTrigger>
+					<QueueSectionContent>
+						<QueueList>
+							{queue.map((message) => {
+								const preview = getQueuePreview(message);
+								const files = getQueueFileParts(message);
+
+								return (
+									<QueueItem key={message.id}>
+										<div className="flex items-start gap-2">
+											<QueueItemIndicator />
+											<QueueItemContent>{preview}</QueueItemContent>
+										</div>
+										{files.length > 0 && (
+											<QueueItemAttachment>
+												{files.map((file, index) =>
+													file.mediaType.startsWith("image/") ? (
+														<QueueItemImage
+															key={`${message.id}-file-${index}`}
+															src={file.url}
+														/>
+													) : (
+														<QueueItemFile key={`${message.id}-file-${index}`}>
+															{file.filename ?? "Attachment"}
+														</QueueItemFile>
+													),
+												)}
+											</QueueItemAttachment>
+										)}
+									</QueueItem>
+								);
+							})}
+						</QueueList>
+					</QueueSectionContent>
+				</QueueSection>
+			</Queue>
+		</div>
+	);
+}
+
+function ChatHistoryLoading() {
+	return (
+		<div className="flex h-full items-center justify-center text-muted-foreground">
+			<Spinner className="mr-2" />
+			Loading chat history...
+		</div>
+	);
+}
+
+function mapHistoryToUiMessages(history: GetHistoryResult | null): UIMessage[] {
+	if (!history) return [];
+	return history.messages.map(mapChatMessageToUi);
+}
+
+function mapChatMessageToUi(message: ChatMessage): UIMessage {
+	return {
+		id: message.id,
+		role: message.role,
+		parts: message.parts as UIMessage["parts"],
+		...(message.metadata ? { metadata: message.metadata } : {}),
+	};
+}
+
+function getQueuePreview(message: QueuedMessage): string {
+	const trimmed = message.content.trim();
+	if (trimmed) return trimmed;
+
+	const textPart = message.parts?.find(
+		(part): part is QueueTextPart =>
+			part.type === "text" && "text" in part && typeof part.text === "string",
+	);
+
+	if (textPart?.text) {
+		const text = textPart.text.trim();
+		if (text) return text;
+	}
+
+	return "Queued message";
+}
+
+function getQueueFileParts(message: QueuedMessage): QueueFilePart[] {
+	if (!message.parts) return [];
+	return message.parts.filter(
+		(part): part is QueueFilePart =>
+			part.type === "file" &&
+			"mediaType" in part &&
+			"url" in part &&
+			typeof part.mediaType === "string" &&
+			typeof part.url === "string",
+	);
+}

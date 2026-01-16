@@ -6,7 +6,12 @@
 	"type": "module",
 	"private": true,
 	"exports": {
-		".": "./src/index.ts"
+		".": "./src/index.ts",
+		"./entities": "./src/entities/index.ts",
+		"./chat": "./src/chat/index.ts",
+		"./coordination": "./src/coordination/index.ts",
+		"./errors": "./src/errors/index.ts",
+		"./primitives": "./src/primitives.ts"
 	},
 	"scripts": {
 		"test": "bun test",

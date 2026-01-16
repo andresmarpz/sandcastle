@@ -24,8 +24,7 @@
 	"dependencies": {
 		"effect": "^3.19.14",
 		"@effect/rpc": "^0.73.0",
-		"@sandcastle/schemas": "workspace:*",
-		"@sandcastle/storage": "workspace:*"
+		"@sandcastle/schemas": "workspace:*"
 	},
 	"devDependencies": {
 		"@types/bun": "latest",

@@ -4,10 +4,10 @@ import type {
 	SDKResultMessage,
 	SDKUserMessage,
 } from "@anthropic-ai/claude-agent-sdk";
-import {
+import type {
 	ChatMessage,
-	type MessagePart,
-	type MessageRole,
+	MessagePart,
+	MessageRole,
 	ReasoningPart,
 	TextPart,
 	ToolCallPart,
@@ -162,22 +162,20 @@ function processAssistantMessage(
 	for (const block of message.message.content) {
 		if (block.type === "text" && "text" in block) {
 			const textBlock = block as TextContentBlock;
-			parts.push(
-				new TextPart({
-					type: "text",
-					text: textBlock.text,
-					state: "done",
-				}),
-			);
+			const part: TextPart = {
+				type: "text",
+				text: textBlock.text,
+				state: "done",
+			};
+			parts.push(part);
 		} else if (block.type === "thinking" && "thinking" in block) {
 			const thinkingBlock = block as ThinkingContentBlock;
-			parts.push(
-				new ReasoningPart({
-					type: "reasoning",
-					text: thinkingBlock.thinking,
-					state: "done",
-				}),
-			);
+			const part: ReasoningPart = {
+				type: "reasoning",
+				text: thinkingBlock.thinking,
+				state: "done",
+			};
+			parts.push(part);
 		} else if (
 			block.type === "tool_use" &&
 			"id" in block &&
@@ -187,15 +185,14 @@ function processAssistantMessage(
 			const toolBlock = block as ToolUseContentBlock;
 			const partIndex = parts.length;
 
-			parts.push(
-				new ToolCallPart({
-					type: `tool-${toolBlock.name}`,
-					toolCallId: toolBlock.id,
-					toolName: toolBlock.name,
-					input: toolBlock.input,
-					state: "input-available",
-				}),
-			);
+			const part: ToolCallPart = {
+				type: `tool-${toolBlock.name}`,
+				toolCallId: toolBlock.id,
+				toolName: toolBlock.name,
+				input: toolBlock.input,
+				state: "input-available",
+			};
+			parts.push(part);
 
 			// Track for tool result correlation
 			state.pendingToolCalls.set(toolBlock.id, {
@@ -208,19 +205,18 @@ function processAssistantMessage(
 	// Only create message if there are parts
 	if (parts.length > 0) {
 		const now = new Date().toISOString();
-		state.messages.push(
-			new ChatMessage({
-				id: message.uuid,
-				sessionId: config.storageSessionId,
-				role: "assistant" as MessageRole,
-				parts,
-				createdAt: now,
-				metadata: {
-					claudeSessionId: message.session_id,
-					model: message.message.model,
-				},
-			}),
-		);
+		const chatMessage: ChatMessage = {
+			id: message.uuid,
+			sessionId: config.storageSessionId,
+			role: "assistant" as MessageRole,
+			parts,
+			createdAt: now,
+			metadata: {
+				claudeSessionId: message.session_id,
+				model: message.message.model,
+			},
+		};
+		state.messages.push(chatMessage);
 	}
 }
 
@@ -234,13 +230,12 @@ function processUserMessage(
 
 	// Handle string content
 	if (typeof content === "string") {
-		userParts.push(
-			new TextPart({
-				type: "text",
-				text: content,
-				state: "done",
-			}),
-		);
+		const part: TextPart = {
+			type: "text",
+			text: content,
+			state: "done",
+		};
+		userParts.push(part);
 	} else if (Array.isArray(content)) {
 		// Process array content - first handle tool results (they update assistant messages)
 		for (const block of content) {
@@ -253,13 +248,12 @@ function processUserMessage(
 		for (const block of content) {
 			if (block.type === "text" && "text" in block) {
 				const textBlock = block as TextContentBlock;
-				userParts.push(
-					new TextPart({
-						type: "text",
-						text: textBlock.text,
-						state: "done",
-					}),
-				);
+				const part: TextPart = {
+					type: "text",
+					text: textBlock.text,
+					state: "done",
+				};
+				userParts.push(part);
 			}
 			// Note: image blocks could be handled here as FilePart if needed
 		}
@@ -268,15 +262,14 @@ function processUserMessage(
 	// Only create user message if there's visible content (not just tool_result)
 	if (userParts.length > 0) {
 		const now = new Date().toISOString();
-		state.messages.push(
-			new ChatMessage({
-				id: message.uuid ?? config.generateId(),
-				sessionId: config.storageSessionId,
-				role: "user" as MessageRole,
-				parts: userParts,
-				createdAt: now,
-			}),
-		);
+		const chatMessage: ChatMessage = {
+			id: message.uuid ?? config.generateId(),
+			sessionId: config.storageSessionId,
+			role: "user" as MessageRole,
+			parts: userParts,
+			createdAt: now,
+		};
+		state.messages.push(chatMessage);
 	}
 }
 
@@ -303,12 +296,12 @@ function applyToolResult(
 			: JSON.stringify(result.content);
 
 	// Create updated part with new state
-	const updatedPart = new ToolCallPart({
+	const updatedPart: ToolCallPart = {
 		...toolPart,
 		state: result.is_error ? "output-error" : "output-available",
 		output: result.is_error ? undefined : outputContent,
 		errorText: result.is_error ? outputContent : undefined,
-	});
+	};
 
 	// Replace the part in the message
 	// Note: We're mutating here for simplicity since ChatMessage.parts is mutable

@@ -33,11 +33,12 @@
  * )
  * ```
  */
+import * as Socket from "@effect/platform/Socket";
 import { BrowserSocket } from "@effect/platform-browser";
 import { RpcClient, RpcSerialization } from "@effect/rpc";
 import type { RpcClientError } from "@effect/rpc/RpcClientError";
 import { ChatRpc } from "@sandcastle/rpc";
-import { Context, type Effect, Layer, ManagedRuntime } from "effect";
+import { Context, Effect, Layer, ManagedRuntime } from "effect";
 import { getBackendUrl } from "./backend-url";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -62,6 +63,117 @@ function getWebSocketUrl(): string {
 
 	// Add /ws path
 	return `${wsUrl}/ws`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Connection Tracking
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type StreamingConnectionStatus = "connected" | "disconnected";
+
+export interface StreamingConnectionEvent {
+	status: StreamingConnectionStatus;
+	isReconnect: boolean;
+	connectionId: number;
+}
+
+export interface StreamingConnectionState {
+	status: StreamingConnectionStatus;
+	connectionId: number;
+	hasConnected: boolean;
+}
+
+const streamingConnectionListeners = new Set<
+	(event: StreamingConnectionEvent) => void
+>();
+
+let streamingConnectionState: StreamingConnectionState = {
+	status: "disconnected",
+	connectionId: 0,
+	hasConnected: false,
+};
+
+function emitStreamingConnectionEvent(event: StreamingConnectionEvent) {
+	for (const listener of streamingConnectionListeners) {
+		listener(event);
+	}
+}
+
+function markStreamingConnected() {
+	if (streamingConnectionState.status === "connected") {
+		return;
+	}
+
+	const isReconnect = streamingConnectionState.hasConnected;
+	const connectionId = streamingConnectionState.connectionId + 1;
+
+	streamingConnectionState = {
+		status: "connected",
+		connectionId,
+		hasConnected: true,
+	};
+
+	emitStreamingConnectionEvent({
+		status: "connected",
+		isReconnect,
+		connectionId,
+	});
+}
+
+function markStreamingDisconnected() {
+	if (streamingConnectionState.status === "disconnected") {
+		return;
+	}
+
+	streamingConnectionState = {
+		...streamingConnectionState,
+		status: "disconnected",
+	};
+
+	emitStreamingConnectionEvent({
+		status: "disconnected",
+		isReconnect: false,
+		connectionId: streamingConnectionState.connectionId,
+	});
+}
+
+export function onStreamingConnectionEvent(
+	listener: (event: StreamingConnectionEvent) => void,
+): () => void {
+	streamingConnectionListeners.add(listener);
+	return () => streamingConnectionListeners.delete(listener);
+}
+
+export function getStreamingConnectionState(): StreamingConnectionState {
+	return { ...streamingConnectionState };
+}
+
+export function waitForStreamingConnection(
+	afterConnectionId = streamingConnectionState.connectionId,
+): Promise<StreamingConnectionEvent> {
+	if (
+		streamingConnectionState.status === "connected" &&
+		streamingConnectionState.connectionId > afterConnectionId
+	) {
+		return Promise.resolve({
+			status: "connected",
+			isReconnect: streamingConnectionState.hasConnected,
+			connectionId: streamingConnectionState.connectionId,
+		});
+	}
+
+	return new Promise((resolve) => {
+		const unsubscribe = onStreamingConnectionEvent((event) => {
+			if (event.status !== "connected") {
+				return;
+			}
+			if (event.connectionId <= afterConnectionId) {
+				return;
+			}
+			unsubscribe();
+			resolve(event);
+		});
+	});
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -101,9 +213,42 @@ function createWebSocketProtocolLayer(wsUrl: string) {
 	return RpcClient.layerProtocolSocket({
 		retryTransientErrors: true,
 	}).pipe(
-		Layer.provide(BrowserSocket.layerWebSocket(wsUrl)),
+		Layer.provide(createTrackedSocketLayer(wsUrl)),
 		Layer.provide(RpcSerialization.layerNdjson),
 	);
+}
+
+function createTrackedSocketLayer(wsUrl: string): Layer.Layer<Socket.Socket> {
+	const baseLayer = BrowserSocket.layerWebSocket(wsUrl);
+
+	const trackedLayer = Layer.effect(
+		Socket.Socket,
+		Effect.gen(function* () {
+			const socket = yield* Socket.Socket;
+
+			const withOnOpen = (options?: { onOpen?: Effect.Effect<void> }) => ({
+				...options,
+				onOpen: options?.onOpen
+					? Effect.zipRight(options.onOpen, Effect.sync(markStreamingConnected))
+					: Effect.sync(markStreamingConnected),
+			});
+
+			const trackDisconnect = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+				effect.pipe(
+					Effect.onExit(() => Effect.sync(markStreamingDisconnected)),
+				);
+
+			return Socket.Socket.of({
+				...socket,
+				run: (handler, options) =>
+					trackDisconnect(socket.run(handler, withOnOpen(options))),
+				runRaw: (handler, options) =>
+					trackDisconnect(socket.runRaw(handler, withOnOpen(options))),
+			});
+		}),
+	);
+
+	return trackedLayer.pipe(Layer.provide(baseLayer));
 }
 
 /**
