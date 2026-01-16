@@ -168,7 +168,6 @@ function SidebarProvider({
 			setOpen,
 			isMobile,
 			openMobile,
-			setOpenMobile,
 			toggleSidebar,
 			width,
 			setWidth,

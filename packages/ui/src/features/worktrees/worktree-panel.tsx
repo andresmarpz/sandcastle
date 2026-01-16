@@ -42,6 +42,13 @@ export function WorktreePanel() {
 		sessionId?: string;
 	}>();
 
+	const worktreeResult = useAtomValue(worktreeAtomFamily(worktreeId!));
+	const worktree = useMemo(
+		() => Option.getOrElse(Result.value(worktreeResult), () => null),
+		[worktreeResult],
+	);
+	const hasWorktreeCache = worktree !== null;
+
 	if (!worktreeId) {
 		return (
 			<div className="flex h-full items-center justify-center px-6">
@@ -52,13 +59,6 @@ export function WorktreePanel() {
 			</div>
 		);
 	}
-
-	const worktreeResult = useAtomValue(worktreeAtomFamily(worktreeId));
-	const worktree = useMemo(
-		() => Option.getOrElse(Result.value(worktreeResult), () => null),
-		[worktreeResult],
-	);
-	const hasWorktreeCache = worktree !== null;
 
 	return Result.matchWithWaiting(worktreeResult, {
 		onWaiting: () =>

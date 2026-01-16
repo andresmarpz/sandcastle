@@ -27,9 +27,6 @@ import { cn } from "@/lib/utils";
 
 interface SidebarWorktreeItemProps {
 	worktree: Worktree;
-	onSelect: (worktree: Worktree) => void;
-	onDelete: (worktree: Worktree) => void | Promise<void>;
-	className?: string;
 }
 
 function formatRelativeTime(iso: string) {
@@ -42,12 +39,7 @@ function formatRelativeTime(iso: string) {
 	});
 }
 
-export function SidebarWorktreeItem({
-	worktree,
-	onSelect,
-	onDelete,
-	className,
-}: SidebarWorktreeItemProps) {
+export function SidebarWorktreeItem({ worktree }: SidebarWorktreeItemProps) {
 	const location = useLocation();
 
 	const [isDialogOpen, setIsDialogOpen] = React.useState(false);
@@ -57,18 +49,20 @@ export function SidebarWorktreeItem({
 	);
 
 	const handleDelete = async () => {
-		await onDelete(worktree);
+		// Missing: delete using RPC
 		setIsDialogOpen(false);
 	};
 
 	const isActive = location.pathname.startsWith(`/worktrees/${worktree.id}`);
 
+	function handleSelect() {}
+
 	return (
 		<>
-			<SidebarMenuItem className={cn("group relative", className)}>
+			<SidebarMenuItem className={cn("group relative")}>
 				<SidebarMenuButton
 					className="h-auto w-full items-start gap-2 px-2 py-2 pr-8 text-left"
-					onClick={() => onSelect(worktree)}
+					onClick={handleSelect}
 					isActive={isActive}
 				>
 					<div className="flex w-full flex-col gap-1">

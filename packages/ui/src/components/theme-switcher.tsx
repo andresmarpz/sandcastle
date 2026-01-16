@@ -1,6 +1,6 @@
 "use client";
 
-import { IconMoon, IconSun, IconDeviceDesktop } from "@tabler/icons-react";
+import { IconDeviceDesktop, IconMoon, IconSun } from "@tabler/icons-react";
 import { Button } from "@/components/button";
 import {
 	DropdownMenu,

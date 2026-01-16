@@ -165,9 +165,9 @@ export function GrepPart({ part }: GrepPartProps) {
 						{/* File list */}
 						{files.length > 0 ? (
 							<ul className="max-h-64 overflow-auto divide-y divide-border/50">
-								{files.map((file, index) => (
+								{files.map((file) => (
 									<li
-										key={index}
+										key={`${part.toolCallId}_${file.slice(Math.min(10, file.length - 10), file.length)}`}
 										className="flex items-center gap-2 px-3 py-1.5 hover:bg-muted/30"
 									>
 										<IconFile className="size-3.5 text-muted-foreground shrink-0" />
