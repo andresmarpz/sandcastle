@@ -31,9 +31,9 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/alert";
 import { Badge } from "@/components/badge";
 import { Spinner } from "@/components/spinner";
-import { useSessionEvents } from "@/hooks/use-session-events";
-import { RpcChatTransport } from "@/lib/chat-transport";
-import { subscriptionManager } from "@/lib/subscription-manager";
+import { RpcChatTransport } from "@/features/chat/transport/chat-transport";
+import { subscriptionManager } from "@/features/chat/transport/subscription-manager";
+import { useSessionEvents } from "@/features/chat/transport/use-session-events";
 import { ChatInput } from "./chat-input";
 import { MessageList } from "./message-list";
 
@@ -167,7 +167,7 @@ function ChatViewContent({
 	].filter(Boolean) as Array<{ title: string; message: string }>;
 
 	return (
-		<div className="flex h-full min-w-0 flex-col">
+		<div className="flex h-full min-w-0 flex-col max-w-4xl w-full m-auto">
 			<header className="border-border flex items-center justify-between border-b px-4 py-3">
 				<div className="flex items-center gap-2">
 					<Badge

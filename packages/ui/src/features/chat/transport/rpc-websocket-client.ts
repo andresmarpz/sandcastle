@@ -39,7 +39,7 @@ import { RpcClient, RpcSerialization } from "@effect/rpc";
 import type { RpcClientError } from "@effect/rpc/RpcClientError";
 import { ChatRpc } from "@sandcastle/rpc";
 import { Context, Effect, Layer, ManagedRuntime } from "effect";
-import { getBackendUrl } from "./backend-url";
+import { getBackendUrl } from "../../../lib/backend-url";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // URL Utilities
