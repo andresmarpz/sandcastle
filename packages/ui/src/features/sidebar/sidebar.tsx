@@ -14,14 +14,14 @@ import {
 	Sidebar as SidebarPrimitive,
 	SidebarRail,
 } from "@/components/sidebar";
-import SidebarHeader from "@/components/sidebar/sidebar-header";
-import { SidebarRepositoryItem } from "@/components/sidebar/sidebar-repository-item";
 import { Skeleton } from "@/components/skeleton";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import {
 	SettingsModal,
 	type SettingsSection,
 } from "@/features/settings/settings-modal";
+import SidebarHeader from "@/features/sidebar/sidebar-header";
+import { SidebarRepositoryItem } from "@/features/sidebar/sidebar-repository-item";
 
 export function Sidebar() {
 	const repositoriesResult = useAtomValue(repositoryListAtom);
