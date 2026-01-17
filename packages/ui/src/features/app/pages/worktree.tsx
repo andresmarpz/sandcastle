@@ -12,6 +12,7 @@ import {
 	SESSION_LIST_KEY,
 	sessionListByWorktreeAtomFamily,
 } from "@/api/session-atoms";
+import { worktreeAtomFamily } from "@/api/worktree-atoms";
 import {
 	Panel,
 	PanelBody,
@@ -45,6 +46,7 @@ function WorktreePageContent({ worktreeId }: { worktreeId: string }) {
 	const sessionsResult = useAtomValue(
 		sessionListByWorktreeAtomFamily(worktreeId),
 	);
+	const worktreeResult = useAtomValue(worktreeAtomFamily(worktreeId));
 	const refreshSessions = useAtomRefresh(
 		sessionListByWorktreeAtomFamily(worktreeId),
 	);
@@ -104,11 +106,17 @@ function WorktreePageContent({ worktreeId }: { worktreeId: string }) {
 
 	const handleAddTab = async () => {
 		if (isCreatingSession) return;
+
+		// Get worktree to pass its path
+		const worktree = Option.getOrUndefined(Result.value(worktreeResult));
+		if (!worktree) return;
+
 		setIsCreatingSession(true);
 		try {
 			const result = await createSession({
 				payload: {
 					worktreeId,
+					workingPath: worktree.path,
 					title: "New session",
 				},
 				reactivityKeys: [SESSION_LIST_KEY, `sessions:worktree:${worktreeId}`],
