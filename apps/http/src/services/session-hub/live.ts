@@ -574,7 +574,7 @@ export const makeSessionHub = Effect.gen(function* () {
 				...(parts && parts.length > 0 ? { parts } : {}),
 			});
 
-			// 4. Get worktree path for Claude SDK
+			// 4. Get session's working path for Claude SDK
 			const dbSession = yield* storage.sessions.get(sessionId).pipe(
 				Effect.mapError(
 					() =>
@@ -584,21 +584,12 @@ export const makeSessionHub = Effect.gen(function* () {
 						}),
 				),
 			);
-			const worktree = yield* storage.worktrees.get(dbSession.worktreeId).pipe(
-				Effect.mapError(
-					() =>
-						new ChatOperationRpcError({
-							message: "Worktree not found",
-							code: "WORKTREE_NOT_FOUND",
-						}),
-				),
-			);
 
 			// 5. Start Claude stream
 			const claudeSessionId = yield* Ref.get(session.claudeSessionIdRef);
 			const queryHandle = yield* claudeSDK
 				.query(content, {
-					cwd: worktree.path,
+					cwd: dbSession.workingPath,
 					resume: claudeSessionId ?? undefined,
 					permissionMode: "bypassPermissions",
 				})

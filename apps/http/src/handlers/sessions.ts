@@ -43,7 +43,8 @@ const mapCreateError = (
 
 const toSession = (session: {
 	id: string;
-	worktreeId: string;
+	worktreeId: string | null;
+	workingPath: string;
 	title: string;
 	description: string | null;
 	status: "created" | "active" | "paused" | "completed" | "failed";
@@ -58,6 +59,7 @@ const toSession = (session: {
 	new Session({
 		id: session.id,
 		worktreeId: session.worktreeId,
+		workingPath: session.workingPath,
 		title: session.title,
 		description: session.description,
 		status: session.status,
@@ -114,6 +116,7 @@ export const SessionRpcHandlers = SessionRpc.toLayer(
 				storage.sessions
 					.create({
 						worktreeId: params.worktreeId,
+						workingPath: params.workingPath,
 						title: params.title,
 						description: params.description,
 					})

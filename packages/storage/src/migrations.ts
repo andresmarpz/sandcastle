@@ -41,7 +41,8 @@ const migrations: Migration[] = [
 			-- Sessions table
 			CREATE TABLE IF NOT EXISTS sessions (
 				id TEXT PRIMARY KEY,
-				worktreeId TEXT NOT NULL,
+				worktreeId TEXT,
+				workingPath TEXT NOT NULL,
 				title TEXT NOT NULL,
 				description TEXT,
 				status TEXT NOT NULL CHECK (status IN ('created', 'active', 'paused', 'completed', 'failed')),
