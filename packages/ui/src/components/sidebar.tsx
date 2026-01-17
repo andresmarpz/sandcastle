@@ -101,7 +101,12 @@ function SidebarProvider({
 		);
 		_setWidth(clampedWidth);
 		// Persist to cookie
-		document.cookie = `${SIDEBAR_WIDTH_COOKIE_NAME}=${clampedWidth}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
+		cookieStore.set({
+			name: SIDEBAR_WIDTH_COOKIE_NAME,
+			value: String(clampedWidth),
+			path: "/",
+			expires: Date.now() + SIDEBAR_COOKIE_MAX_AGE * 1000,
+		});
 	}, []);
 
 	// This is the internal state of the sidebar.
@@ -118,7 +123,12 @@ function SidebarProvider({
 			}
 
 			// This sets the cookie to keep the sidebar state.
-			document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
+			cookieStore.set({
+				name: SIDEBAR_COOKIE_NAME,
+				value: String(openState),
+				path: "/",
+				expires: Date.now() + SIDEBAR_COOKIE_MAX_AGE * 1000,
+			});
 		},
 		[setOpenProp, open],
 	);
