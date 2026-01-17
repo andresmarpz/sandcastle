@@ -3,11 +3,13 @@
 import { useChat } from "@ai-sdk/react";
 import { Result, useAtomValue } from "@effect-atom/atom-react";
 import type { GetHistoryResult } from "@sandcastle/rpc";
-import type { ChatMessage, QueuedMessage } from "@sandcastle/schemas";
+import type { ChatMessage, QueuedMessage, Session } from "@sandcastle/schemas";
 import type { UIMessage } from "ai";
+import { formatDistanceToNow } from "date-fns";
 import * as Option from "effect/Option";
 import { useEffect, useMemo, useState } from "react";
 import { chatHistoryQuery } from "@/api/chat-atoms";
+import { sessionQuery } from "@/api/session-atoms";
 import {
 	Conversation,
 	ConversationContent,
@@ -120,6 +122,14 @@ function ChatViewContent({
 	historyStatus,
 }: ChatViewContentProps) {
 	const [autonomous, setAutonomous] = useState(false);
+
+	// Fetch session data for metadata display
+	const sessionResult = useAtomValue(sessionQuery(sessionId));
+	const session = useMemo(
+		() => Option.getOrElse(Result.value(sessionResult), () => null),
+		[sessionResult],
+	);
+
 	const transport = useMemo(() => new RpcChatTransport(sessionId), [sessionId]);
 
 	const {
@@ -168,67 +178,71 @@ function ChatViewContent({
 
 	return (
 		<div className="h-full w-full overflow-y-auto">
-			<div className="flex flex-col min-h-full">
-				<header className="sticky top-0 w-full bg-background">
-					<div className="flex items-center justify-between px-4 py-3 max-w-4xl w-full mx-auto">
-						<div className="flex items-center gap-2 z-10">
-							<Badge
-								variant={
-									sessionStatus === "streaming" ? "default" : "secondary"
-								}
-							>
-								{sessionStatus === "streaming" ? "Streaming" : "Idle"}
-							</Badge>
-							<Badge variant={isConnected ? "outline" : "destructive"}>
-								{isConnected ? "Live" : "Offline"}
-							</Badge>
-							{historyStatus === "loading" && (
-								<span className="flex items-center gap-2 text-muted-foreground text-xs">
-									<Spinner className="size-3" />
-									Syncing history
-								</span>
+			<div className="grid grid-cols-[1fr_minmax(0,56rem)_1fr] min-h-full">
+				{/* Left column - empty spacer */}
+				<div />
+
+				{/* Center column - main content */}
+				<div className="flex flex-col min-h-full">
+					<header className="sticky top-0 w-full bg-background z-10">
+						<div className="flex items-center justify-between px-4 py-3">
+							<div className="flex items-center gap-2">
+								<Badge
+									variant={
+										sessionStatus === "streaming" ? "default" : "secondary"
+									}
+								>
+									{sessionStatus === "streaming" ? "Streaming" : "Idle"}
+								</Badge>
+								<Badge variant={isConnected ? "outline" : "destructive"}>
+									{isConnected ? "Live" : "Offline"}
+								</Badge>
+								{historyStatus === "loading" && (
+									<span className="flex items-center gap-2 text-muted-foreground text-xs">
+										<Spinner className="size-3" />
+										Syncing history
+									</span>
+								)}
+							</div>
+							{queue.length > 0 && (
+								<Badge variant="outline">{queue.length} queued</Badge>
 							)}
 						</div>
-						{queue.length > 0 && (
-							<Badge variant="outline">{queue.length} queued</Badge>
+						{errors.length > 0 && (
+							<div className="flex flex-col gap-2 px-4 pb-3">
+								{errors.map((error) => (
+									<Alert key={error.title} variant="destructive">
+										<AlertTitle>{error.title}</AlertTitle>
+										<AlertDescription>{error.message}</AlertDescription>
+									</Alert>
+								))}
+							</div>
 						)}
+					</header>
+
+					<div className="flex-1">
+						<Conversation>
+							<ConversationContent>
+								{showHistoryLoading ? (
+									<div className="flex min-h-[240px] items-center justify-center text-muted-foreground">
+										<Spinner className="mr-2" />
+										Loading chat history...
+									</div>
+								) : messages.length > 0 ? (
+									<GroupedMessageList messages={messages} />
+								) : (
+									<ConversationEmptyState
+										title="No messages yet"
+										description="Send a message to start the session."
+									/>
+								)}
+							</ConversationContent>
+							<ConversationScrollButton />
+						</Conversation>
+						{queue.length > 0 && <QueuePanel queue={queue} />}
 					</div>
-					{errors.length > 0 && (
-						<div className="flex flex-col gap-2 px-4 pb-3 max-w-4xl w-full mx-auto">
-							{errors.map((error) => (
-								<Alert key={error.title} variant="destructive">
-									<AlertTitle>{error.title}</AlertTitle>
-									<AlertDescription>{error.message}</AlertDescription>
-								</Alert>
-							))}
-						</div>
-					)}
-				</header>
 
-				<div className="flex-1 max-w-4xl w-full mx-auto">
-					<Conversation>
-						<ConversationContent>
-							{showHistoryLoading ? (
-								<div className="flex min-h-[240px] items-center justify-center text-muted-foreground">
-									<Spinner className="mr-2" />
-									Loading chat history...
-								</div>
-							) : messages.length > 0 ? (
-								<GroupedMessageList messages={messages} />
-							) : (
-								<ConversationEmptyState
-									title="No messages yet"
-									description="Send a message to start the session."
-								/>
-							)}
-						</ConversationContent>
-						<ConversationScrollButton />
-					</Conversation>
-					{queue.length > 0 && <QueuePanel queue={queue} />}
-				</div>
-
-				<footer className="sticky bottom-0 w-full bg-background">
-					<div className="max-w-4xl w-full mx-auto">
+					<footer className="sticky bottom-0 w-full bg-background">
 						<ChatInput
 							worktreeId={worktreeId}
 							onSend={sendMessage}
@@ -237,12 +251,98 @@ function ChatViewContent({
 							autonomous={autonomous}
 							onAutonomousChange={setAutonomous}
 						/>
-					</div>
-				</footer>
+					</footer>
+				</div>
+
+				{/* Right column - session metadata */}
+				<div className="relative">
+					<SessionMetadataPanel session={session} />
+				</div>
 			</div>
 		</div>
 	);
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Session Metadata Panel
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface SessionMetadataPanelProps {
+	session: Session | null;
+}
+
+function SessionMetadataPanel({ session }: SessionMetadataPanelProps) {
+	const createdAtLabel = useMemo(() => {
+		if (!session?.createdAt) return null;
+		const timestamp = Date.parse(session.createdAt);
+		if (Number.isNaN(timestamp)) return null;
+		return formatDistanceToNow(timestamp, { addSuffix: true });
+	}, [session?.createdAt]);
+
+	const formattedCost = useMemo(() => {
+		const cost = session?.totalCostUsd ?? 0;
+		if (cost === 0) return "$0.00";
+		if (cost < 0.01) return `$${cost.toFixed(4)}`;
+		return `$${cost.toFixed(2)}`;
+	}, [session?.totalCostUsd]);
+
+	const formattedTokens = useMemo(() => {
+		const formatCount = (count: number) => {
+			if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`;
+			if (count >= 1_000) return `${(count / 1_000).toFixed(1)}K`;
+			return count.toString();
+		};
+		const inputTokens = session?.inputTokens ?? 0;
+		const outputTokens = session?.outputTokens ?? 0;
+		return {
+			input: formatCount(inputTokens),
+			output: formatCount(outputTokens),
+			total: formatCount(inputTokens + outputTokens),
+		};
+	}, [session?.inputTokens, session?.outputTokens]);
+
+	return (
+		<div className="sticky top-0 p-4">
+			<div className="flex flex-col gap-4 text-sm">
+				<div className="flex flex-col gap-1">
+					<span className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
+						Session
+					</span>
+					{createdAtLabel && (
+						<span className="text-foreground">Created {createdAtLabel}</span>
+					)}
+				</div>
+
+				<div className="flex flex-col gap-1">
+					<span className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
+						Cost
+					</span>
+					<span className="text-foreground font-mono">{formattedCost}</span>
+				</div>
+
+				<div className="flex flex-col gap-1">
+					<span className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
+						Tokens
+					</span>
+					<div className="flex flex-col gap-0.5 text-foreground font-mono">
+						<span>
+							<span className="text-muted-foreground">In:</span>{" "}
+							{formattedTokens.input}
+						</span>
+						<span>
+							<span className="text-muted-foreground">Out:</span>{" "}
+							{formattedTokens.output}
+						</span>
+					</div>
+				</div>
+			</div>
+		</div>
+	);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Queue Panel
+// ─────────────────────────────────────────────────────────────────────────────
 
 function QueuePanel({ queue }: { queue: QueuedMessage[] }) {
 	const label = queue.length === 1 ? "queued message" : "queued messages";
