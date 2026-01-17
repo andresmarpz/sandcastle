@@ -62,8 +62,6 @@ const LoggingMiddleware = HttpMiddleware.make((app) =>
 	}),
 );
 
-// ─── RPC Layers ──────────────────────────────────────────────
-
 const SandcastleRpc = RepositoryRpc.merge(WorktreeRpc)
 	.merge(SessionRpc)
 	.merge(ChatRpc)
@@ -101,8 +99,6 @@ const WebSocketRpcServer = RpcServer.layer(SandcastleRpc).pipe(
 // Combined RPC layer (both HTTP and WebSocket)
 const RpcLayers = Layer.mergeAll(HttpRpcServer, WebSocketRpcServer);
 
-// ─── Custom Routes ───────────────────────────────────────────
-
 const CustomRoutes = HttpRouter.Default.use((router) =>
 	Effect.gen(function* () {
 		const metrics = yield* WebSocketMetricsService;
@@ -123,8 +119,6 @@ const CustomRoutes = HttpRouter.Default.use((router) =>
 		);
 	}),
 );
-
-// ─── Server ──────────────────────────────────────────────────
 
 const port = Number(process.env.PORT) || 3000;
 

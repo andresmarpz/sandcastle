@@ -12,9 +12,6 @@ export type { CreateSessionInput, Session, UpdateSessionInput };
 // Re-export the client and key for direct use
 export { SessionClient, SESSION_LIST_KEY };
 
-// ─── Stable Query Atoms ─────────────────────────────────────────
-// These use Atom.family for proper caching and reactivity
-
 /**
  * Stable atom for the full session list.
  */

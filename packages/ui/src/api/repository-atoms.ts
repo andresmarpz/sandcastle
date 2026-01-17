@@ -12,9 +12,6 @@ export type { CreateRepositoryInput, Repository, UpdateRepositoryInput };
 // Re-export the client and key for direct use
 export { RepositoryClient, REPOSITORY_LIST_KEY };
 
-// ─── Stable Query Atoms ─────────────────────────────────────────
-// These are created once and reused, ensuring reactivity works properly
-
 const _repositoryListAtom = RepositoryClient.query(
 	"repository.list",
 	{},
