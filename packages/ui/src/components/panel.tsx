@@ -30,10 +30,6 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "./button";
 
-// -----------------------------------------------------------------------------
-// Types
-// -----------------------------------------------------------------------------
-
 interface PanelTab {
 	id: string;
 	label: ReactNode;
@@ -51,10 +47,6 @@ interface PanelContextValue {
 	reorderable: boolean;
 }
 
-// -----------------------------------------------------------------------------
-// Context
-// -----------------------------------------------------------------------------
-
 const PanelContext = createContext<PanelContextValue | null>(null);
 
 function usePanelContext() {
@@ -64,10 +56,6 @@ function usePanelContext() {
 	}
 	return context;
 }
-
-// -----------------------------------------------------------------------------
-// Panel (Root)
-// -----------------------------------------------------------------------------
 
 interface PanelProps {
 	children: ReactNode;
@@ -215,10 +203,6 @@ function Panel({
 	);
 }
 
-// -----------------------------------------------------------------------------
-// SortableTab
-// -----------------------------------------------------------------------------
-
 interface SortableTabProps {
 	tab: PanelTab;
 	isActive: boolean;
@@ -310,10 +294,6 @@ function SortableTab({
 		</TabsPrimitive.Tab>
 	);
 }
-
-// -----------------------------------------------------------------------------
-// PanelHeader
-// -----------------------------------------------------------------------------
 
 interface PanelHeaderProps {
 	className?: string;
@@ -411,10 +391,6 @@ function PanelHeader({ className, children }: PanelHeaderProps) {
 	);
 }
 
-// -----------------------------------------------------------------------------
-// PanelContent
-// -----------------------------------------------------------------------------
-
 interface PanelContentProps {
 	className?: string;
 	children: ReactNode;
@@ -442,10 +418,6 @@ function PanelContent({
 	);
 }
 
-// -----------------------------------------------------------------------------
-// PanelBody (renders all content panels)
-// -----------------------------------------------------------------------------
-
 interface PanelBodyProps {
 	className?: string;
 	children: ReactNode;
@@ -461,10 +433,6 @@ function PanelBody({ className, children }: PanelBodyProps) {
 		</div>
 	);
 }
-
-// -----------------------------------------------------------------------------
-// Exports
-// -----------------------------------------------------------------------------
 
 export {
 	Panel,

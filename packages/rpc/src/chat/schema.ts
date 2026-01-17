@@ -10,10 +10,6 @@ import { Schema } from "effect";
 
 import { ChatOperationRpcError, ChatSessionNotFoundRpcError } from "./errors";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Response Types
-// ─────────────────────────────────────────────────────────────────────────────
-
 /** Result of sending a message */
 export class SendMessageResult extends Schema.Class<SendMessageResult>(
 	"SendMessageResult",
@@ -43,10 +39,6 @@ export class GetHistoryResult extends Schema.Class<GetHistoryResult>(
 )({
 	messages: Schema.Array(ChatMessage),
 }) {}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// RPC Group
-// ─────────────────────────────────────────────────────────────────────────────
 
 export class ChatRpc extends RpcGroup.make(
 	/**

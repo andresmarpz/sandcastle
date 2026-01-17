@@ -5,8 +5,6 @@ import { type FileMatch, fileSearchAtomFamily } from "@/api/files-atoms";
 import { CommandEmpty, CommandGroup, CommandItem } from "@/components/command";
 import { splitPath } from "./utils";
 
-// ─── File Search Results Components ───────────────────────────
-
 interface FileSearchResultsInnerProps {
 	atom: ReturnType<typeof fileSearchAtomFamily>;
 	onSelect: (path: string) => void;
@@ -26,7 +24,6 @@ function FileSearchResultsInner({
 		return <CommandEmpty>Error searching files</CommandEmpty>;
 	}
 
-	// result._tag === "Success"
 	if (result.value.length === 0) {
 		return <CommandEmpty>No files found</CommandEmpty>;
 	}
