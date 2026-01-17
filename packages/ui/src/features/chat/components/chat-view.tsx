@@ -303,9 +303,9 @@ function SessionMetadataPanel({ session }: SessionMetadataPanelProps) {
 
 	return (
 		<div className="sticky top-0 p-4">
-			<div className="flex flex-col gap-4 text-sm">
+			<div className="flex flex-col gap-4 text-sm min-w-[240px]">
 				<div className="flex flex-col gap-1">
-					<span className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
+					<span className="text-muted-foreground text-xs font-medium uppercase">
 						Session
 					</span>
 					{createdAtLabel && (
@@ -314,17 +314,17 @@ function SessionMetadataPanel({ session }: SessionMetadataPanelProps) {
 				</div>
 
 				<div className="flex flex-col gap-1">
-					<span className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
+					<span className="text-muted-foreground text-xs font-medium uppercase">
 						Cost
 					</span>
-					<span className="text-foreground font-mono">{formattedCost}</span>
+					<span className="text-foreground">{formattedCost}</span>
 				</div>
 
 				<div className="flex flex-col gap-1">
-					<span className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
+					<span className="text-muted-foreground text-xs font-medium uppercase">
 						Tokens
 					</span>
-					<div className="flex flex-col gap-0.5 text-foreground font-mono">
+					<div className="flex flex-col gap-0.5 text-foreground">
 						<span>
 							<span className="text-muted-foreground">In:</span>{" "}
 							{formattedTokens.input}
