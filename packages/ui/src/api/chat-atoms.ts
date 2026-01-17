@@ -9,8 +9,6 @@ export type { ChatMessage, GetHistoryResult };
 // Re-export the client and key for direct use
 export { CHAT_HISTORY_KEY, ChatClient };
 
-// ─── Query Atoms ─────────────────────────────────────────────
-
 /**
  * Family of atoms for chat history by session ID.
  * Returns a GetHistoryResult (messages + pagination info).

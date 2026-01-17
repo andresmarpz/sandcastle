@@ -6,8 +6,6 @@ import {
 import { type RpcSerialization, RpcServer } from "@effect/rpc";
 import { Context, Effect, Layer, Ref, type Scope } from "effect";
 
-// ─── WebSocket Connection Metrics ────────────────────────────────────────────
-
 /**
  * Tracks WebSocket connection health and provides metrics for monitoring.
  */
@@ -29,8 +27,6 @@ export interface WebSocketMetrics {
 export class WebSocketMetricsService extends Context.Tag(
 	"WebSocketMetricsService",
 )<WebSocketMetricsService, WebSocketMetrics>() {}
-
-// ─── Live Implementation ─────────────────────────────────────────────────────
 
 interface MetricsState {
 	activeConnections: number;
@@ -129,8 +125,6 @@ export const WebSocketMetricsLive = Layer.effect(
 	WebSocketMetricsService,
 	makeWebSocketMetrics,
 );
-
-// ─── Custom Protocol with Metrics ────────────────────────────────────────────
 
 /**
  * Creates a WebSocket protocol layer that tracks connection metrics.
