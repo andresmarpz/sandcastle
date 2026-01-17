@@ -2,8 +2,6 @@ import { Schema } from "effect";
 import { FinishReason, ProviderMetadata } from "../primitives";
 import { MessageMetadata } from "./message";
 
-// ─── Text Streaming Events ───────────────────────────────────────────────────
-
 export const StreamEventTextStart = Schema.Struct({
 	type: Schema.Literal("text-start"),
 	id: Schema.String,
@@ -26,8 +24,6 @@ export const StreamEventTextEnd = Schema.Struct({
 });
 export type StreamEventTextEnd = typeof StreamEventTextEnd.Type;
 
-// ─── Reasoning Streaming Events ──────────────────────────────────────────────
-
 export const StreamEventReasoningStart = Schema.Struct({
 	type: Schema.Literal("reasoning-start"),
 	id: Schema.String,
@@ -49,8 +45,6 @@ export const StreamEventReasoningEnd = Schema.Struct({
 	providerMetadata: Schema.optional(ProviderMetadata),
 });
 export type StreamEventReasoningEnd = typeof StreamEventReasoningEnd.Type;
-
-// ─── Tool Streaming Events ───────────────────────────────────────────────────
 
 export const StreamEventToolInputStart = Schema.Struct({
 	type: Schema.Literal("tool-input-start"),
@@ -130,8 +124,6 @@ export const StreamEventToolOutputDenied = Schema.Struct({
 export type StreamEventToolOutputDenied =
 	typeof StreamEventToolOutputDenied.Type;
 
-// ─── Source/File Events ──────────────────────────────────────────────────────
-
 export const StreamEventSourceUrl = Schema.Struct({
 	type: Schema.Literal("source-url"),
 	sourceId: Schema.String,
@@ -159,8 +151,6 @@ export const StreamEventFile = Schema.Struct({
 });
 export type StreamEventFile = typeof StreamEventFile.Type;
 
-// ─── Step/Data Events ────────────────────────────────────────────────────────
-
 export const StreamEventStepStart = Schema.Struct({
 	type: Schema.Literal("start-step"),
 });
@@ -178,8 +168,6 @@ export const StreamEventData = Schema.Struct({
 	transient: Schema.optional(Schema.Boolean),
 });
 export type StreamEventData = typeof StreamEventData.Type;
-
-// ─── Lifecycle Events ────────────────────────────────────────────────────────
 
 export const StreamEventStart = Schema.Struct({
 	type: Schema.Literal("start"),
@@ -223,8 +211,6 @@ export const StreamEventError = Schema.Struct({
 	errorText: Schema.String,
 });
 export type StreamEventError = typeof StreamEventError.Type;
-
-// ─── Stream Event Union ──────────────────────────────────────────────────────
 
 /** Union of all stream events (AI SDK v6: UIMessageChunk) */
 export const ChatStreamEvent = Schema.Union(

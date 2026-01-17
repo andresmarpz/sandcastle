@@ -14,8 +14,6 @@ import {
 } from "@sandcastle/storage";
 import { Effect, Layer } from "effect";
 
-// ─── Error Mapping ───────────────────────────────────────────
-
 const mapDatabaseError = (error: DatabaseError): DatabaseRpcError =>
 	new DatabaseRpcError({ operation: error.operation, message: error.message });
 
@@ -43,8 +41,6 @@ const mapDeleteError = (
 	error: RepositoryNotFoundError | DatabaseError,
 ): RepositoryNotFoundRpcError | DatabaseRpcError => mapNotFoundError(error);
 
-// ─── Response Mapping ────────────────────────────────────────
-
 const toRepository = (repo: {
 	id: string;
 	label: string;
@@ -63,8 +59,6 @@ const toRepository = (repo: {
 		createdAt: repo.createdAt,
 		updatedAt: repo.updatedAt,
 	});
-
-// ─── Handlers ────────────────────────────────────────────────
 
 export const RepositoryRpcHandlers = RepositoryRpc.toLayer(
 	Effect.gen(function* () {

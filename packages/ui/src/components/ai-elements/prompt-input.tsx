@@ -65,10 +65,6 @@ import {
 } from "@/components/select";
 import { cn } from "@/lib/utils";
 
-// ============================================================================
-// Provider Context & Types
-// ============================================================================
-
 export type AttachmentsContext = {
 	files: (FileUIPart & { id: string })[];
 	add: (files: File[] | FileList) => void;
@@ -140,11 +136,9 @@ export function PromptInputProvider({
 	initialInput: initialTextInput = "",
 	children,
 }: PromptInputProviderProps) {
-	// ----- textInput state
 	const [textInput, setTextInput] = useState(initialTextInput);
 	const clearInput = useCallback(() => setTextInput(""), []);
 
-	// ----- attachments state (global when wrapped)
 	const [attachmentFiles, setAttachmentFiles] = useState<
 		(FileUIPart & { id: string })[]
 	>([]);
@@ -251,10 +245,6 @@ export function PromptInputProvider({
 		</PromptInputController.Provider>
 	);
 }
-
-// ============================================================================
-// Component Context & Hooks
-// ============================================================================
 
 const LocalAttachmentsContext = createContext<AttachmentsContext | null>(null);
 
@@ -469,11 +459,9 @@ export const PromptInput = ({
 	const controller = useOptionalPromptInputController();
 	const usingProvider = Boolean(controller);
 
-	// Refs
 	const inputRef = useRef<HTMLInputElement | null>(null);
 	const formRef = useRef<HTMLFormElement | null>(null);
 
-	// ----- Local attachments (only used when no provider)
 	const [items, setItems] = useState<(FileUIPart & { id: string })[]>([]);
 	const files = controller ? controller.attachments.files : items;
 

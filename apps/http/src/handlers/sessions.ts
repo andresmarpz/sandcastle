@@ -16,8 +16,6 @@ import {
 import { Effect, Layer } from "effect";
 import { SessionHub, SessionHubLive } from "../services/session-hub";
 
-// ─── Error Mapping ───────────────────────────────────────────
-
 const mapDatabaseError = (error: DatabaseError): DatabaseRpcError =>
 	new DatabaseRpcError({ operation: error.operation, message: error.message });
 
@@ -42,8 +40,6 @@ const mapCreateError = (
 	}
 	return mapDatabaseError(error);
 };
-
-// ─── Response Mapping ────────────────────────────────────────
 
 const toSession = (session: {
 	id: string;
@@ -90,8 +86,6 @@ const toTurn = (turn: {
 		completedAt: turn.completedAt,
 		reason: turn.reason,
 	});
-
-// ─── Handlers ────────────────────────────────────────────────
 
 export const SessionRpcHandlers = SessionRpc.toLayer(
 	Effect.gen(function* () {

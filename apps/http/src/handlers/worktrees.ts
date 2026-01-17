@@ -35,8 +35,6 @@ class FileSystemError extends Data.TaggedError("FileSystemError")<{
 	message: string;
 }> {}
 
-// ─── Error Mapping ───────────────────────────────────────────
-
 const mapDatabaseError = (error: DatabaseError): DatabaseRpcError =>
 	new DatabaseRpcError({ operation: error.operation, message: error.message });
 
@@ -172,8 +170,6 @@ const mapWorktreeSyncError = (
 	}
 };
 
-// ─── Sync Logic ─────────────────────────────────────────────
-
 /**
  * Syncs database worktree records with actual git worktrees.
  * Removes orphaned DB records where the git worktree no longer exists.
@@ -210,8 +206,6 @@ export const syncWorktrees = Effect.gen(function* () {
 	return { removedIds };
 });
 
-// ─── Response Mapping ────────────────────────────────────────
-
 const toWorktree = (wt: {
 	id: string;
 	repositoryId: string;
@@ -235,16 +229,12 @@ const toWorktree = (wt: {
 		lastAccessedAt: wt.lastAccessedAt,
 	});
 
-// ─── Handlers ────────────────────────────────────────────────
-
 export const WorktreeRpcHandlers = WorktreeRpc.toLayer(
 	Effect.gen(function* () {
 		const storage = yield* StorageService;
 		const gitWorktree = yield* WorktreeService;
 
 		return WorktreeRpc.of({
-			// ─── Pure Storage Operations ─────────────────────────
-
 			"worktree.list": () =>
 				storage.worktrees.list().pipe(
 					Effect.map((wts) => wts.map(toWorktree)),
@@ -279,8 +269,6 @@ export const WorktreeRpcHandlers = WorktreeRpc.toLayer(
 				storage.worktrees
 					.touch(params.id)
 					.pipe(Effect.mapError(mapNotFoundError)),
-
-			// ─── Combined Git + Storage Operations ───────────────
 
 			"worktree.create": (params) =>
 				Effect.gen(function* () {

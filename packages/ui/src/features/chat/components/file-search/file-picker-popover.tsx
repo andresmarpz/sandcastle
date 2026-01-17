@@ -11,8 +11,6 @@ import { cn } from "@/lib/utils";
 import { FileSearchResults } from "./file-search-results";
 import { useDebouncedValue } from "./utils";
 
-// ─── File Picker Popover ──────────────────────────────────────
-
 export interface FilePickerPopoverProps {
 	worktreeId: string;
 	open: boolean;
