@@ -16,7 +16,8 @@ import {
 const rowToSession = (row: Record<string, unknown>): Session =>
 	new Session({
 		id: row.id as string,
-		worktreeId: row.worktreeId as string,
+		worktreeId: (row.worktreeId as string) ?? null,
+		workingPath: row.workingPath as string,
 		title: row.title as string,
 		description: (row.description as string) ?? null,
 		status: row.status as
@@ -71,7 +72,8 @@ export const createSessionsService = (db: DbInstance) => ({
 		}),
 
 	create: (input: {
-		worktreeId: string;
+		worktreeId?: string | null;
+		workingPath: string;
 		title: string;
 		description?: string | null;
 		status?: "created" | "active" | "paused" | "completed" | "failed";
@@ -81,34 +83,39 @@ export const createSessionsService = (db: DbInstance) => ({
 			const id = generateId();
 			const status = input.status ?? "created";
 			const description = input.description ?? null;
+			const worktreeId = input.worktreeId ?? null;
 
-			const existingWorktree = yield* tryDb(
-				"sessions.create.checkWorktree",
-				() =>
-					db
-						.query<Record<string, unknown>, [string]>(
-							"SELECT id FROM worktrees WHERE id = ?",
-						)
-						.get(input.worktreeId),
-			);
-
-			if (!existingWorktree) {
-				return yield* Effect.fail(
-					new ForeignKeyViolationError({
-						entity: "Session",
-						foreignKey: "worktreeId",
-						foreignId: input.worktreeId,
-					}),
+			// Only validate worktree if provided
+			if (worktreeId) {
+				const existingWorktree = yield* tryDb(
+					"sessions.create.checkWorktree",
+					() =>
+						db
+							.query<Record<string, unknown>, [string]>(
+								"SELECT id FROM worktrees WHERE id = ?",
+							)
+							.get(worktreeId),
 				);
+
+				if (!existingWorktree) {
+					return yield* Effect.fail(
+						new ForeignKeyViolationError({
+							entity: "Session",
+							foreignKey: "worktreeId",
+							foreignId: worktreeId,
+						}),
+					);
+				}
 			}
 
 			yield* tryDb("sessions.create", () =>
 				db.run(
-					`INSERT INTO sessions (id, worktreeId, title, description, status, claudeSessionId, model, totalCostUsd, inputTokens, outputTokens, createdAt, lastActivityAt)
-					 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+					`INSERT INTO sessions (id, worktreeId, workingPath, title, description, status, claudeSessionId, model, totalCostUsd, inputTokens, outputTokens, createdAt, lastActivityAt)
+					 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 					[
 						id,
-						input.worktreeId,
+						worktreeId,
+						input.workingPath,
 						input.title,
 						description,
 						status,
@@ -125,7 +132,8 @@ export const createSessionsService = (db: DbInstance) => ({
 
 			return new Session({
 				id,
-				worktreeId: input.worktreeId,
+				worktreeId,
+				workingPath: input.workingPath,
 				title: input.title,
 				description,
 				status,
