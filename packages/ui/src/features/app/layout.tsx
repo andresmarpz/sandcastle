@@ -20,7 +20,7 @@ export default function Layout() {
 						<SidebarInset className="relative h-screen overflow-hidden">
 							<div
 								data-tauri-drag-region
-								className="border-border flex-row items-center justify-between border-b h-12 min-h-12 bg-sidebar flex-shrink-0"
+								className="border-border flex-row items-center justify-between border-b h-12 min-h-12 bg-sidebar shrink-0"
 							/>
 
 							<div className="flex-1 min-h-0 overflow-hidden">
