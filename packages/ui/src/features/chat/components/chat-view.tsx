@@ -35,7 +35,7 @@ import { RpcChatTransport } from "@/features/chat/transport/chat-transport";
 import { subscriptionManager } from "@/features/chat/transport/subscription-manager";
 import { useSessionEvents } from "@/features/chat/transport/use-session-events";
 import { ChatInput } from "./chat-input";
-import { MessageList } from "./message-list";
+import { GroupedMessageList } from "./grouped-message-list";
 
 interface ChatViewProps {
 	sessionId: string;
@@ -214,7 +214,7 @@ function ChatViewContent({
 									Loading chat history...
 								</div>
 							) : messages.length > 0 ? (
-								<MessageList messages={messages} />
+								<GroupedMessageList messages={messages} />
 							) : (
 								<ConversationEmptyState
 									title="No messages yet"
