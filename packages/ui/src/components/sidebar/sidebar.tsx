@@ -2,9 +2,11 @@
 
 import { Result, useAtomValue } from "@effect-atom/atom-react";
 import type { Repository } from "@sandcastle/schemas";
+import { IconSettings } from "@tabler/icons-react";
 import * as Option from "effect/Option";
 import * as React from "react";
 import { repositoryListAtom } from "@/api/repository-atoms";
+import { Button } from "@/components/button";
 import {
 	SidebarContent,
 	SidebarFooter,
@@ -16,6 +18,10 @@ import SidebarHeader from "@/components/sidebar/sidebar-header";
 import { SidebarRepositoryItem } from "@/components/sidebar/sidebar-repository-item";
 import { Skeleton } from "@/components/skeleton";
 import { ThemeSwitcher } from "@/components/theme-switcher";
+import {
+	SettingsModal,
+	type SettingsSection,
+} from "@/features/settings/settings-modal";
 
 export function Sidebar() {
 	const repositoriesResult = useAtomValue(repositoryListAtom);
@@ -24,6 +30,10 @@ export function Sidebar() {
 		[repositoriesResult],
 	);
 	const hasRepositoriesCache = Option.isSome(Result.value(repositoriesResult));
+
+	const [settingsOpen, setSettingsOpen] = React.useState(false);
+	const [settingsSection, setSettingsSection] =
+		React.useState<SettingsSection>("chat");
 
 	return (
 		<SidebarPrimitive collapsible="offExamples">
@@ -55,11 +65,27 @@ export function Sidebar() {
 				</SidebarMenu>
 			</SidebarContent>
 
-			<SidebarFooter className="border-border border-t p-2 flex items-center justify-end">
+			<SidebarFooter className="border-border border-t p-2 flex flex-row items-center gap-1">
+				<Button
+					variant="ghost"
+					size="sm"
+					className="flex-1 justify-start"
+					onClick={() => setSettingsOpen(true)}
+				>
+					<IconSettings className="size-4" />
+					<span>Settings</span>
+				</Button>
 				<ThemeSwitcher />
 			</SidebarFooter>
 
 			<SidebarRail />
+
+			<SettingsModal
+				open={settingsOpen}
+				onOpenChange={setSettingsOpen}
+				section={settingsSection}
+				onSectionChange={setSettingsSection}
+			/>
 		</SidebarPrimitive>
 	);
 }
