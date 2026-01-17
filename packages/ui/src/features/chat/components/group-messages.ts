@@ -67,7 +67,10 @@ export function groupMessages(messages: UIMessage[]): GroupedItem[] {
 					text: part.text,
 					isStreaming: part.state === "streaming",
 				});
-			} else if (part.type.startsWith("tool-") || part.type === "dynamic-tool") {
+			} else if (
+				part.type.startsWith("tool-") ||
+				part.type === "dynamic-tool"
+			) {
 				// Accumulate tool parts into pending work unit
 				pendingSteps.push({
 					messageId: message.id,
