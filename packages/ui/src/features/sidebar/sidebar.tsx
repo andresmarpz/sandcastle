@@ -1,131 +1,55 @@
 "use client";
 
-import { Result, useAtomValue } from "@effect-atom/atom-react";
-import type { Repository } from "@sandcastle/schemas";
-import { IconSettings } from "@tabler/icons-react";
-import * as Option from "effect/Option";
-import * as React from "react";
-import { repositoryListAtom } from "@/api/repository-atoms";
-import { Button } from "@/components/button";
+import { useMatch } from "react-router";
 import {
 	SidebarContent,
-	SidebarFooter,
 	SidebarMenu,
 	Sidebar as SidebarPrimitive,
 	SidebarRail,
+	useSidebar,
 } from "@/components/sidebar";
-import { Skeleton } from "@/components/skeleton";
-import { ThemeSwitcher } from "@/components/theme-switcher";
-import {
-	SettingsModal,
-	type SettingsSection,
-} from "@/features/settings/settings-modal";
-import SidebarHeader from "@/features/sidebar/sidebar-header";
-import { SidebarRepositoryItem } from "@/features/sidebar/sidebar-repository-item";
+import Rail from "@/features/sidebar/rail/rail";
+import { SessionList } from "@/features/sidebar/sessions";
+import { cn } from "@/lib/utils";
 
 export function Sidebar() {
-	const repositoriesResult = useAtomValue(repositoryListAtom);
-	const repositories = React.useMemo(
-		() => Option.getOrElse(Result.value(repositoriesResult), () => []),
-		[repositoriesResult],
-	);
-	const hasRepositoriesCache = Option.isSome(Result.value(repositoriesResult));
-
-	const [settingsOpen, setSettingsOpen] = React.useState(false);
-	const [settingsSection, setSettingsSection] =
-		React.useState<SettingsSection>("chat");
+	const { open } = useSidebar();
+	const match = useMatch("/repository/:repositoryId/*");
+	const repositoryId = match?.params.repositoryId;
 
 	return (
-		<SidebarPrimitive collapsible="offExamples">
-			<SidebarHeader />
+		<SidebarPrimitive
+			collapsible="icon"
+			className={cn(
+				"overflow-hidden *:data-[sidebar=sidebar]:flex-row border-r-0",
+				"top-(--header-height) h-[calc(100svh-var(--header-height))]!",
+			)}
+			style={{
+				borderRight: !open ? "none" : undefined,
+			}}
+		>
+			{/* This is the sidebar vertical Rail that contains all the repository items, Slack style. */}
+			<Rail />
 
-			<SidebarContent className="pt-2 px-2">
-				<SidebarMenu>
-					{Result.matchWithWaiting(repositoriesResult, {
-						onWaiting: () =>
-							hasRepositoriesCache ? (
-								<RepositoryList repositories={repositories} />
-							) : (
-								<RepositoryListSkeleton />
-							),
-						onError: () =>
-							hasRepositoriesCache ? (
-								<RepositoryList repositories={repositories} />
-							) : (
-								<RepositoryListError />
-							),
-						onDefect: () =>
-							hasRepositoriesCache ? (
-								<RepositoryList repositories={repositories} />
-							) : (
-								<RepositoryListError />
-							),
-						onSuccess: () => <RepositoryList repositories={repositories} />,
-					})}
-				</SidebarMenu>
-			</SidebarContent>
+			{/* Second sidebar - session list for the selected repository */}
+			<SidebarPrimitive
+				collapsible="none"
+				className="hidden flex-1 md:flex border-l border-t rounded-tl-md"
+			>
+				<SidebarContent className="pt-2 px-2">
+					<SidebarMenu>
+						{repositoryId ? (
+							<SessionList repositoryId={repositoryId} />
+						) : (
+							<div className="text-muted-foreground text-sm px-2 py-8 text-center">
+								Select a repository to view sessions
+							</div>
+						)}
+					</SidebarMenu>
+				</SidebarContent>
+			</SidebarPrimitive>
 
-			<SidebarFooter className="border-border border-t p-2 flex flex-row items-center gap-1">
-				<Button
-					variant="ghost"
-					size="sm"
-					className="flex-1 justify-start"
-					onClick={() => setSettingsOpen(true)}
-				>
-					<IconSettings className="size-4" />
-					<span>Settings</span>
-				</Button>
-				<ThemeSwitcher />
-			</SidebarFooter>
-
-			<SidebarRail />
-
-			<SettingsModal
-				open={settingsOpen}
-				onOpenChange={setSettingsOpen}
-				section={settingsSection}
-				onSectionChange={setSettingsSection}
-			/>
+			{open && <SidebarRail />}
 		</SidebarPrimitive>
-	);
-}
-
-interface RepositoryListProps {
-	repositories: readonly Repository[];
-}
-
-function RepositoryList({ repositories }: RepositoryListProps) {
-	if (repositories.length === 0) {
-		return (
-			<div className="text-muted-foreground text-sm px-2 py-4 text-center">
-				No repositories yet
-			</div>
-		);
-	}
-
-	return (
-		<>
-			{repositories.map((repo) => (
-				<SidebarRepositoryItem key={repo.id} repository={repo} />
-			))}
-		</>
-	);
-}
-
-function RepositoryListSkeleton() {
-	return (
-		<div className="space-y-2 px-2 py-1">
-			<Skeleton className="h-8 w-full" />
-			<Skeleton className="h-8 w-full" />
-			<Skeleton className="h-8 w-full" />
-		</div>
-	);
-}
-
-function RepositoryListError() {
-	return (
-		<div className="text-destructive text-sm px-2 py-4 text-center">
-			Failed to load repositories
-		</div>
 	);
 }

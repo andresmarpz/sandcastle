@@ -41,7 +41,7 @@ import { GroupedMessageList } from "./grouped-message-list";
 
 interface ChatViewProps {
 	sessionId: string;
-	worktreeId: string;
+	worktreeId?: string;
 }
 
 type HistoryStatus = "loading" | "ready" | "error";
@@ -110,7 +110,7 @@ export function ChatView({ sessionId, worktreeId }: ChatViewProps) {
 
 interface ChatViewContentProps {
 	sessionId: string;
-	worktreeId: string;
+	worktreeId?: string;
 	initialMessages: UIMessage[];
 	historyStatus: HistoryStatus;
 }

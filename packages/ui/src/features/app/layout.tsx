@@ -1,10 +1,17 @@
 import { RegistryProvider } from "@effect-atom/atom-react";
 import { BrowserRouter, Route, Routes } from "react-router";
-import { SidebarInset, SidebarProvider } from "@/components/sidebar";
+import {
+	SidebarInset,
+	SidebarProvider,
+	SidebarTrigger,
+	useSidebar,
+} from "@/components/sidebar";
 import { usePlatform } from "@/context/platform-context";
 import { ThemeProvider } from "@/context/theme-context";
 import { Sidebar } from "@/features/sidebar/sidebar";
+import { cn } from "@/lib/utils";
 import { HomePage } from "./pages/home";
+import { SessionPage } from "./pages/session";
 import { WorktreePage } from "./pages/worktree";
 
 export default function Layout() {
@@ -15,27 +22,48 @@ export default function Layout() {
 		<ThemeProvider>
 			<RegistryProvider defaultIdleTTL={5 * 60 * 1000}>
 				<BrowserRouter>
-					<SidebarProvider>
-						<Sidebar />
-						<SidebarInset className="relative h-screen overflow-hidden">
-							<div
-								data-tauri-drag-region
-								className="border-border flex-row items-center justify-between border-b h-12 min-h-12 bg-sidebar shrink-0"
-							/>
-
-							<div className="flex-1 min-h-0 overflow-hidden">
-								<Routes>
-									<Route path="/" element={<HomePage />} />
-									<Route
-										path="/worktree/:worktreeId"
-										element={<WorktreePage />}
-									/>
-								</Routes>
+					<div className="[--header-height:calc(--spacing(14))]">
+						<SidebarProvider className="flex flex-col">
+							<header className="bg-background sticky top-0 z-50 flex w-full items-center">
+								<div className="flex h-(--header-height) w-full items-center gap-2 px-4">
+									<SidebarTrigger />
+								</div>
+							</header>
+							<div className="flex flex-1">
+								<Sidebar />
+								<SidebarMainContent />
 							</div>
-						</SidebarInset>
-					</SidebarProvider>
+						</SidebarProvider>
+					</div>
 				</BrowserRouter>
 			</RegistryProvider>
 		</ThemeProvider>
+	);
+}
+
+function SidebarMainContent() {
+	const { open } = useSidebar();
+
+	return (
+		<SidebarInset
+			data-tauri-drag-region
+			data-state={open ? "expanded" : "collapsed"}
+			className={cn(
+				"relative h-[calc(100vh-var(--header-height))] overflow-hidden border-l border-t",
+				"data-[state=collapsed]:rounded-tl-md",
+			)}
+		>
+			<div className="flex-1 min-h-0 overflow-hidden">
+				<Routes>
+					<Route path="/" element={<HomePage />} />
+					<Route path="/worktree/:worktreeId" element={<WorktreePage />} />
+					<Route path="/repository/:repositoryId" element={<HomePage />} />
+					<Route
+						path="/repository/:repositoryId/sessions/:sessionId"
+						element={<SessionPage />}
+					/>
+				</Routes>
+			</div>
+		</SidebarInset>
 	);
 }

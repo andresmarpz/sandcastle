@@ -20,7 +20,7 @@ interface ChatInputProps {
 	status: ChatStatus;
 	autonomous: boolean;
 	onAutonomousChange: (autonomous: boolean) => void;
-	worktreeId: string;
+	worktreeId?: string;
 }
 
 export function ChatInput({
@@ -54,7 +54,9 @@ export function ChatInput({
 			setInputValue(text);
 
 			// Check if user just typed @ (text is longer and ends with @)
+			// Only trigger file picker if worktreeId is available
 			if (
+				worktreeId &&
 				text.length > prevValue.length &&
 				text[cursor - 1] === "@" &&
 				!filePickerOpen
@@ -63,7 +65,7 @@ export function ChatInput({
 				setFilePickerOpen(true);
 			}
 		},
-		[inputValue, filePickerOpen],
+		[inputValue, filePickerOpen, worktreeId],
 	);
 
 	// Handle file selection - insert path into textarea
@@ -116,14 +118,16 @@ export function ChatInput({
 
 	return (
 		<div ref={containerRef} className="relative p-2 pt-0">
-			{/* File picker popover */}
-			<FilePickerPopover
-				worktreeId={worktreeId}
-				open={filePickerOpen}
-				onOpenChange={handleOpenChange}
-				onSelect={handleFileSelect}
-				anchorEl={containerRef.current}
-			/>
+			{/* File picker popover - only available when worktreeId is set */}
+			{worktreeId && (
+				<FilePickerPopover
+					worktreeId={worktreeId}
+					open={filePickerOpen}
+					onOpenChange={handleOpenChange}
+					onSelect={handleFileSelect}
+					anchorEl={containerRef.current}
+				/>
+			)}
 
 			<PromptInput onSubmit={handleSubmit}>
 				<PromptInputTextarea
