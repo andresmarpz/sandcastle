@@ -1,9 +1,9 @@
 import { RegistryProvider } from "@effect-atom/atom-react";
 import { BrowserRouter, Route, Routes } from "react-router";
 import { SidebarInset, SidebarProvider } from "@/components/sidebar";
-import { Sidebar } from "@/components/sidebar/sidebar";
 import { usePlatform } from "@/context/platform-context";
 import { ThemeProvider } from "@/context/theme-context";
+import { Sidebar } from "@/features/sidebar/sidebar";
 import { HomePage } from "./pages/home";
 import { WorktreePage } from "./pages/worktree";
 
