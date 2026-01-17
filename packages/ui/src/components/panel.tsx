@@ -205,7 +205,6 @@ function Panel({
 
 interface SortableTabProps {
 	tab: PanelTab;
-	isActive: boolean;
 	closable: boolean;
 	reorderable: boolean;
 	onClose: (id: string) => void;
@@ -213,7 +212,6 @@ interface SortableTabProps {
 
 function SortableTab({
 	tab,
-	isActive,
 	closable,
 	reorderable,
 	onClose,
@@ -245,16 +243,16 @@ function SortableTab({
 				"text-muted-foreground hover:text-foreground hover:bg-muted/50",
 				"transition-colors outline-none",
 				"focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
-				"data-[selected]:bg-background data-[selected]:text-foreground",
+				"data-selected:bg-background data-selected:text-foreground",
 				"whitespace-nowrap",
-				"data-[dragging]:opacity-50 data-[dragging]:z-50",
+				"data-dragging:opacity-50 data-dragging:z-50",
 			)}
 		>
 			{reorderable && (
 				<span
 					className={cn(
 						"size-4 shrink-0 flex items-center justify-center cursor-grab active:cursor-grabbing",
-						"opacity-0 group-hover:opacity-60 group-data-[selected]:opacity-60",
+						"opacity-0 group-hover:opacity-60 group-data-selected:opacity-60",
 						"hover:opacity-100",
 						"transition-opacity",
 					)}
@@ -282,7 +280,7 @@ function SortableTab({
 					}}
 					className={cn(
 						"size-4 shrink-0 rounded-sm flex items-center justify-center",
-						"opacity-0 group-hover:opacity-100 group-data-[selected]:opacity-100",
+						"opacity-0 group-hover:opacity-100 group-data-selected:opacity-100",
 						"hover:bg-muted-foreground/20",
 						"transition-opacity",
 					)}
@@ -364,7 +362,6 @@ function PanelHeader({ className, children }: PanelHeaderProps) {
 								<SortableTab
 									key={tab.id}
 									tab={tab}
-									isActive={activeTab === tab.id}
 									closable={closable}
 									reorderable={reorderable}
 									onClose={closeTab}
