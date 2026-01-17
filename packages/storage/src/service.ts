@@ -91,6 +91,9 @@ export class StorageService extends Context.Tag("StorageService")<
 			listByWorktree: (
 				worktreeId: string,
 			) => Effect.Effect<Session[], DatabaseError>;
+			listByRepository: (
+				repositoryId: string,
+			) => Effect.Effect<Session[], DatabaseError>;
 			get: (
 				id: string,
 			) => Effect.Effect<Session, SessionNotFoundError | DatabaseError>;

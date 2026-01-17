@@ -318,6 +318,7 @@ export const WorktreeRpcHandlers = WorktreeRpc.toLayer(
 
 					// 4. Create default session so user can start working immediately
 					const session = yield* storage.sessions.create({
+						repositoryId: params.repositoryId,
 						worktreeId: worktree.id,
 						workingPath: worktreePath,
 						title: "Session 1",

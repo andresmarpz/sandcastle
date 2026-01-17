@@ -107,7 +107,7 @@ function WorktreePageContent({ worktreeId }: { worktreeId: string }) {
 	const handleAddTab = async () => {
 		if (isCreatingSession) return;
 
-		// Get worktree to pass its path
+		// Get worktree to pass its path and repositoryId
 		const worktree = Option.getOrUndefined(Result.value(worktreeResult));
 		if (!worktree) return;
 
@@ -115,6 +115,7 @@ function WorktreePageContent({ worktreeId }: { worktreeId: string }) {
 		try {
 			const result = await createSession({
 				payload: {
+					repositoryId: worktree.repositoryId,
 					worktreeId,
 					workingPath: worktree.path,
 					title: "New session",

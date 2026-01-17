@@ -41,6 +41,7 @@ const migrations: Migration[] = [
 			-- Sessions table
 			CREATE TABLE IF NOT EXISTS sessions (
 				id TEXT PRIMARY KEY,
+				repositoryId TEXT NOT NULL,
 				worktreeId TEXT,
 				workingPath TEXT NOT NULL,
 				title TEXT NOT NULL,
@@ -53,6 +54,7 @@ const migrations: Migration[] = [
 				outputTokens INTEGER NOT NULL DEFAULT 0,
 				createdAt TEXT NOT NULL,
 				lastActivityAt TEXT NOT NULL,
+				FOREIGN KEY (repositoryId) REFERENCES repositories(id) ON DELETE CASCADE,
 				FOREIGN KEY (worktreeId) REFERENCES worktrees(id) ON DELETE CASCADE
 			);
 
@@ -69,6 +71,7 @@ const migrations: Migration[] = [
 
 			-- Indexes for common queries
 			CREATE INDEX IF NOT EXISTS idx_worktrees_repositoryId ON worktrees(repositoryId);
+			CREATE INDEX IF NOT EXISTS idx_sessions_repositoryId ON sessions(repositoryId);
 			CREATE INDEX IF NOT EXISTS idx_sessions_worktreeId ON sessions(worktreeId);
 			CREATE INDEX IF NOT EXISTS idx_chat_messages_sessionId ON chat_messages(sessionId);
 		`,
