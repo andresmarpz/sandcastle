@@ -61,7 +61,9 @@ export function SidebarRepositoryItem({
 	const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
 	const [deleteResult, deleteRepository] = useAtom(deleteRepositoryMutation);
 	const isDeleting = deleteResult.waiting;
-	const [createWorktreeResult, createWorktree] = useAtom(createWorktreeMutation);
+	const [createWorktreeResult, createWorktree] = useAtom(
+		createWorktreeMutation,
+	);
 	const isCreatingWorktree = createWorktreeResult.waiting;
 
 	const worktreesResult = useAtomValue(
@@ -158,43 +160,43 @@ export function SidebarRepositoryItem({
 				</div>
 
 				<CollapsiblePanel className="ml-4 pl-2 space-y-0.5 py-1 border-l">
-				<SidebarMenuItem>
-					<SidebarMenuButton
-						className="w-full justify-start gap-2 px-2 text-muted-foreground"
-						onClick={handleWorktreeCreate}
-						disabled={isCreatingWorktree}
-					>
-						<IconPlus className="text-muted-foreground size-3 shrink-0" />
-						<span className="truncate text-sm">
-							{isCreatingWorktree ? "Creating worktree..." : "New worktree"}
-						</span>
-						{isCreatingWorktree ? (
-							<Spinner className="ml-auto size-3.5" />
-						) : null}
-					</SidebarMenuButton>
-				</SidebarMenuItem>
+					<SidebarMenuItem>
+						<SidebarMenuButton
+							className="w-full justify-start gap-2 px-2 text-muted-foreground"
+							onClick={handleWorktreeCreate}
+							disabled={isCreatingWorktree}
+						>
+							<IconPlus className="text-muted-foreground size-3 shrink-0" />
+							<span className="truncate text-sm">
+								{isCreatingWorktree ? "Creating worktree..." : "New worktree"}
+							</span>
+							{isCreatingWorktree ? (
+								<Spinner className="ml-auto size-3.5" />
+							) : null}
+						</SidebarMenuButton>
+					</SidebarMenuItem>
 
-				{Result.matchWithWaiting(worktreesResult, {
-					onWaiting: () =>
-						hasWorktreesCache ? (
-							<WorktreeList worktrees={worktrees} />
-						) : (
-							<WorktreeListSkeleton />
-						),
-					onError: () =>
-						hasWorktreesCache ? (
-							<WorktreeList worktrees={worktrees} />
-						) : (
-							<WorktreeListError />
-						),
-					onDefect: () =>
-						hasWorktreesCache ? (
-							<WorktreeList worktrees={worktrees} />
-						) : (
-							<WorktreeListError />
-						),
-					onSuccess: () => <WorktreeList worktrees={worktrees} />,
-				})}
+					{Result.matchWithWaiting(worktreesResult, {
+						onWaiting: () =>
+							hasWorktreesCache ? (
+								<WorktreeList worktrees={worktrees} />
+							) : (
+								<WorktreeListSkeleton />
+							),
+						onError: () =>
+							hasWorktreesCache ? (
+								<WorktreeList worktrees={worktrees} />
+							) : (
+								<WorktreeListError />
+							),
+						onDefect: () =>
+							hasWorktreesCache ? (
+								<WorktreeList worktrees={worktrees} />
+							) : (
+								<WorktreeListError />
+							),
+						onSuccess: () => <WorktreeList worktrees={worktrees} />,
+					})}
 				</CollapsiblePanel>
 			</Collapsible>
 
