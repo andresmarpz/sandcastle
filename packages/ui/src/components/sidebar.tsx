@@ -23,10 +23,10 @@ const SIDEBAR_WIDTH_COOKIE_NAME = "sidebar_width";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 const SIDEBAR_WIDTH_ICON = "3rem";
 const SIDEBAR_KEYBOARD_SHORTCUT = "b";
-const SIDEBAR_MIN_WIDTH = 200;
+const SIDEBAR_MIN_WIDTH = 290;
 const SIDEBAR_MAX_WIDTH = 480;
-const SIDEBAR_DEFAULT_WIDTH = 265;
-const SIDEBAR_COLLAPSE_THRESHOLD = 150;
+const SIDEBAR_DEFAULT_WIDTH = 290;
+const SIDEBAR_COLLAPSE_THRESHOLD = 240;
 
 type SidebarContextProps = {
 	state: "expanded" | "collapsed";
@@ -216,30 +216,17 @@ function Sidebar({
 	collapsible = "offExamples",
 	className,
 	children,
+	renderOnMobile = true,
 	...props
 }: React.ComponentProps<"div"> & {
 	side?: "left" | "right";
 	variant?: "sidebar" | "floating" | "inset";
 	collapsible?: "offExamples" | "icon" | "none";
+	renderOnMobile?: boolean;
 }) {
 	const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
 
-	if (collapsible === "none") {
-		return (
-			<div
-				data-slot="sidebar"
-				className={cn(
-					"bg-sidebar text-sidebar-foreground flex h-full w-(--sidebar-width) flex-col",
-					className,
-				)}
-				{...props}
-			>
-				{children}
-			</div>
-		);
-	}
-
-	if (isMobile) {
+	if (isMobile && renderOnMobile) {
 		return (
 			<Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
 				<SheetContent
@@ -257,6 +244,21 @@ function Sidebar({
 					<div className="flex h-full w-full flex-col">{children}</div>
 				</SheetContent>
 			</Sheet>
+		);
+	}
+
+	if (collapsible === "none") {
+		return (
+			<div
+				data-slot="sidebar"
+				className={cn(
+					"bg-sidebar text-sidebar-foreground flex h-full w-(--sidebar-width) flex-col",
+					className,
+				)}
+				{...props}
+			>
+				{children}
+			</div>
 		);
 	}
 
@@ -402,7 +404,7 @@ function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
 			onDoubleClick={handleDoubleClick}
 			title="Drag to resize, double-click to collapse"
 			className={cn(
-				"hover:after:bg-sidebar-border absolute inset-y-0 z-20 hidden w-4 -translate-x-1/2 transition-all ease-linear group-data-[side=left]:-right-4 group-data-[side=right]:left-0 after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] sm:flex",
+				"hover:after:bg-sidebar-border absolute inset-y-0 z-20 hidden w-4 -translate-x-1/2 group-data-[side=left]:-right-4 group-data-[side=right]:left-0 after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] sm:flex",
 				"cursor-col-resize",
 				"hover:after:bg-primary/50",
 				"hover:group-data-[collapsible=offExamples]:bg-sidebar group-data-[collapsible=offExamples]:translate-x-0 group-data-[collapsible=offExamples]:after:left-full",

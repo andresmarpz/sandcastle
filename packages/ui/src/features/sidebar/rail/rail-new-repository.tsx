@@ -1,16 +1,15 @@
 import { IconBrandGithub, IconFolderOpen, IconPlus } from "@tabler/icons-react";
 import { useState } from "react";
-import { Button } from "@/components/button";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/dropdown-menu";
-import { SidebarHeader as PrimitiveSidebarHeader } from "@/components/sidebar";
-import { CreateRepositoryDialog } from "./create-repository-dialog";
+import { SidebarMenuButton, SidebarMenuItem } from "@/components/sidebar";
+import { CreateRepositoryDialog } from "@/features/sidebar/create-repository-dialog";
 
-export default function SidebarHeader() {
+export default function SidebarNewRepository() {
 	const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
 	function handleOpenProject() {
@@ -19,13 +18,9 @@ export default function SidebarHeader() {
 	function handleCloneFromGit() {}
 
 	return (
-		<PrimitiveSidebarHeader
-			data-tauri-drag-region
-			className="border-border flex-row items-center justify-between border-b h-12"
-		>
-			<span />
+		<SidebarMenuItem>
 			<DropdownMenu>
-				<DropdownMenuTrigger render={<Button variant="ghost" size="icon-xs" />}>
+				<DropdownMenuTrigger render={<SidebarMenuButton />}>
 					<IconPlus className="size-3" />
 					<span className="sr-only">Add project</span>
 				</DropdownMenuTrigger>
@@ -48,6 +43,6 @@ export default function SidebarHeader() {
 				open={createDialogOpen}
 				onOpenChange={setCreateDialogOpen}
 			/>
-		</PrimitiveSidebarHeader>
+		</SidebarMenuItem>
 	);
 }

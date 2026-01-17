@@ -40,6 +40,23 @@ export const sessionListByWorktreeAtomFamily = Atom.family(
 );
 
 /**
+ * Family of atoms for sessions by repository.
+ */
+export const sessionListByRepositoryAtomFamily = Atom.family(
+	(repositoryId: string) =>
+		SessionClient.query(
+			"session.listByRepository",
+			{ repositoryId },
+			{
+				reactivityKeys: [
+					SESSION_LIST_KEY,
+					`sessions:repository:${repositoryId}`,
+				],
+			},
+		),
+);
+
+/**
  * Family of atoms for single session by ID.
  */
 export const sessionAtomFamily = Atom.family((id: string) =>
