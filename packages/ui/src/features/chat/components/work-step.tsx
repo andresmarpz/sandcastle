@@ -1,6 +1,7 @@
 "use client";
 
 import {
+	type Icon,
 	IconChevronDown,
 	IconEdit,
 	IconFile,
@@ -9,7 +10,6 @@ import {
 	IconSearch,
 	IconTerminal,
 	IconTool,
-	type Icon,
 } from "@tabler/icons-react";
 import type { ComponentProps, ReactNode } from "react";
 import { memo } from "react";
@@ -94,7 +94,11 @@ export const WorkStep = memo(function WorkStep({
 
 type WorkStepContentProps = ComponentProps<typeof CollapsiblePanel>;
 
-function WorkStepContent({ className, children, ...props }: WorkStepContentProps) {
+function WorkStepContent({
+	className,
+	children,
+	...props
+}: WorkStepContentProps) {
 	const context = useCollapsibleContext();
 	const shouldRender = context?.hasOpened ?? true;
 

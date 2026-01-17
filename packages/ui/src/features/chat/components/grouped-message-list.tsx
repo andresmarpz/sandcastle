@@ -2,7 +2,11 @@
 
 import type { UIMessage } from "ai";
 import { memo, useMemo } from "react";
-import { Message, MessageContent, MessageResponse } from "@/components/ai-elements/message";
+import {
+	Message,
+	MessageContent,
+	MessageResponse,
+} from "@/components/ai-elements/message";
 import {
 	type GroupedItem,
 	getToolName,
@@ -10,7 +14,7 @@ import {
 	groupMessages,
 } from "./group-messages";
 import { ReasoningPart } from "./parts/reasoning-part";
-import { WorkStep, getToolIcon } from "./work-step";
+import { getToolIcon, WorkStep } from "./work-step";
 import { WorkUnit, WorkUnitContent, WorkUnitHeader } from "./work-unit";
 
 interface GroupedMessageListProps {
@@ -70,7 +74,10 @@ const GroupedItemRenderer = memo(function GroupedItemRenderer({
 			return (
 				<Message from="assistant">
 					<MessageContent>
-						<ReasoningPart reasoning={item.text} isStreaming={item.isStreaming} />
+						<ReasoningPart
+							reasoning={item.text}
+							isStreaming={item.isStreaming}
+						/>
 					</MessageContent>
 				</Message>
 			);
