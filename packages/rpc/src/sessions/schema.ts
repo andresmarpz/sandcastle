@@ -26,6 +26,12 @@ export class SessionRpc extends RpcGroup.make(
 		error: DatabaseRpcError,
 	}),
 
+	Rpc.make("session.listByRepository", {
+		payload: { repositoryId: Schema.String },
+		success: Schema.Array(Session),
+		error: DatabaseRpcError,
+	}),
+
 	Rpc.make("session.get", {
 		payload: { id: Schema.String },
 		success: Session,

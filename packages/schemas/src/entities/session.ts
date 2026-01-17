@@ -11,6 +11,7 @@ export type SessionStatus = typeof SessionStatus.Type;
 
 export class Session extends Schema.Class<Session>("Session")({
 	id: Schema.String,
+	repositoryId: Schema.String,
 	worktreeId: Schema.NullOr(Schema.String),
 	workingPath: Schema.String,
 	title: Schema.String,
@@ -28,6 +29,7 @@ export class Session extends Schema.Class<Session>("Session")({
 export class CreateSessionInput extends Schema.Class<CreateSessionInput>(
 	"CreateSessionInput",
 )({
+	repositoryId: Schema.String,
 	worktreeId: Schema.optional(Schema.NullOr(Schema.String)),
 	workingPath: Schema.String,
 	title: Schema.String,

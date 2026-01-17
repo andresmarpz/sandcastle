@@ -43,6 +43,7 @@ const mapCreateError = (
 
 const toSession = (session: {
 	id: string;
+	repositoryId: string;
 	worktreeId: string | null;
 	workingPath: string;
 	title: string;
@@ -58,6 +59,7 @@ const toSession = (session: {
 }): Session =>
 	new Session({
 		id: session.id,
+		repositoryId: session.repositoryId,
 		worktreeId: session.worktreeId,
 		workingPath: session.workingPath,
 		title: session.title,
@@ -107,6 +109,12 @@ export const SessionRpcHandlers = SessionRpc.toLayer(
 					Effect.mapError(mapDatabaseError),
 				),
 
+			"session.listByRepository": (params) =>
+				storage.sessions.listByRepository(params.repositoryId).pipe(
+					Effect.map((sessions) => sessions.map(toSession)),
+					Effect.mapError(mapDatabaseError),
+				),
+
 			"session.get": (params) =>
 				storage.sessions
 					.get(params.id)
@@ -115,6 +123,7 @@ export const SessionRpcHandlers = SessionRpc.toLayer(
 			"session.create": (params) =>
 				storage.sessions
 					.create({
+						repositoryId: params.repositoryId,
 						worktreeId: params.worktreeId,
 						workingPath: params.workingPath,
 						title: params.title,

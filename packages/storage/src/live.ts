@@ -107,6 +107,7 @@ export const makeStorageService = (
 			sessions: {
 				list: sessionsService.list,
 				listByWorktree: sessionsService.listByWorktree,
+				listByRepository: sessionsService.listByRepository,
 				get: sessionsService.get,
 				create: sessionsService.create,
 				update: (id: string, input: UpdateSessionInput) =>
