@@ -178,9 +178,9 @@ function ChatViewContent({
 
 	return (
 		<div className="h-full w-full overflow-y-auto">
-			<div className="grid grid-cols-[1fr_minmax(0,56rem)_1fr] min-h-full">
-				{/* Left column - empty spacer */}
-				<div />
+			<div className="grid grid-cols-1 sm:grid-cols-[1fr_minmax(0,56rem)_1fr] min-h-full">
+				{/* Left column - empty spacer (hidden on small screens) */}
+				<div className="hidden sm:block" />
 
 				{/* Center column - main content */}
 				<div className="flex flex-col min-h-full">
@@ -254,8 +254,8 @@ function ChatViewContent({
 					</footer>
 				</div>
 
-				{/* Right column - session metadata */}
-				<div className="relative">
+				{/* Right column - session metadata (hidden on small screens) */}
+				<div className="relative hidden sm:block">
 					<SessionMetadataPanel session={session} />
 				</div>
 			</div>
