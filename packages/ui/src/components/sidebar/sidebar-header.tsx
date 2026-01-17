@@ -1,4 +1,5 @@
 import { IconBrandGithub, IconFolderOpen, IconPlus } from "@tabler/icons-react";
+import { useState } from "react";
 import { Button } from "@/components/button";
 import {
 	DropdownMenu,
@@ -7,9 +8,14 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/dropdown-menu";
 import { SidebarHeader as PrimitiveSidebarHeader } from "@/components/sidebar";
+import { CreateRepositoryDialog } from "./create-repository-dialog";
 
 export default function SidebarHeader() {
-	function handleOpenProject() {}
+	const [createDialogOpen, setCreateDialogOpen] = useState(false);
+
+	function handleOpenProject() {
+		setCreateDialogOpen(true);
+	}
 	function handleCloneFromGit() {}
 
 	return (
@@ -38,6 +44,10 @@ export default function SidebarHeader() {
 					</DropdownMenuItem>
 				</DropdownMenuContent>
 			</DropdownMenu>
+			<CreateRepositoryDialog
+				open={createDialogOpen}
+				onOpenChange={setCreateDialogOpen}
+			/>
 		</PrimitiveSidebarHeader>
 	);
 }

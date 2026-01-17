@@ -2,6 +2,9 @@ import { Atom, Result } from "@effect-atom/atom-react";
 import type { UpdateWorktreeInput, Worktree } from "@sandcastle/schemas";
 import { WORKTREE_LIST_KEY, WorktreeClient } from "./worktree-client";
 
+// Re-export the client and key for direct use
+export { WORKTREE_LIST_KEY, WorktreeClient };
+
 /**
  * Atom for the worktree list.
  * Use with `useAtomValue` to read and `useAtomRefresh` to manually refresh.
