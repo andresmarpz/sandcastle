@@ -34,7 +34,7 @@ export function Sidebar() {
 			{/* Second sidebar - session list for the selected repository */}
 			<SidebarPrimitive
 				collapsible="none"
-				className="hidden flex-1 md:flex border-l border-t rounded-tl-md"
+				className="flex flex-1 border-l border-t md:rounded-tl-md"
 			>
 				<SidebarContent className="pt-2 px-2">
 					<SidebarMenu>

@@ -216,17 +216,32 @@ function Sidebar({
 	collapsible = "offExamples",
 	className,
 	children,
-	renderOnMobile = true,
 	...props
 }: React.ComponentProps<"div"> & {
 	side?: "left" | "right";
 	variant?: "sidebar" | "floating" | "inset";
 	collapsible?: "offExamples" | "icon" | "none";
-	renderOnMobile?: boolean;
 }) {
 	const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
 
-	if (isMobile && renderOnMobile) {
+	// Non-collapsible sidebars always render inline, even on mobile
+	// This prevents nested sidebars from all becoming Sheet components
+	if (collapsible === "none") {
+		return (
+			<div
+				data-slot="sidebar"
+				className={cn(
+					"bg-sidebar text-sidebar-foreground flex h-full w-(--sidebar-width) flex-col",
+					className,
+				)}
+				{...props}
+			>
+				{children}
+			</div>
+		);
+	}
+
+	if (isMobile) {
 		return (
 			<Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
 				<SheetContent
@@ -241,24 +256,9 @@ function Sidebar({
 						<SheetTitle>Sidebar</SheetTitle>
 						<SheetDescription>Displays the mobile sidebar.</SheetDescription>
 					</SheetHeader>
-					<div className="flex h-full w-full flex-col">{children}</div>
+					<div className="flex h-full w-full">{children}</div>
 				</SheetContent>
 			</Sheet>
-		);
-	}
-
-	if (collapsible === "none") {
-		return (
-			<div
-				data-slot="sidebar"
-				className={cn(
-					"bg-sidebar text-sidebar-foreground flex h-full w-(--sidebar-width) flex-col",
-					className,
-				)}
-				{...props}
-			>
-				{children}
-			</div>
 		);
 	}
 
