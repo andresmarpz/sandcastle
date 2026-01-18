@@ -1,8 +1,7 @@
 "use client";
 
-import type { useChat } from "@ai-sdk/react";
 import { IconRobot, IconSquare } from "@tabler/icons-react";
-import type { ChatStatus } from "ai";
+import type { ChatStatus, UIMessage } from "ai";
 import { type ChangeEvent, useCallback, useRef, useState } from "react";
 import {
 	PromptInput,
@@ -15,7 +14,7 @@ import { cn } from "@/lib/utils";
 import { FilePickerPopover } from "./file-search";
 
 interface ChatInputProps {
-	onSend: ReturnType<typeof useChat>["sendMessage"];
+	onSend: (options: { text: string; parts?: UIMessage["parts"] }) => void;
 	onStop: () => void;
 	status: ChatStatus;
 	autonomous: boolean;

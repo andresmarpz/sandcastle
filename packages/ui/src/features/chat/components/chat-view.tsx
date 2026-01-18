@@ -1,10 +1,9 @@
 "use client";
 
-import { useChat } from "@ai-sdk/react";
 import { Result, useAtomValue } from "@effect-atom/atom-react";
 import type { GetHistoryResult } from "@sandcastle/rpc";
 import type { ChatMessage, QueuedMessage, Session } from "@sandcastle/schemas";
-import type { UIMessage } from "ai";
+import type { ChatStatus, UIMessage } from "ai";
 import { formatDistanceToNow } from "date-fns";
 import * as Option from "effect/Option";
 import { useEffect, useMemo, useState } from "react";
@@ -33,9 +32,10 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/alert";
 import { Badge } from "@/components/badge";
 import { Spinner } from "@/components/spinner";
-import { RpcChatTransport } from "@/features/chat/transport/chat-transport";
-import { subscriptionManager } from "@/features/chat/transport/subscription-manager";
-import { useSessionEvents } from "@/features/chat/transport/use-session-events";
+import {
+	useChatSession,
+	useSetChatHistory,
+} from "@/features/chat/store";
 import { ChatInput } from "./chat-input";
 import { GroupedMessageList } from "./grouped-message-list";
 
@@ -51,13 +51,6 @@ type QueueFilePart = Extract<QueuePart, { type: "file" }>;
 type QueueTextPart = Extract<QueuePart, { type: "text" }>;
 
 export function ChatView({ sessionId, worktreeId }: ChatViewProps) {
-	useEffect(() => {
-		subscriptionManager.visit(sessionId);
-		return () => {
-			subscriptionManager.leave(sessionId);
-		};
-	}, [sessionId]);
-
 	const historyResult = useAtomValue(chatHistoryQuery(sessionId));
 	const cachedHistory = useMemo(
 		() => Option.getOrElse(Result.value(historyResult), () => null),
@@ -130,26 +123,29 @@ function ChatViewContent({
 		[sessionResult],
 	);
 
-	const transport = useMemo(() => new RpcChatTransport(sessionId), [sessionId]);
-
+	// Use the global chat store instead of useChat + useSessionEvents
 	const {
 		messages,
-		sendMessage,
-		status,
-		stop,
-		error: chatError,
-	} = useChat({
-		id: sessionId,
-		transport,
-		messages: initialMessages,
-	});
-
-	const {
+		status: sessionStatus,
 		queue,
-		sessionStatus,
 		isConnected,
 		error: sessionError,
-	} = useSessionEvents(sessionId);
+		historyLoaded,
+		sendMessage,
+		stop,
+	} = useChatSession(sessionId);
+
+	// Set initial history when available
+	const setHistory = useSetChatHistory(sessionId);
+	useEffect(() => {
+		if (initialMessages.length > 0 && !historyLoaded) {
+			setHistory(initialMessages);
+		}
+	}, [initialMessages, historyLoaded, setHistory]);
+
+	// Map session status to ChatStatus for ChatInput compatibility
+	// AI SDK ChatStatus is 'submitted' | 'streaming' | 'ready' | 'error'
+	const chatStatus: ChatStatus = sessionStatus === "streaming" ? "streaming" : "ready";
 
 	const showHistoryLoading =
 		historyStatus === "loading" && messages.length === 0;
@@ -166,12 +162,6 @@ function ChatViewContent({
 			? {
 					title: "Session stream error",
 					message: sessionError.message,
-				}
-			: null,
-		chatError
-			? {
-					title: "Chat error",
-					message: chatError.message,
 				}
 			: null,
 	].filter(Boolean) as Array<{ title: string; message: string }>;
@@ -247,7 +237,7 @@ function ChatViewContent({
 							worktreeId={worktreeId}
 							onSend={sendMessage}
 							onStop={stop}
-							status={status}
+							status={chatStatus}
 							autonomous={autonomous}
 							onAutonomousChange={setAutonomous}
 						/>
