@@ -24,8 +24,8 @@ export default function Layout() {
 				<BrowserRouter>
 					<div className="[--header-height:calc(--spacing(14))]">
 						<SidebarProvider className="flex flex-col">
-							<header className="bg-background sticky top-0 z-50 flex w-full items-center">
-								<div className="w-[72px]"></div>
+							<header className="bg-background sticky top-0 z-50 flex w-full items-center pl-4 sm:pl-0">
+								<div className="hidden sm:ml-0 sm:block w-[72px]" />
 								<div className="flex h-(--header-height) w-full items-center gap-2">
 									<SidebarTrigger />
 								</div>

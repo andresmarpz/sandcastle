@@ -35,11 +35,11 @@ export default function Rail() {
 	return (
 		<SidebarPrimitive
 			collapsible="none"
-			className="w-[calc(var(--sidebar-width-icon)+1px)]! shrink-0 border-r-0 bg-background"
+			className="w-16! shrink-0 border-r-0 bg-background"
 		>
 			<SidebarContent>
-				<SidebarGroup>
-					<SidebarGroupContent className="px-1.5 md:px-0">
+				<SidebarGroup className="p-3">
+					<SidebarGroupContent>
 						<SidebarMenu>
 							{Result.matchWithWaiting(repositoriesResult, {
 								onWaiting: () =>
@@ -68,7 +68,8 @@ export default function Rail() {
 					</SidebarGroupContent>
 				</SidebarGroup>
 			</SidebarContent>
-			<SidebarFooter className="border-border border-t flex flex-col items-center gap-2 px-1.5 md:px-0">
+
+			<SidebarFooter className="border-border border-t px-4">
 				<SidebarMenu>
 					<SidebarMenuItem>
 						<SidebarMenuButton onClick={() => setSettingsOpen(true)}>
@@ -108,10 +109,10 @@ function RepositoryList({ repositories }: RepositoryListProps) {
 
 function RepositoryListSkeleton() {
 	return (
-		<div className="space-y-2 px-2 py-1">
-			<Skeleton className="h-8 w-full" />
-			<Skeleton className="h-8 w-full" />
-			<Skeleton className="h-8 w-full" />
+		<div className="space-y-1">
+			<Skeleton className="size-10" />
+			<Skeleton className="size-10" />
+			<Skeleton className="size-10" />
 		</div>
 	);
 }
