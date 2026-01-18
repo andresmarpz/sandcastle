@@ -40,7 +40,7 @@ export default function Rail() {
 			<SidebarContent>
 				<SidebarGroup className="p-3">
 					<SidebarGroupContent>
-						<SidebarMenu>
+						<SidebarMenu className="gap-3">
 							{Result.matchWithWaiting(repositoriesResult, {
 								onWaiting: () =>
 									hasRepositoriesCache ? (
@@ -69,7 +69,7 @@ export default function Rail() {
 				</SidebarGroup>
 			</SidebarContent>
 
-			<SidebarFooter className="border-border border-t px-4">
+			<SidebarFooter className="px-4">
 				<SidebarMenu>
 					<SidebarMenuItem>
 						<SidebarMenuButton onClick={() => setSettingsOpen(true)}>
