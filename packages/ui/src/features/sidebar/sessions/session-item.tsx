@@ -22,7 +22,6 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from "@/components/alert-dialog";
-import { Badge } from "@/components/badge";
 import {
 	ContextMenu,
 	ContextMenuContent,
@@ -248,34 +247,23 @@ interface SessionLiveStatusProps {
 function SessionLiveStatus({ sessionId }: SessionLiveStatusProps) {
 	const status = useChatSessionSelector(sessionId, (s) => s.status);
 	const isConnected = useChatSessionSelector(sessionId, (s) => s.isConnected);
-	const queueLength = useChatSessionSelector(sessionId, (s) => s.queue.length);
 
-	// Only show badges when there's something noteworthy
-	const showStreaming = status === "streaming";
-	const showOffline = !isConnected;
-	const showQueue = queueLength > 0;
+	const isStreaming = status === "streaming";
+	const isOffline = !isConnected;
 
-	if (!showStreaming && !showOffline && !showQueue) {
+	// Only show dot when streaming or offline
+	if (!isStreaming && !isOffline) {
 		return null;
 	}
 
 	return (
-		<div className="flex items-center gap-1">
-			{showStreaming && (
-				<Badge variant="default" className="text-[10px] px-1.5 py-0 h-4">
-					Streaming
-				</Badge>
+		<span
+			className={cn(
+				"size-2 rounded-full shrink-0",
+				isStreaming && "bg-primary animate-pulse",
+				isOffline && !isStreaming && "bg-destructive",
 			)}
-			{showOffline && (
-				<Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-4">
-					Offline
-				</Badge>
-			)}
-			{showQueue && (
-				<Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
-					{queueLength} queued
-				</Badge>
-			)}
-		</div>
+			title={isStreaming ? "Streaming" : "Offline"}
+		/>
 	);
 }
