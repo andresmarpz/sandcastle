@@ -162,7 +162,7 @@ export const StreamEventStepEnd = Schema.Struct({
 export type StreamEventStepEnd = typeof StreamEventStepEnd.Type;
 
 export const StreamEventData = Schema.Struct({
-	type: Schema.String, // 'data-{name}'
+	type: Schema.TemplateLiteral("data-", Schema.String),
 	id: Schema.optional(Schema.String),
 	data: Schema.Unknown,
 	transient: Schema.optional(Schema.Boolean),
