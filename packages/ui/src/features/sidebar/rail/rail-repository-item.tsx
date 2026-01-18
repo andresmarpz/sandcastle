@@ -73,9 +73,13 @@ export function RailRepositoryItem({ repository }: RailRepositoryItemProps) {
 				<ContextMenuTrigger
 					render={
 						<SidebarMenuItem>
-							<SidebarMenuButton onClick={handleSelect} isActive={isActive}>
-								{initials}
-							</SidebarMenuButton>
+							<SidebarMenuButton
+									size="lg"
+									onClick={handleSelect}
+									isActive={isActive}
+								>
+									{initials}
+								</SidebarMenuButton>
 						</SidebarMenuItem>
 					}
 				/>

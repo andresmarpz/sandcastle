@@ -20,8 +20,8 @@ export default function SidebarNewRepository() {
 	return (
 		<SidebarMenuItem>
 			<DropdownMenu>
-				<DropdownMenuTrigger render={<SidebarMenuButton />}>
-					<IconPlus className="size-3" />
+				<DropdownMenuTrigger render={<SidebarMenuButton size="lg" />}>
+					<IconPlus className="size-5" />
 					<span className="sr-only">Add project</span>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent
