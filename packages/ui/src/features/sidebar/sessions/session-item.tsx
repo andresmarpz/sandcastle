@@ -22,6 +22,7 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from "@/components/alert-dialog";
+import { Badge } from "@/components/badge";
 import {
 	ContextMenu,
 	ContextMenuContent,
@@ -29,6 +30,9 @@ import {
 	ContextMenuSeparator,
 	ContextMenuTrigger,
 } from "@/components/context-menu";
+import {
+	useChatSessionSelector,
+} from "@/features/chat/store";
 import { cn } from "@/lib/utils";
 
 interface SessionItemProps {
@@ -113,8 +117,11 @@ export function SessionItem({ session, repositoryId }: SessionItemProps) {
 											worktreeId={session.worktreeId}
 										/>
 									</div>
-									<div className="text-muted-foreground text-xs mt-0.5">
-										{lastActivityLabel}
+									<div className="flex items-center gap-2 mt-0.5">
+										<span className="text-muted-foreground text-xs">
+											{lastActivityLabel}
+										</span>
+										<SessionLiveStatus sessionId={session.id} />
 									</div>
 								</div>
 							</div>
@@ -227,5 +234,48 @@ function WorktreeBadge({ worktreeId }: { worktreeId: string }) {
 		>
 			[{branchName}]
 		</span>
+	);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Session Live Status (streaming/connection status from chat store)
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface SessionLiveStatusProps {
+	sessionId: string;
+}
+
+function SessionLiveStatus({ sessionId }: SessionLiveStatusProps) {
+	const status = useChatSessionSelector(sessionId, (s) => s.status);
+	const isConnected = useChatSessionSelector(sessionId, (s) => s.isConnected);
+	const queueLength = useChatSessionSelector(sessionId, (s) => s.queue.length);
+
+	// Only show badges when there's something noteworthy
+	const showStreaming = status === "streaming";
+	const showOffline = !isConnected;
+	const showQueue = queueLength > 0;
+
+	if (!showStreaming && !showOffline && !showQueue) {
+		return null;
+	}
+
+	return (
+		<div className="flex items-center gap-1">
+			{showStreaming && (
+				<Badge variant="default" className="text-[10px] px-1.5 py-0 h-4">
+					Streaming
+				</Badge>
+			)}
+			{showOffline && (
+				<Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-4">
+					Offline
+				</Badge>
+			)}
+			{showQueue && (
+				<Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
+					{queueLength} queued
+				</Badge>
+			)}
+		</div>
 	);
 }

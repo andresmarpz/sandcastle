@@ -30,7 +30,6 @@ import {
 	QueueSectionTrigger,
 } from "@/components/ai-elements/queue";
 import { Alert, AlertDescription, AlertTitle } from "@/components/alert";
-import { Badge } from "@/components/badge";
 import { Spinner } from "@/components/spinner";
 import {
 	useChatSession,
@@ -174,32 +173,9 @@ function ChatViewContent({
 
 				{/* Center column - main content */}
 				<div className="flex flex-col min-h-full">
-					<header className="sticky top-0 w-full bg-background z-10">
-						<div className="flex items-center justify-between px-4 py-3">
-							<div className="flex items-center gap-2">
-								<Badge
-									variant={
-										sessionStatus === "streaming" ? "default" : "secondary"
-									}
-								>
-									{sessionStatus === "streaming" ? "Streaming" : "Idle"}
-								</Badge>
-								<Badge variant={isConnected ? "outline" : "destructive"}>
-									{isConnected ? "Live" : "Offline"}
-								</Badge>
-								{historyStatus === "loading" && (
-									<span className="flex items-center gap-2 text-muted-foreground text-xs">
-										<Spinner className="size-3" />
-										Syncing history
-									</span>
-								)}
-							</div>
-							{queue.length > 0 && (
-								<Badge variant="outline">{queue.length} queued</Badge>
-							)}
-						</div>
-						{errors.length > 0 && (
-							<div className="flex flex-col gap-2 px-4 pb-3">
+					{errors.length > 0 && (
+						<div className="sticky top-0 w-full bg-background z-10">
+							<div className="flex flex-col gap-2 px-4 py-3">
 								{errors.map((error) => (
 									<Alert key={error.title} variant="destructive">
 										<AlertTitle>{error.title}</AlertTitle>
@@ -207,8 +183,8 @@ function ChatViewContent({
 									</Alert>
 								))}
 							</div>
-						)}
-					</header>
+						</div>
+					)}
 
 					<div className="flex-1">
 						<Conversation>
