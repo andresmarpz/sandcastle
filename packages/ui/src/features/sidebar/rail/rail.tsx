@@ -35,8 +35,7 @@ export default function Rail() {
 	return (
 		<SidebarPrimitive
 			collapsible="none"
-			className="w-[calc(var(--sidebar-width-icon)+1px)]! border-r-0 bg-background"
-			renderOnMobile={false}
+			className="w-[calc(var(--sidebar-width-icon)+1px)]! shrink-0 border-r-0 bg-background"
 		>
 			<SidebarContent>
 				<SidebarGroup>
@@ -69,15 +68,15 @@ export default function Rail() {
 					</SidebarGroupContent>
 				</SidebarGroup>
 			</SidebarContent>
-			<SidebarFooter className="border-border border-t flex flex-col items-center gap-2">
+			<SidebarFooter className="border-border border-t flex flex-col items-center gap-2 px-1.5 md:px-0">
 				<SidebarMenu>
 					<SidebarMenuItem>
 						<SidebarMenuButton onClick={() => setSettingsOpen(true)}>
 							<IconSettings className="size-4" />
 						</SidebarMenuButton>
 					</SidebarMenuItem>
+					<ThemeSwitcher />
 				</SidebarMenu>
-				<ThemeSwitcher />
 			</SidebarFooter>
 			<SettingsModal
 				open={settingsOpen}
