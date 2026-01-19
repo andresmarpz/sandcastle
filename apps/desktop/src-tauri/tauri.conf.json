@@ -41,7 +41,7 @@
 			"endpoints": [
 				"https://github.com/andresmarpz/sandcastle/releases/latest/download/latest.json"
 			],
-			"pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEQzNDM5QUU3RkM3QTdDNkUKUldSdWZIcjg1NXBEMDRzNXRGdEdRV0hGMEVFQXBxVXRtUmkxaURzUlFkZENhVHJXUm1pR3FFb3MK"
+			"pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDlEOEFBQTczMUU0RkQ0N0IKUldSNzFFOGVjNnFLbmRKcFlMVFBUL091Wmh1OWd1SHc5ZlR0ei95OWZtdUtkY2ZGQjBkRlZERHgK"
 		}
 	}
 }
