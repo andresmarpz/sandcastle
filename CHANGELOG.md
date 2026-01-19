@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.7](https://github.com/andresmarpz/sandcastle/compare/v0.1.6...v0.1.7) (2026-01-19)
+
+
+### Bug Fixes
+
+* **ci:** default empty password for updater signing key ([688bfd4](https://github.com/andresmarpz/sandcastle/commit/688bfd448cedece4dc692400a9a1ed6c338f4a75))
+
 ## [0.1.6](https://github.com/andresmarpz/sandcastle/compare/v0.1.5...v0.1.6) (2026-01-19)
 
 
