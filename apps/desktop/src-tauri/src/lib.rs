@@ -13,7 +13,10 @@ pub fn run() {
         .setup(|app| {
             let win_builder = WebviewWindowBuilder::new(app, "main", WebviewUrl::default())
                 .title("Sandcastle")
-                .inner_size(1600.0, 1200.0);
+                .inner_size(1440.0, 900.0)
+                .min_inner_size(800.0, 600.0)
+                .resizable(true)
+                .fullscreen(false);
 
             #[cfg(target_os = "macos")]
             let win_builder = win_builder
