@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.4](https://github.com/andresmarpz/sandcastle/compare/v0.1.3...v0.1.4) (2026-01-19)
+
+
+### Bug Fixes
+
+* chatview layout scroll to bottom ([68fbb07](https://github.com/andresmarpz/sandcastle/commit/68fbb076dcdad84316c641610e45be1b7057981b))
+* overscrolling bug and safari recalculation lag ([1fae9dc](https://github.com/andresmarpz/sandcastle/commit/1fae9dcac14340959962cadf849e402754df9ef4))
+
 ## [0.1.3](https://github.com/andresmarpz/sandcastle/compare/v0.1.2...v0.1.3) (2026-01-19)
 
 
