@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.8](https://github.com/andresmarpz/sandcastle/compare/v0.1.7...v0.1.8) (2026-01-19)
+
+
+### Bug Fixes
+
+* **desktop:** update updater signing pubkey ([fa243ef](https://github.com/andresmarpz/sandcastle/commit/fa243ef9548d8bcbc519ee1b4fcc79bb1bba9ed8))
+
 ## [0.1.7](https://github.com/andresmarpz/sandcastle/compare/v0.1.6...v0.1.7) (2026-01-19)
 
 
