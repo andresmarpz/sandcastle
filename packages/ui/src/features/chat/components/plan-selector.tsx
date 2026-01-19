@@ -5,6 +5,7 @@ import {
 	IconHammer,
 	IconListCheck,
 	IconPlus,
+	IconRobot,
 } from "@tabler/icons-react";
 import { useState } from "react";
 import { Button } from "@/components/button";
@@ -24,6 +25,7 @@ import {
 	DialogTitle,
 } from "@/components/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/popover";
+import { cn } from "@/lib/utils";
 
 const MODES = [
 	{
@@ -38,9 +40,15 @@ const MODES = [
 		icon: IconHammer,
 		color: "text-indigo-500",
 	},
+	{
+		value: "autonomous",
+		label: "Autonomous",
+		icon: IconRobot,
+		color: "text-amber-500",
+	},
 ] as const;
 
-type Mode = (typeof MODES)[number]["value"];
+export type Mode = (typeof MODES)[number]["value"];
 
 interface PlanSelectorProps {
 	value?: Mode;
@@ -49,8 +57,11 @@ interface PlanSelectorProps {
 
 export function PlanSelector({ value, onValueChange }: PlanSelectorProps) {
 	const [open, setOpen] = useState(false);
-	const [selectedMode, setSelectedMode] = useState<Mode>(value ?? "plan");
+	const [internalMode, setInternalMode] = useState<Mode>(value ?? "plan");
 	const [createDialogOpen, setCreateDialogOpen] = useState(false);
+
+	// Use controlled value if provided, otherwise use internal state
+	const selectedMode = value ?? internalMode;
 
 	const handleModeSelect = (newValue: string) => {
 		if (newValue === "create") {
@@ -59,7 +70,9 @@ export function PlanSelector({ value, onValueChange }: PlanSelectorProps) {
 			return;
 		}
 		const mode = newValue as Mode;
-		setSelectedMode(mode);
+		// Update internal state for uncontrolled mode
+		setInternalMode(mode);
+		// Notify parent
 		onValueChange?.(mode);
 		setOpen(false);
 	};
@@ -75,8 +88,10 @@ export function PlanSelector({ value, onValueChange }: PlanSelectorProps) {
 					render={<Button variant="outline" size="xs" />}
 					className="w-auto gap-1.5 px-2"
 				>
-					<SelectedIcon className={`size-3.5 ${selectedColor}`} />
-					{selectedModeData?.label ?? "Plan"}
+					<SelectedIcon className={cn("size-3.5", selectedColor)} />
+					<span className="text-[13px]">
+						{selectedModeData?.label ?? "Plan"}
+					</span>
 					<IconChevronDown className="size-3 text-muted-foreground" />
 				</PopoverTrigger>
 				<PopoverContent className="w-48 p-0" align="start">
@@ -92,16 +107,18 @@ export function PlanSelector({ value, onValueChange }: PlanSelectorProps) {
 										onSelect={handleModeSelect}
 										data-checked={selectedMode === mode.value}
 									>
-										<mode.icon className={`size-4 ${mode.color}`} />
-										{mode.label}
+										<mode.icon
+											className={cn("size-3.5 shrink-0", mode.color)}
+										/>
+										<span>{mode.label}</span>
 									</CommandItem>
 								))}
 							</CommandGroup>
 							<CommandSeparator />
 							<CommandGroup>
 								<CommandItem value="create" onSelect={handleModeSelect}>
-									<IconPlus className="size-4" />
-									Create mode
+									<IconPlus className="size-3.5 shrink-0 text-muted-foreground" />
+									<span>Create mode</span>
 								</CommandItem>
 							</CommandGroup>
 						</CommandList>
