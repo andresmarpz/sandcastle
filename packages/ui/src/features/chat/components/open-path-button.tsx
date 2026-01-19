@@ -49,10 +49,9 @@ function FinderIcon({ className }: { className?: string }) {
 
 interface OpenPathButtonProps {
 	path: string;
-	size?: "default" | "sm" | "lg" | "icon" | "icon-xs" | "xs";
 }
 
-export function OpenPathButton({ path, size = "xs" }: OpenPathButtonProps) {
+export function OpenPathButton({ path }: OpenPathButtonProps) {
 	const { openInFileManager, openInEditor, copyToClipboard } = usePlatform();
 
 	// If no platform actions are available, don't render the button
@@ -76,7 +75,7 @@ export function OpenPathButton({ path, size = "xs" }: OpenPathButtonProps) {
 		<DropdownMenu>
 			<DropdownMenuTrigger
 				render={
-					<Button variant="outline" size={size} className="gap-1">
+					<Button variant="outline" size="xs" className="gap-1 w-fit">
 						Open
 						<IconChevronDown className="size-3" />
 					</Button>
