@@ -211,7 +211,7 @@ function ChatViewContent({
 
 			<footer className="shrink-0 bg-background grid grid-cols-1 sm:grid-cols-[1fr_minmax(0,56rem)_1fr]">
 				<div className="hidden sm:block" />
-				<div>
+				<div className="min-w-0">
 					{queue.length > 0 && <QueuePanel queue={queue} onDequeue={dequeue} />}
 					<ChatInput
 						workingPath={workingPath}
@@ -222,7 +222,10 @@ function ChatViewContent({
 						onAutonomousChange={setAutonomous}
 					/>
 				</div>
-				<div className="hidden sm:block" />
+				{/* Spacer to match metadata panel width so chat input aligns with messages */}
+				<div className="hidden p-4 sm:block">
+					<div className="min-w-[240px]" />
+				</div>
 			</footer>
 		</div>
 	);
