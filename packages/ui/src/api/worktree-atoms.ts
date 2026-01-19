@@ -131,15 +131,6 @@ export const deleteWorktreeMutation =
 	WorktreeClient.mutation("worktree.delete");
 
 /**
- * Family of mutation atoms for deleting worktrees.
- * Each worktree gets its own mutation instance to support parallel deletions
- * and independent loading states.
- */
-export const deleteWorktreeMutationFamily = Atom.family((_worktreeId: string) =>
-	WorktreeClient.mutation("worktree.delete"),
-);
-
-/**
  * Mutation atom for touching a worktree (updating lastAccessedAt timestamp).
  * Call with payload and reactivityKeys to invalidate the worktree after touch.
  */

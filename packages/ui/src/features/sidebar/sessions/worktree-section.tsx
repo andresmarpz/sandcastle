@@ -13,7 +13,7 @@ import * as Option from "effect/Option";
 import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import {
-	deleteWorktreeMutationFamily,
+	deleteWorktreeMutation,
 	WORKTREE_LIST_KEY,
 	worktreeListByRepositoryAtomFamily,
 } from "@/api/worktree-atoms";
@@ -140,14 +140,9 @@ function WorktreeSubItem({ worktree }: WorktreeSubItemProps) {
 	const location = useLocation();
 	const navigate = useNavigate();
 	const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+	const [isDeleting, setIsDeleting] = useState(false);
 
-	// Use a family-based mutation so each worktree has its own loading state
-	const deleteMutationAtom = useMemo(
-		() => deleteWorktreeMutationFamily(worktree.id),
-		[worktree.id],
-	);
-	const [deleteResult, deleteWorktree] = useAtom(deleteMutationAtom);
-	const isDeleting = deleteResult.waiting;
+	const [, deleteWorktree] = useAtom(deleteWorktreeMutation);
 
 	const createdAtLabel = useMemo(
 		() => formatRelativeTime(worktree.createdAt),
@@ -163,6 +158,10 @@ function WorktreeSubItem({ worktree }: WorktreeSubItemProps) {
 	}
 
 	function handleDelete() {
+		setIsDeleting(true);
+		// Close dialog immediately - the spinner will show on the item
+		setIsDeleteDialogOpen(false);
+
 		deleteWorktree({
 			payload: { id: worktree.id },
 			reactivityKeys: [
@@ -171,8 +170,6 @@ function WorktreeSubItem({ worktree }: WorktreeSubItemProps) {
 				`worktree:${worktree.id}`,
 			],
 		});
-		// Close dialog immediately - the spinner will show on the item
-		setIsDeleteDialogOpen(false);
 	}
 
 	return (
