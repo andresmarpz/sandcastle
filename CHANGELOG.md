@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.1.10](https://github.com/andresmarpz/sandcastle/compare/v0.1.9...v0.1.10) (2026-01-19)
+
+
+### Features
+
+* add sidebar worktree item section ([3c763ec](https://github.com/andresmarpz/sandcastle/commit/3c763ec2c42d863e3acb9b4b9679b703e0ce3df8))
+
+
+### Bug Fixes
+
+* remove unused variable from chat-view ([0714961](https://github.com/andresmarpz/sandcastle/commit/071496162e6e6e0c88442eef4bd0ac292cdea9bb))
+
+
+### Performance Improvements
+
+* **ui:** reduce unnecessary re-renders in chat message list ([#56](https://github.com/andresmarpz/sandcastle/issues/56)) ([db81d94](https://github.com/andresmarpz/sandcastle/commit/db81d94d2675cd99f5b38bf6b18529da99aa5cbe))
+
 ## [0.1.9](https://github.com/andresmarpz/sandcastle/compare/v0.1.8...v0.1.9) (2026-01-19)
 
 
