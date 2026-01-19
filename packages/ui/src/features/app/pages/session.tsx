@@ -35,7 +35,10 @@ function SessionPageContent({ sessionId }: { sessionId: string }) {
 	return Result.matchWithWaiting(sessionResult, {
 		onWaiting: () =>
 			hasSessionCache ? (
-				<ChatView sessionId={sessionId} worktreeId={session.worktreeId ?? undefined} />
+				<ChatView
+					sessionId={sessionId}
+					worktreeId={session.worktreeId ?? undefined}
+				/>
 			) : (
 				<SessionLoading />
 			),
@@ -50,7 +53,10 @@ function SessionPageContent({ sessionId }: { sessionId: string }) {
 			</div>
 		),
 		onSuccess: () => (
-			<ChatView sessionId={sessionId} worktreeId={session?.worktreeId ?? undefined} />
+			<ChatView
+				sessionId={sessionId}
+				worktreeId={session?.worktreeId ?? undefined}
+			/>
 		),
 	});
 }

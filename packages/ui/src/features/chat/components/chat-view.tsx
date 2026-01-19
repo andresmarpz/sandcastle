@@ -32,8 +32,6 @@ import {
 	QueueSectionLabel,
 	QueueSectionTrigger,
 } from "@/components/ai-elements/queue";
-import { Alert, AlertDescription, AlertTitle } from "@/components/alert";
-import { Badge } from "@/components/badge";
 import { Spinner } from "@/components/spinner";
 import { useChatSession, useSetChatHistory } from "@/features/chat/store";
 import {
@@ -130,7 +128,7 @@ function ChatViewContent({
 		status: sessionStatus,
 		queue,
 		isConnected,
-		error: sessionError,
+		error: _sessionError,
 		historyLoaded,
 		sendMessage,
 		stop,
@@ -153,21 +151,21 @@ function ChatViewContent({
 	const showHistoryLoading =
 		historyStatus === "loading" && messages.length === 0;
 
-	const errors = [
-		historyStatus === "error"
-			? {
-					title: "History unavailable",
-					message:
-						"Unable to load saved messages. New updates will still stream.",
-				}
-			: null,
-		sessionError
-			? {
-					title: "Session stream error",
-					message: sessionError.message,
-				}
-			: null,
-	].filter(Boolean) as Array<{ title: string; message: string }>;
+	// const errors = [
+	// 	historyStatus === "error"
+	// 		? {
+	// 				title: "History unavailable",
+	// 				message:
+	// 					"Unable to load saved messages. New updates will still stream.",
+	// 			}
+	// 		: null,
+	// 	sessionError
+	// 		? {
+	// 				title: "Session stream error",
+	// 				message: sessionError.message,
+	// 			}
+	// 		: null,
+	// ].filter(Boolean) as Array<{ title: string; message: string }>;
 
 	return (
 		<div className="h-full w-full overflow-y-auto">

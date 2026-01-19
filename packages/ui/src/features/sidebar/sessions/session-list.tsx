@@ -2,7 +2,7 @@
 
 import { Result, useAtom, useAtomValue } from "@effect-atom/atom-react";
 import type { Session } from "@sandcastle/schemas";
-import { IconMessage2Plus, IconPlus } from "@tabler/icons-react";
+import { IconPlus } from "@tabler/icons-react";
 import * as Option from "effect/Option";
 import { useMemo } from "react";
 import { useNavigate } from "react-router";
@@ -12,7 +12,6 @@ import {
 	SESSION_LIST_KEY,
 	sessionListByRepositoryAtomFamily,
 } from "@/api/session-atoms";
-import { Button } from "@/components/button";
 import { SidebarMenuButton, SidebarMenuItem } from "@/components/sidebar";
 import { Skeleton } from "@/components/skeleton";
 import { Spinner } from "@/components/spinner";

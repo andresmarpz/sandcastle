@@ -74,12 +74,12 @@ export function RailRepositoryItem({ repository }: RailRepositoryItemProps) {
 					render={
 						<SidebarMenuItem>
 							<SidebarMenuButton
-									size="lg"
-									onClick={handleSelect}
-									isActive={isActive}
-								>
-									{initials}
-								</SidebarMenuButton>
+								size="lg"
+								onClick={handleSelect}
+								isActive={isActive}
+							>
+								{initials}
+							</SidebarMenuButton>
 						</SidebarMenuItem>
 					}
 				/>
