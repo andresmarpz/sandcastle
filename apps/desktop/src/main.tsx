@@ -1,4 +1,5 @@
 import { PlatformProvider } from "@sandcastle/ui/context/platform-context";
+import { VersionProvider } from "@sandcastle/ui/api/version.tsx";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Command } from "@tauri-apps/plugin-shell";
 import ReactDOM from "react-dom/client";
@@ -7,7 +8,7 @@ import "@sandcastle/ui/globals.css";
 import "@fontsource-variable/inter";
 import "./tauri.css";
 import { StrictMode } from "react";
-import { UpdaterProvider } from "@/context/updater-context";
+import { UpdaterProvider, useUpdaterContext } from "@/context/updater-context";
 import Layout from "@/features/app/layout";
 
 const openDirectory = async () => {
@@ -32,6 +33,13 @@ const copyToClipboard = async (text: string) => {
 	await navigator.clipboard.writeText(text);
 };
 
+function VersionBridge({ children }: { children: React.ReactNode }) {
+	const { currentVersion } = useUpdaterContext();
+	return (
+		<VersionProvider currentVersion={currentVersion}>{children}</VersionProvider>
+	);
+}
+
 function App() {
 	return (
 		<PlatformProvider
@@ -41,7 +49,9 @@ function App() {
 			copyToClipboard={copyToClipboard}
 		>
 			<UpdaterProvider>
-				<Layout />
+				<VersionBridge>
+					<Layout />
+				</VersionBridge>
 			</UpdaterProvider>
 		</PlatformProvider>
 	);

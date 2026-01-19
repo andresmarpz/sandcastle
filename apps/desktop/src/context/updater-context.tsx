@@ -13,6 +13,7 @@ import { type UpdaterState, useUpdater } from "@/hooks/use-updater";
 interface UpdaterContextValue {
 	state: UpdaterState;
 	checkForUpdates: () => Promise<void>;
+	currentVersion: string;
 }
 
 const UpdaterContext = createContext<UpdaterContextValue | undefined>(
@@ -94,8 +95,9 @@ export function UpdaterProvider({ children }: { children: React.ReactNode }) {
 		() => ({
 			state: updater.state,
 			checkForUpdates: updater.checkForUpdates,
+			currentVersion,
 		}),
-		[updater.state, updater.checkForUpdates],
+		[updater.state, updater.checkForUpdates, currentVersion],
 	);
 
 	return (

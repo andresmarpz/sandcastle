@@ -3,6 +3,7 @@ import type { Repository } from "@sandcastle/schemas";
 import { IconSettings } from "@tabler/icons-react";
 import * as Option from "effect/Option";
 import { useMemo, useState } from "react";
+import { useVersion } from "@/api/version.tsx";
 import { repositoryListAtom } from "@/api/repository-atoms";
 import {
 	SidebarContent,
@@ -25,6 +26,7 @@ export default function Rail() {
 	const [settingsSection, setSettingsSection] =
 		useState<SettingsSection>("chat");
 
+	const version = useVersion();
 	const repositoriesResult = useAtomValue(repositoryListAtom);
 	const repositories = useMemo(
 		() => Option.getOrElse(Result.value(repositoriesResult), () => []),
@@ -84,6 +86,7 @@ export default function Rail() {
 				onOpenChange={setSettingsOpen}
 				section={settingsSection}
 				onSectionChange={setSettingsSection}
+				version={version}
 			/>
 		</SidebarPrimitive>
 	);

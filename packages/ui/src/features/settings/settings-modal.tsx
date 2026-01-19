@@ -16,6 +16,7 @@ interface SettingsModalProps {
 	onOpenChange: (open: boolean) => void;
 	section: SettingsSection;
 	onSectionChange: (section: SettingsSection) => void;
+	version?: string;
 }
 
 export function SettingsModal({
@@ -23,6 +24,7 @@ export function SettingsModal({
 	onOpenChange,
 	section,
 	onSectionChange,
+	version,
 }: SettingsModalProps) {
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -34,6 +36,7 @@ export function SettingsModal({
 					<SettingsSidebar
 						section={section}
 						onSectionChange={onSectionChange}
+						version={version}
 					/>
 					<main className="flex-1 overflow-y-auto p-6">
 						<SettingsContent section={section} />

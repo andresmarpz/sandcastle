@@ -8,6 +8,7 @@ import {
 } from "@tabler/icons-react";
 import {
 	SidebarContent,
+	SidebarFooter,
 	SidebarMenu,
 	SidebarMenuButton,
 	SidebarMenuItem,
@@ -41,11 +42,13 @@ const settingsNav = [
 interface SettingsSidebarProps {
 	section: SettingsSection;
 	onSectionChange: (section: SettingsSection) => void;
+	version?: string;
 }
 
 export function SettingsSidebar({
 	section,
 	onSectionChange,
+	version,
 }: SettingsSidebarProps) {
 	return (
 		<SidebarPrimitive collapsible="none" className="w-56 shrink-0 border-r">
@@ -67,6 +70,11 @@ export function SettingsSidebar({
 					})}
 				</SidebarMenu>
 			</SidebarContent>
+			{version && (
+				<SidebarFooter className="px-4 py-3">
+					<span className="text-xs text-muted-foreground">v{version}</span>
+				</SidebarFooter>
+			)}
 		</SidebarPrimitive>
 	);
 }
