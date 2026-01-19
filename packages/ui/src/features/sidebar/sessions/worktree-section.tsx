@@ -1,13 +1,33 @@
 "use client";
 
-import { Result, useAtomValue } from "@effect-atom/atom-react";
+import { Result, useAtom, useAtomValue } from "@effect-atom/atom-react";
 import type { Worktree } from "@sandcastle/schemas";
-import { IconChevronDown, IconGitBranch } from "@tabler/icons-react";
+import { IconChevronDown, IconGitBranch, IconTrash } from "@tabler/icons-react";
 import { formatDistanceToNow } from "date-fns";
 import * as Option from "effect/Option";
 import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
-import { worktreeListByRepositoryAtomFamily } from "@/api/worktree-atoms";
+import {
+	deleteWorktreeMutation,
+	WORKTREE_LIST_KEY,
+	worktreeListByRepositoryAtomFamily,
+} from "@/api/worktree-atoms";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/alert-dialog";
+import {
+	ContextMenu,
+	ContextMenuContent,
+	ContextMenuItem,
+	ContextMenuTrigger,
+} from "@/components/context-menu";
 import { Badge } from "@/components/badge";
 import {
 	Collapsible,
@@ -114,6 +134,10 @@ function formatRelativeTime(iso: string) {
 function WorktreeSubItem({ worktree }: WorktreeSubItemProps) {
 	const location = useLocation();
 	const navigate = useNavigate();
+	const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+	const [deleteResult, deleteWorktree] = useAtom(deleteWorktreeMutation);
+	const isDeleting = deleteResult.waiting;
 
 	const createdAtLabel = useMemo(
 		() => formatRelativeTime(worktree.createdAt),
@@ -126,22 +150,78 @@ function WorktreeSubItem({ worktree }: WorktreeSubItemProps) {
 		navigate(`/worktree/${worktree.id}`);
 	}
 
+	function handleDelete() {
+		deleteWorktree({
+			payload: { id: worktree.id },
+			reactivityKeys: [
+				WORKTREE_LIST_KEY,
+				`worktrees:repo:${worktree.repositoryId}`,
+				`worktree:${worktree.id}`,
+			],
+		});
+		setIsDeleteDialogOpen(false);
+	}
+
 	return (
-		<SidebarMenuSubItem>
-			<SidebarMenuSubButton
-				onClick={handleSelect}
-				isActive={isActive}
-				className="h-auto flex-col items-start gap-0.5 py-1.5"
+		<>
+			<ContextMenu>
+				<ContextMenuTrigger
+					render={
+						<SidebarMenuSubItem>
+							<SidebarMenuSubButton
+								onClick={handleSelect}
+								isActive={isActive}
+								className="h-auto flex-col items-start gap-0.5 py-1.5"
+							>
+								<span className="flex items-center gap-1.5 text-sm font-medium">
+									<IconGitBranch className="size-3 shrink-0" />
+									<span className="truncate">{worktree.branch}</span>
+								</span>
+								<span className="text-muted-foreground text-xs">
+									{worktree.name} · {createdAtLabel}
+								</span>
+							</SidebarMenuSubButton>
+						</SidebarMenuSubItem>
+					}
+				/>
+
+				<ContextMenuContent className="min-w-[160px]">
+					<ContextMenuItem
+						variant="destructive"
+						onClick={() => setIsDeleteDialogOpen(true)}
+					>
+						<IconTrash className="size-4" />
+						Delete
+					</ContextMenuItem>
+				</ContextMenuContent>
+			</ContextMenu>
+
+			<AlertDialog
+				open={isDeleteDialogOpen}
+				onOpenChange={setIsDeleteDialogOpen}
 			>
-				<span className="flex items-center gap-1.5 text-sm font-medium">
-					<IconGitBranch className="size-3 shrink-0" />
-					<span className="truncate">{worktree.branch}</span>
-				</span>
-				<span className="text-muted-foreground text-xs">
-					{worktree.name} · {createdAtLabel}
-				</span>
-			</SidebarMenuSubButton>
-		</SidebarMenuSubItem>
+				<AlertDialogContent size="sm">
+					<AlertDialogHeader>
+						<AlertDialogTitle>Delete worktree?</AlertDialogTitle>
+						<AlertDialogDescription>
+							This will permanently delete the worktree "{worktree.name}" and
+							remove the branch "{worktree.branch}" from your local repository.
+							This action cannot be undone.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+						<AlertDialogAction
+							variant="destructive"
+							onClick={handleDelete}
+							disabled={isDeleting}
+						>
+							{isDeleting ? "Deleting..." : "Delete"}
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+		</>
 	);
 }
 
