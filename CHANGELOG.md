@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.5](https://github.com/andresmarpz/sandcastle/compare/v0.1.4...v0.1.5) (2026-01-19)
+
+
+### Features
+
+* **desktop:** add auto-updater with toast notifications ([9ad3260](https://github.com/andresmarpz/sandcastle/commit/9ad32608b93dc1f33664e907570a2993ca42171f))
+* **desktop:** add auto-updater with toast notifications ([#48](https://github.com/andresmarpz/sandcastle/issues/48)) ([f9c1840](https://github.com/andresmarpz/sandcastle/commit/f9c18406b0bb231ca6e33565483f685503b39e81))
+
 ## [0.1.4](https://github.com/andresmarpz/sandcastle/compare/v0.1.3...v0.1.4) (2026-01-19)
 
 
