@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.1--beta.1-blue" alt="Version" />
+  <img src="https://img.shields.io/github/v/release/andresmarpz/sandcastle?color=blue" alt="Version" />
   <a href="https://github.com/andresmarpz/sandcastle/blob/main/LICENSE"><img src="https://img.shields.io/github/license/andresmarpz/sandcastle?label=license&logo=github&color=f80&logoColor=fff" alt="License" /></a>
 </p>
 
