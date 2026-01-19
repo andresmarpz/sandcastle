@@ -169,66 +169,61 @@ function ChatViewContent({
 	// ].filter(Boolean) as Array<{ title: string; message: string }>;
 
 	return (
-		<div className="flex flex-col h-full w-full overflow-y-auto">
-			<div className="grid grid-cols-1 sm:grid-cols-[1fr_minmax(0,56rem)_1fr] min-h-full">
-				{/* Left column - empty spacer (hidden on small screens) */}
-				<div className="hidden sm:block" />
+		<div className="flex h-full w-full flex-col">
+			<Conversation className="flex-1 min-h-0">
+				<ConversationContent className="grid grid-cols-1 sm:grid-cols-[1fr_minmax(0,56rem)_1fr]">
+					<div className="hidden sm:block" />
 
-				{/* Center column - main content */}
-				<div className="flex flex-col">
-					<div className="flex-1">
-						<Conversation>
-							<ConversationContent>
-								{showHistoryLoading ? (
-									<div className="flex min-h-[240px] items-center justify-center text-muted-foreground">
-										<Spinner className="mr-2" />
-										Loading chat history...
-									</div>
-								) : messages.length > 0 ? (
-									<GroupedMessageList messages={messages} />
-								) : (
-									<ConversationEmptyState
-										title="No messages yet"
-										description="Send a message to start the session."
-									/>
-								)}
-							</ConversationContent>
-							<ConversationScrollButton />
-						</Conversation>
+					<div className="flex flex-col gap-8 p-4 pb-12">
+						{showHistoryLoading ? (
+							<div className="flex min-h-[240px] items-center justify-center text-muted-foreground">
+								<Spinner className="mr-2" />
+								Loading chat history...
+							</div>
+						) : messages.length > 0 ? (
+							<GroupedMessageList messages={messages} />
+						) : (
+							<ConversationEmptyState
+								title="No messages yet"
+								description="Send a message to start the session."
+							/>
+						)}
 					</div>
 
-					<footer className="sticky bottom-0 w-full bg-background">
-						{queue.length > 0 && (
-							<QueuePanel queue={queue} onDequeue={dequeue} />
-						)}
-						<ChatInput
-							workingPath={workingPath}
-							onSend={sendMessage}
-							onStop={stop}
-							status={chatStatus}
-							autonomous={autonomous}
-							onAutonomousChange={setAutonomous}
-						/>
-					</footer>
-				</div>
+					{Result.matchWithWaiting(sessionResult, {
+						onSuccess: (session) => (
+							<div className="sticky top-0 hidden self-start p-4 sm:block">
+								<SessionMetadataPanel
+									session={session.value}
+									status={sessionStatus}
+									isConnected={isConnected}
+									workingPath={workingPath}
+								/>
+							</div>
+						),
+						onDefect: () => null,
+						onError: () => null,
+						onWaiting: () => null,
+					})}
+				</ConversationContent>
+				<ConversationScrollButton />
+			</Conversation>
 
-				{Result.matchWithWaiting(sessionResult, {
-					onSuccess: (session) => (
-						<div className="hidden sm:block">
-							<SessionMetadataPanel
-								session={session.value}
-								status={sessionStatus}
-								isConnected={isConnected}
-								workingPath={workingPath}
-							/>
-						</div>
-					),
-					onDefect: () => null,
-					onError: () => null,
-					onWaiting: () => null,
-				})}
-				{/* Right column - session metadata (hidden on small screens) */}
-			</div>
+			<footer className="shrink-0 bg-background grid grid-cols-1 sm:grid-cols-[1fr_minmax(0,56rem)_1fr]">
+				<div className="hidden sm:block" />
+				<div>
+					{queue.length > 0 && <QueuePanel queue={queue} onDequeue={dequeue} />}
+					<ChatInput
+						workingPath={workingPath}
+						onSend={sendMessage}
+						onStop={stop}
+						status={chatStatus}
+						autonomous={autonomous}
+						onAutonomousChange={setAutonomous}
+					/>
+				</div>
+				<div className="hidden sm:block" />
+			</footer>
 		</div>
 	);
 }
@@ -283,62 +278,60 @@ function SessionMetadataPanel({
 	}, [session?.inputTokens, session?.outputTokens]);
 
 	return (
-		<div className="sticky top-0 p-4">
-			<div className="flex flex-col gap-4 text-sm min-w-[240px]">
-				<div className="flex flex-col gap-1">
-					<span className="text-muted-foreground text-xs font-medium uppercase">
-						Status
+		<div className="flex flex-col gap-4 text-sm min-w-[240px]">
+			<div className="flex flex-col gap-1">
+				<span className="text-muted-foreground text-xs font-medium uppercase">
+					Status
+				</span>
+				<div className="flex items-center gap-2">
+					<SessionStatusDot status={sessionStatusIndicator} />
+
+					<span className="text-foreground">
+						{statusConfig[sessionStatusIndicator].label}
 					</span>
-					<div className="flex items-center gap-2">
-						<SessionStatusDot status={sessionStatusIndicator} />
-
-						<span className="text-foreground">
-							{statusConfig[sessionStatusIndicator].label}
-						</span>
-					</div>
 				</div>
+			</div>
 
-				<div className="flex flex-col gap-1">
-					<span className="text-muted-foreground text-xs font-medium uppercase">
-						Session
-					</span>
-					{createdAtLabel && (
-						<span className="text-foreground">Created {createdAtLabel}</span>
-					)}
-				</div>
-
-				<div className="flex flex-col gap-1">
-					<span className="text-muted-foreground text-xs font-medium uppercase">
-						Cost
-					</span>
-					<span className="text-foreground">{formattedCost}</span>
-				</div>
-
-				<div className="flex flex-col gap-1">
-					<span className="text-muted-foreground text-xs font-medium uppercase">
-						Tokens
-					</span>
-					<div className="flex flex-col gap-0.5 text-foreground">
-						<span>
-							<span className="text-muted-foreground">In:</span>{" "}
-							{formattedTokens.input}
-						</span>
-						<span>
-							<span className="text-muted-foreground">Out:</span>{" "}
-							{formattedTokens.output}
-						</span>
-					</div>
-				</div>
-
-				{workingPath && (
-					<div className="flex flex-col gap-1">
-						<span className="text-muted-foreground text-xs font-medium uppercase">
-							Working Directory
-						</span>
-						<OpenPathButton path={workingPath} />
-					</div>
+			<div className="flex flex-col gap-1">
+				<span className="text-muted-foreground text-xs font-medium uppercase">
+					Session
+				</span>
+				{createdAtLabel && (
+					<span className="text-foreground">Created {createdAtLabel}</span>
 				)}
 			</div>
+
+			<div className="flex flex-col gap-1">
+				<span className="text-muted-foreground text-xs font-medium uppercase">
+					Cost
+				</span>
+				<span className="text-foreground">{formattedCost}</span>
+			</div>
+
+			<div className="flex flex-col gap-1">
+				<span className="text-muted-foreground text-xs font-medium uppercase">
+					Tokens
+				</span>
+				<div className="flex flex-col gap-0.5 text-foreground">
+					<span>
+						<span className="text-muted-foreground">In:</span>{" "}
+						{formattedTokens.input}
+					</span>
+					<span>
+						<span className="text-muted-foreground">Out:</span>{" "}
+						{formattedTokens.output}
+					</span>
+				</div>
+			</div>
+
+			{workingPath && (
+				<div className="flex flex-col gap-1">
+					<span className="text-muted-foreground text-xs font-medium uppercase">
+						Working Directory
+					</span>
+					<OpenPathButton path={workingPath} />
+				</div>
+			)}
 		</div>
 	);
 }
