@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.9](https://github.com/andresmarpz/sandcastle/compare/v0.1.8...v0.1.9) (2026-01-19)
+
+
+### Features
+
+* **ui:** improve ChatInput footer layout and mode selector ([#54](https://github.com/andresmarpz/sandcastle/issues/54)) ([37df5ab](https://github.com/andresmarpz/sandcastle/commit/37df5ab5f9e99d58213816208d8317ef189afeaa))
+
 ## [0.1.8](https://github.com/andresmarpz/sandcastle/compare/v0.1.7...v0.1.8) (2026-01-19)
 
 
