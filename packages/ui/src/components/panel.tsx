@@ -299,15 +299,8 @@ interface PanelHeaderProps {
 }
 
 function PanelHeader({ className, children }: PanelHeaderProps) {
-	const {
-		tabs,
-		activeTab,
-		closeTab,
-		reorderTabs,
-		onAddClick,
-		closable,
-		reorderable,
-	} = usePanelContext();
+	const { tabs, closeTab, reorderTabs, onAddClick, closable, reorderable } =
+		usePanelContext();
 
 	const sensors = useSensors(
 		useSensor(PointerSensor, {

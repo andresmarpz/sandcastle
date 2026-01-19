@@ -481,26 +481,26 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 		}
 	};
 
-	const stopSubscription = (sessionId: string) => {
-		const state = get();
-		const sub = state.subscriptions.get(sessionId);
-		if (!sub) return;
+	// const stopSubscription = (sessionId: string) => {
+	// 	const state = get();
+	// 	const sub = state.subscriptions.get(sessionId);
+	// 	if (!sub) return;
 
-		sub.disposed = true;
+	// 	sub.disposed = true;
 
-		if (sub.fiber) {
-			const fiber = sub.fiber;
-			sub.fiber = null;
-			Effect.runPromise(Fiber.interrupt(fiber)).catch(() => {});
-		}
+	// 	if (sub.fiber) {
+	// 		const fiber = sub.fiber;
+	// 		sub.fiber = null;
+	// 		Effect.runPromise(Fiber.interrupt(fiber)).catch(() => {});
+	// 	}
 
-		if (sub.unsubscribeConnection) {
-			sub.unsubscribeConnection();
-			sub.unsubscribeConnection = null;
-		}
+	// 	if (sub.unsubscribeConnection) {
+	// 		sub.unsubscribeConnection();
+	// 		sub.unsubscribeConnection = null;
+	// 	}
 
-		state.subscriptions.delete(sessionId);
-	};
+	// 	state.subscriptions.delete(sessionId);
+	// };
 
 	return {
 		// State

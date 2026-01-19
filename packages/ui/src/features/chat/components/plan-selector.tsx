@@ -26,8 +26,18 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/popover";
 
 const MODES = [
-	{ value: "plan", label: "Plan", icon: IconListCheck, color: "text-green-500" },
-	{ value: "build", label: "Build", icon: IconHammer, color: "text-indigo-500" },
+	{
+		value: "plan",
+		label: "Plan",
+		icon: IconListCheck,
+		color: "text-green-500",
+	},
+	{
+		value: "build",
+		label: "Build",
+		icon: IconHammer,
+		color: "text-indigo-500",
+	},
 ] as const;
 
 type Mode = (typeof MODES)[number]["value"];
