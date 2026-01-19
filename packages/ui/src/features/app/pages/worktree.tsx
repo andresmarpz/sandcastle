@@ -60,6 +60,11 @@ function WorktreePageContent({ worktreeId }: { worktreeId: string }) {
 		[sessionsResult],
 	);
 
+	const worktreePath = useMemo(
+		() => Option.getOrUndefined(Result.value(worktreeResult))?.path,
+		[worktreeResult],
+	);
+
 	const sortedSessions = useMemo(
 		() =>
 			[...sessions].sort((a, b) => {
@@ -139,7 +144,7 @@ function WorktreePageContent({ worktreeId }: { worktreeId: string }) {
 		onWaiting: () =>
 			hasSessionCache ? (
 				<WorktreePanelView
-					worktreeId={worktreeId}
+					worktreePath={worktreePath}
 					tabs={tabs}
 					activeTab={effectiveActiveTab}
 					onActiveTabChange={setActiveTab}
@@ -162,7 +167,7 @@ function WorktreePageContent({ worktreeId }: { worktreeId: string }) {
 		),
 		onSuccess: () => (
 			<WorktreePanelView
-				worktreeId={worktreeId}
+				worktreePath={worktreePath}
 				tabs={tabs}
 				activeTab={effectiveActiveTab}
 				onActiveTabChange={setActiveTab}
@@ -175,7 +180,7 @@ function WorktreePageContent({ worktreeId }: { worktreeId: string }) {
 }
 
 interface WorktreePanelViewProps {
-	worktreeId: string;
+	worktreePath?: string;
 	tabs: SessionTab[];
 	activeTab: string | null;
 	onActiveTabChange: (id: string) => void;
@@ -185,7 +190,7 @@ interface WorktreePanelViewProps {
 }
 
 function WorktreePanelView({
-	worktreeId,
+	worktreePath,
 	tabs,
 	activeTab,
 	onActiveTabChange,
@@ -257,7 +262,7 @@ function WorktreePanelView({
 			<PanelBody>
 				{orderedTabs.map((tab) => (
 					<PanelContent key={tab.id} value={tab.id}>
-						<ChatView sessionId={tab.sessionId} worktreeId={worktreeId} />
+						<ChatView sessionId={tab.sessionId} workingPath={worktreePath} />
 					</PanelContent>
 				))}
 			</PanelBody>

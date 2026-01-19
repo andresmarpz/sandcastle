@@ -44,7 +44,7 @@ import { GroupedMessageList } from "./grouped-message-list";
 
 interface ChatViewProps {
 	sessionId: string;
-	worktreeId?: string;
+	workingPath?: string;
 }
 
 type HistoryStatus = "loading" | "ready" | "error";
@@ -53,7 +53,7 @@ type QueuePart = NonNullable<QueuedMessage["parts"]>[number];
 type QueueFilePart = Extract<QueuePart, { type: "file" }>;
 type QueueTextPart = Extract<QueuePart, { type: "text" }>;
 
-export function ChatView({ sessionId, worktreeId }: ChatViewProps) {
+export function ChatView({ sessionId, workingPath }: ChatViewProps) {
 	const historyResult = useAtomValue(chatHistoryQuery(sessionId));
 	const cachedHistory = useMemo(
 		() => Option.getOrElse(Result.value(historyResult), () => null),
@@ -70,7 +70,7 @@ export function ChatView({ sessionId, worktreeId }: ChatViewProps) {
 			hasHistoryCache ? (
 				<ChatViewContent
 					sessionId={sessionId}
-					worktreeId={worktreeId}
+					workingPath={workingPath}
 					initialMessages={initialMessages}
 					historyStatus="loading"
 				/>
@@ -80,7 +80,7 @@ export function ChatView({ sessionId, worktreeId }: ChatViewProps) {
 		onError: () => (
 			<ChatViewContent
 				sessionId={sessionId}
-				worktreeId={worktreeId}
+				workingPath={workingPath}
 				initialMessages={initialMessages}
 				historyStatus="error"
 			/>
@@ -88,7 +88,7 @@ export function ChatView({ sessionId, worktreeId }: ChatViewProps) {
 		onDefect: () => (
 			<ChatViewContent
 				sessionId={sessionId}
-				worktreeId={worktreeId}
+				workingPath={workingPath}
 				initialMessages={initialMessages}
 				historyStatus="error"
 			/>
@@ -96,7 +96,7 @@ export function ChatView({ sessionId, worktreeId }: ChatViewProps) {
 		onSuccess: () => (
 			<ChatViewContent
 				sessionId={sessionId}
-				worktreeId={worktreeId}
+				workingPath={workingPath}
 				initialMessages={initialMessages}
 				historyStatus="ready"
 			/>
@@ -106,14 +106,14 @@ export function ChatView({ sessionId, worktreeId }: ChatViewProps) {
 
 interface ChatViewContentProps {
 	sessionId: string;
-	worktreeId?: string;
+	workingPath?: string;
 	initialMessages: UIMessage[];
 	historyStatus: HistoryStatus;
 }
 
 function ChatViewContent({
 	sessionId,
-	worktreeId,
+	workingPath,
 	initialMessages,
 	historyStatus,
 }: ChatViewContentProps) {
@@ -201,7 +201,7 @@ function ChatViewContent({
 							<QueuePanel queue={queue} onDequeue={dequeue} />
 						)}
 						<ChatInput
-							worktreeId={worktreeId}
+							workingPath={workingPath}
 							onSend={sendMessage}
 							onStop={stop}
 							status={chatStatus}
