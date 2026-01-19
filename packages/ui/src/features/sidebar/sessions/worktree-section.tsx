@@ -184,10 +184,9 @@ function WorktreeSubItem({ worktree }: WorktreeSubItemProps) {
 							<SidebarMenuSubButton
 								onClick={handleSelect}
 								isActive={isActive}
-								disabled={isDeleting}
 								className={cn(
 									"h-auto flex-col items-start gap-0.5 py-1.5",
-									isDeleting && "opacity-60",
+									isDeleting && "pointer-events-none opacity-60",
 								)}
 							>
 								<span className="flex items-center gap-1.5 text-sm font-medium">
