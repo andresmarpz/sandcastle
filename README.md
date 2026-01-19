@@ -1,24 +1,52 @@
-# Sandcastle
+<p align="center">
+  <img alt="Sandcastle" src="assets/logo-rounded.png" width="120">
+</p>
 
-[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+<h1 align="center">Sandcastle</h1>
 
-An open source agent orchestrator for managing ephemeral AI coding instances.
+<p align="center">
+  The agent orchestrator for Claude Code.
+</p>
 
-## What is Sandcastle?
+<p align="center">
+  <img src="https://img.shields.io/badge/version-0.1--beta.1-blue" alt="Version" />
+  <a href="https://github.com/andresmarpz/sandcastle/blob/main/LICENSE"><img src="https://img.shields.io/github/license/andresmarpz/sandcastle?label=license&logo=github&color=f80&logoColor=fff" alt="License" /></a>
+</p>
 
-Sandcastle lets you spawn, manage, and monitor multiple AI coding agents (like Claude Code) running in isolated environments. Each agent works in its own sandboxed container with a dedicated git worktree, completes a task, opens a PR, and then disappears.
+<p align="center">
+  <em>
+    Luna sobre el mar,<br>
+    granos de arena brillan,<br>
+    noche de cristal.
+  </em>
+  <br>
+  <sub>— Claude's haiku for Sandcastle</sub>
+</p>
 
-## Why?
+<br/>
 
-- **Parallel work**: Run 3-4 agents simultaneously on different tickets
-- **Isolation**: Each agent gets its own container and git worktree
-- **Ephemeral**: Spin up for a task, tear down when done
-- **Simple**: Automates the tedious setup of worktrees and environments
+## About
 
-## Status
+Sandcastle is an open-source agent orchestrator for managing fleets of AI coding agents. Spawn isolated development environments, assign Claude Code instances to specific tasks, and monitor progress across all your work streams—from a beautiful, unified interface.
 
-Early development.
+Built with a client-server architecture, Sandcastle lets you host your orchestration server wherever you want and connect from desktop or web clients. Multi-client streaming keeps everything in sync, so you can seamlessly switch between devices while your agents keep working.
+
+## Tech Stack
+
+- [Tauri](https://tauri.app/) – Desktop framework
+- [React](https://react.dev/) – UI framework
+- [Effect](https://effect.website/) – Type-safe services and composition
+- [SQLite](https://www.sqlite.org/) – Embedded database
+- [Bun](https://bun.sh/) – JavaScript runtime
+
+## Contributing
+
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details on how to get started.
 
 ## License
 
-Apache 2.0 - See [LICENSE](LICENSE) for details.
+Sandcastle is open-source software licensed under the [Apache 2.0 License](LICENSE).
+
+## Contact
+
+Built by [@andresmarpz](https://x.com/andresmarpz). Reach out at [hi@andrs.me](mailto:hi@andrs.me).
