@@ -29,8 +29,19 @@ export default function ClientApp() {
 		}
 	}, []);
 
+	const copyToClipboard = useCallback(async (text: string): Promise<void> => {
+		try {
+			await navigator.clipboard.writeText(text);
+		} catch (error) {
+			console.error("Failed to copy to clipboard:", error);
+		}
+	}, []);
+
 	return (
-		<PlatformProvider openDirectory={openDirectory}>
+		<PlatformProvider
+			openDirectory={openDirectory}
+			copyToClipboard={copyToClipboard}
+		>
 			<Layout />
 		</PlatformProvider>
 	);
