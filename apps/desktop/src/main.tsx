@@ -7,6 +7,7 @@ import "@sandcastle/ui/globals.css";
 import "@fontsource-variable/inter";
 import "./tauri.css";
 import { StrictMode } from "react";
+import { UpdaterProvider } from "@/context/updater-context";
 import Layout from "@/features/app/layout";
 
 const openDirectory = async () => {
@@ -39,7 +40,9 @@ function App() {
 			openInEditor={openInEditor}
 			copyToClipboard={copyToClipboard}
 		>
-			<Layout />
+			<UpdaterProvider>
+				<Layout />
+			</UpdaterProvider>
 		</PlatformProvider>
 	);
 }
