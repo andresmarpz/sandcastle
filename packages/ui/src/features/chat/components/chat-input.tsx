@@ -10,11 +10,16 @@ import {
 	PromptInputSubmit,
 	PromptInputTextarea,
 } from "@/components/ai-elements/prompt-input";
+import type { SendResult } from "@/features/chat/store";
 import { cn } from "@/lib/utils";
 import { FilePickerPopover } from "./file-search";
+import { PlanSelector } from "./plan-selector";
 
 interface ChatInputProps {
-	onSend: (options: { text: string; parts?: UIMessage["parts"] }) => void;
+	onSend: (options: {
+		text: string;
+		parts?: UIMessage["parts"];
+	}) => Promise<SendResult>;
 	onStop: () => void;
 	status: ChatStatus;
 	autonomous: boolean;
@@ -31,8 +36,8 @@ export function ChatInput({
 	worktreeId,
 }: ChatInputProps) {
 	const isStreaming = status === "streaming";
-	const isSubmitted = status === "submitted";
-	const isDisabled = isStreaming || isSubmitted;
+	// Track when we're waiting for server acknowledgment
+	const [isSending, setIsSending] = useState(false);
 
 	// File picker state
 	const [filePickerOpen, setFilePickerOpen] = useState(false);
@@ -104,12 +109,17 @@ export function ChatInput({
 		}
 	}, []);
 
-	// Handle form submission
+	// Handle form submission - returns promise so PromptInput knows when to clear
 	const handleSubmit = useCallback(
-		({ text }: { text: string }) => {
-			if (text.trim()) {
-				onSend({ text });
+		async ({ text }: { text: string }) => {
+			if (!text.trim()) return;
+
+			setIsSending(true);
+			try {
+				await onSend({ text });
 				setInputValue("");
+			} finally {
+				setIsSending(false);
 			}
 		},
 		[onSend],
@@ -131,11 +141,12 @@ export function ChatInput({
 			<PromptInput onSubmit={handleSubmit}>
 				<PromptInputTextarea
 					placeholder="Type a message... (Cmd+Enter to send)"
-					disabled={isDisabled}
+					disabled={isSending}
 					onChange={handleTextChange}
 					value={inputValue}
 				/>
 				<PromptInputFooter>
+					<PlanSelector />
 					<PromptInputButton
 						onClick={() => onAutonomousChange(!autonomous)}
 						className={cn(
@@ -147,14 +158,16 @@ export function ChatInput({
 						<IconRobot className="h-4 w-4" />
 						Autonomous
 					</PromptInputButton>
-					{isStreaming ? (
+					{isStreaming && (
 						<PromptInputButton onClick={onStop} variant="destructive">
 							<IconSquare className="h-4 w-4" />
 							Stop
 						</PromptInputButton>
-					) : (
-						<PromptInputSubmit status={status} disabled={isSubmitted} />
 					)}
+					<PromptInputSubmit
+						status={isSending ? "submitted" : "ready"}
+						disabled={isSending}
+					/>
 				</PromptInputFooter>
 			</PromptInput>
 		</div>

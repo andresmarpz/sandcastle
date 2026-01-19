@@ -1,13 +1,23 @@
 import type { UIMessage } from "ai";
 import { useCallback, useEffect, useMemo } from "react";
 import { useStore } from "zustand";
-import { type ChatSessionState, chatStore } from "./chat-store";
+import { useShallow } from "zustand/react/shallow";
+import {
+	type ChatSessionState,
+	chatStore,
+	type SendResult,
+} from "./chat-store";
 
 export interface UseChatSessionResult extends ChatSessionState {
-	/** Send a message to the session */
-	sendMessage: (options: { text: string; parts?: UIMessage["parts"] }) => void;
+	/** Send a message to the session. Returns when server acknowledges. */
+	sendMessage: (options: {
+		text: string;
+		parts?: UIMessage["parts"];
+	}) => Promise<SendResult>;
 	/** Stop the current stream */
 	stop: () => void;
+	/** Remove a message from the queue */
+	dequeue: (messageId: string) => Promise<boolean>;
 }
 
 /**
@@ -54,7 +64,7 @@ export function useChatSession(sessionId: string): UseChatSessionResult {
 	// Memoized actions
 	const sendMessage = useCallback(
 		({ text, parts }: { text: string; parts?: UIMessage["parts"] }) => {
-			chatStore.getState().send(sessionId, text, parts);
+			return chatStore.getState().send(sessionId, text, parts);
 		},
 		[sessionId],
 	);
@@ -63,13 +73,21 @@ export function useChatSession(sessionId: string): UseChatSessionResult {
 		chatStore.getState().stop(sessionId);
 	}, [sessionId]);
 
+	const dequeue = useCallback(
+		(messageId: string) => {
+			return chatStore.getState().dequeue(sessionId, messageId);
+		},
+		[sessionId],
+	);
+
 	return useMemo(
 		() => ({
 			...session,
 			sendMessage,
 			stop,
+			dequeue,
 		}),
-		[session, sendMessage, stop],
+		[session, sendMessage, stop, dequeue],
 	);
 }
 
@@ -90,7 +108,7 @@ export function useChatSession(sessionId: string): UseChatSessionResult {
 export function useChatActions(sessionId: string) {
 	const sendMessage = useCallback(
 		({ text, parts }: { text: string; parts?: UIMessage["parts"] }) => {
-			chatStore.getState().send(sessionId, text, parts);
+			return chatStore.getState().send(sessionId, text, parts);
 		},
 		[sessionId],
 	);
@@ -170,15 +188,10 @@ export function useChatSessionSelector<T>(
 	sessionId: string,
 	selector: (session: ChatSessionState) => T,
 ): T {
-	// Subscribe to session on mount
-	useEffect(() => {
-		chatStore.getState().visit(sessionId);
-		return () => {
-			chatStore.getState().leave(sessionId);
-		};
-	}, [sessionId]);
-
-	return useStore(chatStore, (state) => selector(state.getSession(sessionId)));
+	return useStore(
+		chatStore,
+		useShallow((state) => selector(state.getSession(sessionId))),
+	);
 }
 
 /**

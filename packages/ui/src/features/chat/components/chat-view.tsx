@@ -3,6 +3,7 @@
 import { Result, useAtomValue } from "@effect-atom/atom-react";
 import type { GetHistoryResult } from "@sandcastle/rpc";
 import type { ChatMessage, QueuedMessage, Session } from "@sandcastle/schemas";
+import { IconX } from "@tabler/icons-react";
 import type { ChatStatus, UIMessage } from "ai";
 import { formatDistanceToNow } from "date-fns";
 import * as Option from "effect/Option";
@@ -18,6 +19,8 @@ import {
 import {
 	Queue,
 	QueueItem,
+	QueueItemAction,
+	QueueItemActions,
 	QueueItemAttachment,
 	QueueItemContent,
 	QueueItemFile,
@@ -131,6 +134,7 @@ function ChatViewContent({
 		historyLoaded,
 		sendMessage,
 		stop,
+		dequeue,
 	} = useChatSession(sessionId);
 
 	// Set initial history when available
@@ -173,42 +177,6 @@ function ChatViewContent({
 
 				{/* Center column - main content */}
 				<div className="flex flex-col min-h-full">
-					<header className="sticky top-0 w-full bg-background z-10">
-						<div className="flex items-center justify-between px-4 py-3">
-							<div className="flex items-center gap-2">
-								<Badge
-									variant={
-										sessionStatus === "streaming" ? "default" : "secondary"
-									}
-								>
-									{sessionStatus === "streaming" ? "Streaming" : "Idle"}
-								</Badge>
-								<Badge variant={isConnected ? "outline" : "destructive"}>
-									{isConnected ? "Live" : "Offline"}
-								</Badge>
-								{historyStatus === "loading" && (
-									<span className="flex items-center gap-2 text-muted-foreground text-xs">
-										<Spinner className="size-3" />
-										Syncing history
-									</span>
-								)}
-							</div>
-							{queue.length > 0 && (
-								<Badge variant="outline">{queue.length} queued</Badge>
-							)}
-						</div>
-						{errors.length > 0 && (
-							<div className="flex flex-col gap-2 px-4 pb-3">
-								{errors.map((error) => (
-									<Alert key={error.title} variant="destructive">
-										<AlertTitle>{error.title}</AlertTitle>
-										<AlertDescription>{error.message}</AlertDescription>
-									</Alert>
-								))}
-							</div>
-						)}
-					</header>
-
 					<div className="flex-1">
 						<Conversation>
 							<ConversationContent>
@@ -228,10 +196,12 @@ function ChatViewContent({
 							</ConversationContent>
 							<ConversationScrollButton />
 						</Conversation>
-						{queue.length > 0 && <QueuePanel queue={queue} />}
 					</div>
 
 					<footer className="sticky bottom-0 w-full bg-background">
+						{queue.length > 0 && (
+							<QueuePanel queue={queue} onDequeue={dequeue} />
+						)}
 						<ChatInput
 							worktreeId={worktreeId}
 							onSend={sendMessage}
@@ -360,13 +330,19 @@ function SessionMetadataPanel({ session }: SessionMetadataPanelProps) {
 	);
 }
 
-function QueuePanel({ queue }: { queue: QueuedMessage[] }) {
+function QueuePanel({
+	queue,
+	onDequeue,
+}: {
+	queue: QueuedMessage[];
+	onDequeue: (messageId: string) => Promise<boolean>;
+}) {
 	const label = queue.length === 1 ? "queued message" : "queued messages";
 
 	return (
-		<div className="px-4 pb-2">
-			<Queue>
-				<QueueSection defaultOpen={false}>
+		<div className="flex justify-center px-2 pt-2">
+			<Queue className="w-[95%] rounded-b-none border-b-0">
+				<QueueSection defaultOpen={true}>
 					<QueueSectionTrigger>
 						<QueueSectionLabel count={queue.length} label={label} />
 					</QueueSectionTrigger>
@@ -377,10 +353,21 @@ function QueuePanel({ queue }: { queue: QueuedMessage[] }) {
 								const files = getQueueFileParts(message);
 
 								return (
-									<QueueItem key={message.id}>
-										<div className="flex items-start gap-2">
-											<QueueItemIndicator />
-											<QueueItemContent>{preview}</QueueItemContent>
+									<QueueItem key={message.id} className="w-full py-2">
+										<div className="flex w-full items-center gap-2">
+											<QueueItemIndicator className="mt-0 shrink-0" />
+											<QueueItemContent className="flex-1 min-w-0">
+												{preview}
+											</QueueItemContent>
+											<QueueItemActions className="shrink-0 items-center">
+												<QueueItemAction
+													aria-label="Remove from queue"
+													onClick={() => onDequeue(message.id)}
+													className="flex items-center justify-center opacity-100"
+												>
+													<IconX className="size-3" />
+												</QueueItemAction>
+											</QueueItemActions>
 										</div>
 										{files.length > 0 && (
 											<QueueItemAttachment>
