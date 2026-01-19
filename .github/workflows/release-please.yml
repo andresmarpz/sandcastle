@@ -25,45 +25,9 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
-  # Sync Cargo.toml version when release PR is created/updated
-  # This runs on the release PR branch to add the Cargo.toml change
-  update-cargo:
-    runs-on: ubuntu-latest
-    needs: release-please
-    if: ${{ needs.release-please.outputs.release_created == 'true' }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.release-please.outputs.tag_name }}
-
-      - name: Update Cargo.toml version
-        run: |
-          VERSION="${{ needs.release-please.outputs.version }}"
-          sed -i "s/^version = \".*\"/version = \"${VERSION}\"/" apps/desktop/src-tauri/Cargo.toml
-          echo "Updated Cargo.toml to version ${VERSION}"
-
-      - name: Check for changes
-        id: changes
-        run: |
-          if git diff --quiet apps/desktop/src-tauri/Cargo.toml; then
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-          else
-            echo "has_changes=true" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Commit Cargo.toml update
-        if: steps.changes.outputs.has_changes == 'true'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add apps/desktop/src-tauri/Cargo.toml
-          git commit -m "chore: update Cargo.toml version to ${{ needs.release-please.outputs.version }}"
-          git push
-
   # Trigger desktop build when a release is created
   trigger-desktop-release:
-    needs: [release-please, update-cargo]
+    needs: release-please
     if: ${{ needs.release-please.outputs.release_created == 'true' }}
     uses: ./.github/workflows/release-desktop.yml
     with:
