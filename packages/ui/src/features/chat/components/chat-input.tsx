@@ -29,8 +29,8 @@ interface ChatInputProps {
 	}) => Promise<SendResult>;
 	onStop: () => void;
 	status: ChatStatus;
-	autonomous: boolean;
-	onAutonomousChange: (autonomous: boolean) => void;
+	mode?: Mode;
+	onModeChange?: (mode: Mode) => void;
 	workingPath?: string;
 	autoFocus?: boolean;
 }
@@ -39,8 +39,8 @@ export function ChatInput({
 	onSend,
 	onStop,
 	status,
-	autonomous,
-	onAutonomousChange,
+	mode,
+	onModeChange,
 	workingPath,
 	autoFocus = false,
 }: ChatInputProps) {
@@ -61,16 +61,6 @@ export function ChatInput({
 			textareaRef.current.focus();
 		}
 	}, [autoFocus]);
-
-	// Sync mode selector with autonomous state
-	const currentMode: Mode = autonomous ? "autonomous" : "plan";
-
-	const handleModeChange = useCallback(
-		(mode: Mode) => {
-			onAutonomousChange(mode === "autonomous");
-		},
-		[onAutonomousChange],
-	);
 
 	// Detect @ character to open file picker
 	const handleTextChange = useCallback(
@@ -172,10 +162,7 @@ export function ChatInput({
 				/>
 				<PromptInputFooter>
 					<PromptInputTools>
-						<PlanSelector
-							value={currentMode}
-							onValueChange={handleModeChange}
-						/>
+						<PlanSelector value={mode} onValueChange={onModeChange} />
 					</PromptInputTools>
 					<PromptInputActions>
 						{isStreaming && (
