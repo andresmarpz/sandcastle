@@ -924,7 +924,7 @@ export const PromptInputFooter = ({
 }: PromptInputFooterProps) => (
 	<InputGroupAddon
 		align="block-end"
-		className={cn("justify-between gap-1", className)}
+		className={cn("gap-1", className)}
 		{...props}
 	/>
 );
@@ -936,6 +936,19 @@ export const PromptInputTools = ({
 	...props
 }: PromptInputToolsProps) => (
 	<div className={cn("flex items-center gap-1", className)} {...props} />
+);
+
+export type PromptInputActionsProps = HTMLAttributes<HTMLDivElement>;
+
+/**
+ * Container for grouping action buttons (like send/stop) together.
+ * Use this to group related actions on the right side of the footer.
+ */
+export const PromptInputActions = ({
+	className,
+	...props
+}: PromptInputActionsProps) => (
+	<div className={cn("ml-auto flex items-center gap-1", className)} {...props} />
 );
 
 export type PromptInputButtonProps = ComponentProps<typeof InputGroupButton>;

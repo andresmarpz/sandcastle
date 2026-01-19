@@ -67,13 +67,13 @@ function CommandInput({
 				<CommandPrimitive.Input
 					data-slot="command-input"
 					className={cn(
-						"w-full text-sm outline-hidden disabled:cursor-not-allowed disabled:opacity-50",
+						"w-full text-[13px] outline-hidden disabled:cursor-not-allowed disabled:opacity-50",
 						className,
 					)}
 					{...props}
 				/>
 				<InputGroupAddon>
-					<IconSearch className="size-4 shrink-0 opacity-50" />
+					<IconSearch className="size-3.5 shrink-0 opacity-50" />
 				</InputGroupAddon>
 			</InputGroup>
 		</div>
@@ -147,7 +147,7 @@ function CommandItem({
 		<CommandPrimitive.Item
 			data-slot="command-item"
 			className={cn(
-				"data-selected:bg-muted data-selected:text-foreground data-selected:**:[svg]:text-foreground relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none [&_svg:not([class*='size-'])]:size-4 [[data-slot=dialog-content]_&]:rounded-lg! group/command-item data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+				"data-selected:bg-muted data-selected:text-foreground relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-[13px] outline-hidden select-none [&_svg:not([class*='size-'])]:size-4 [[data-slot=dialog-content]_&]:rounded-lg! group/command-item data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
 				className,
 			)}
 			{...props}

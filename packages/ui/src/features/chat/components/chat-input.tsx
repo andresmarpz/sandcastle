@@ -1,19 +1,20 @@
 "use client";
 
-import { IconRobot, IconSquare } from "@tabler/icons-react";
+import { IconSquare } from "@tabler/icons-react";
 import type { ChatStatus, UIMessage } from "ai";
 import { type ChangeEvent, useCallback, useRef, useState } from "react";
 import {
 	PromptInput,
+	PromptInputActions,
 	PromptInputButton,
 	PromptInputFooter,
 	PromptInputSubmit,
 	PromptInputTextarea,
+	PromptInputTools,
 } from "@/components/ai-elements/prompt-input";
 import type { SendResult } from "@/features/chat/store";
-import { cn } from "@/lib/utils";
 import { FilePickerPopover } from "./file-search";
-import { PlanSelector } from "./plan-selector";
+import { PlanSelector, type Mode } from "./plan-selector";
 
 interface ChatInputProps {
 	onSend: (options: {
@@ -45,6 +46,16 @@ export function ChatInput({
 	const [inputValue, setInputValue] = useState("");
 	const containerRef = useRef<HTMLDivElement>(null);
 	const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+	// Sync mode selector with autonomous state
+	const currentMode: Mode = autonomous ? "autonomous" : "plan";
+
+	const handleModeChange = useCallback(
+		(mode: Mode) => {
+			onAutonomousChange(mode === "autonomous");
+		},
+		[onAutonomousChange],
+	);
 
 	// Detect @ character to open file picker
 	const handleTextChange = useCallback(
@@ -146,28 +157,21 @@ export function ChatInput({
 					value={inputValue}
 				/>
 				<PromptInputFooter>
-					<PlanSelector />
-					<PromptInputButton
-						onClick={() => onAutonomousChange(!autonomous)}
-						className={cn(
-							autonomous &&
-								"bg-primary text-primary-foreground hover:bg-primary/90",
+					<PromptInputTools>
+						<PlanSelector value={currentMode} onValueChange={handleModeChange} />
+					</PromptInputTools>
+					<PromptInputActions>
+						{isStreaming && (
+							<PromptInputButton onClick={onStop} variant="destructive">
+								<IconSquare className="size-4" />
+								Stop
+							</PromptInputButton>
 						)}
-						title={autonomous ? "Autonomous mode ON" : "Autonomous mode OFF"}
-					>
-						<IconRobot className="h-4 w-4" />
-						Autonomous
-					</PromptInputButton>
-					{isStreaming && (
-						<PromptInputButton onClick={onStop} variant="destructive">
-							<IconSquare className="h-4 w-4" />
-							Stop
-						</PromptInputButton>
-					)}
-					<PromptInputSubmit
-						status={isSending ? "submitted" : "ready"}
-						disabled={isSending}
-					/>
+						<PromptInputSubmit
+							status={isSending ? "submitted" : "ready"}
+							disabled={isSending}
+						/>
+					</PromptInputActions>
 				</PromptInputFooter>
 			</PromptInput>
 		</div>
