@@ -43,6 +43,21 @@ export type WorkStepProps = ComponentProps<"div"> & {
 	children?: ReactNode;
 };
 
+function areWorkStepPropsEqual(
+	prev: WorkStepProps,
+	next: WorkStepProps,
+): boolean {
+	// Compare icon by reference (they come from a static map)
+	if (prev.icon !== next.icon) return false;
+	// Compare title (usually a string)
+	if (prev.title !== next.title) return false;
+	// Compare other props
+	if (prev.defaultOpen !== next.defaultOpen) return false;
+	if (prev.className !== next.className) return false;
+	if (prev.children !== next.children) return false;
+	return true;
+}
+
 export const WorkStep = memo(function WorkStep({
 	className,
 	icon: IconComponent = IconTool,
@@ -90,7 +105,7 @@ export const WorkStep = memo(function WorkStep({
 			</div>
 		</Collapsible>
 	);
-});
+}, areWorkStepPropsEqual);
 
 type WorkStepContentProps = ComponentProps<typeof CollapsiblePanel>;
 
