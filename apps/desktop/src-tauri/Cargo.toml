@@ -1,8 +1,10 @@
 [package]
-name = "desktop"
-version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
+name = "sandcastle"
+version = "0.1.0-beta.1"
+description = "The loop manager for your agents."
+authors = ["Andres Martinez"]
+license = "Apache-2.0"
+repository = "https://github.com/andresmarpz/sandcastle"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -11,7 +13,7 @@ edition = "2021"
 # The `_lib` suffix may seem redundant but it is necessary
 # to make the lib name unique and wouldn't conflict with the bin name.
 # This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
-name = "desktop_lib"
+name = "sandcastle_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
