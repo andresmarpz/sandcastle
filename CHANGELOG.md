@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.3](https://github.com/andresmarpz/sandcastle/compare/v0.1.2...v0.1.3) (2026-01-19)
+
+
+### Features
+
+* **ui:** add Open dropdown to chat session metadata panel ([#46](https://github.com/andresmarpz/sandcastle/issues/46)) ([3677328](https://github.com/andresmarpz/sandcastle/commit/3677328c4ecaaa496c647768838e512d7f50a3f6))
+
+
+### Bug Fixes
+
+* **ui:** display correct tool names during streaming instead of 'invocation' ([#43](https://github.com/andresmarpz/sandcastle/issues/43)) ([ec7e43e](https://github.com/andresmarpz/sandcastle/commit/ec7e43ede0f398ab06a2b4f4794b19b317a198d5))
+
 ## [0.1.2](https://github.com/andresmarpz/sandcastle/compare/v0.1.1...v0.1.2) (2026-01-19)
 
 
