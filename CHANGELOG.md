@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.2](https://github.com/andresmarpz/sandcastle/compare/v0.1.1...v0.1.2) (2026-01-19)
+
+
+### Bug Fixes
+
+* modify relelease-please ci to update all versions correctly ([81a5563](https://github.com/andresmarpz/sandcastle/commit/81a5563122c24d9cee52b0328ff6b00651e1f138))
+* upload desktop builds to release-please release instead of creating new one ([8436e2e](https://github.com/andresmarpz/sandcastle/commit/8436e2e13da35618cf19d46c383112a698d34228))
+* use toml type for Cargo.toml in release-please config ([1598c7c](https://github.com/andresmarpz/sandcastle/commit/1598c7c24a4fb1fefdf52e3c1577ce648f37e00b))
+
 ## [0.1.1](https://github.com/andresmarpz/sandcastle/compare/v0.1.0...v0.1.1) (2026-01-19)
 
 
