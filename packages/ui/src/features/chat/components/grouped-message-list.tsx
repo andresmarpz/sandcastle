@@ -39,6 +39,54 @@ interface GroupedItemRendererProps {
 	item: GroupedItem;
 }
 
+function areGroupedItemsEqual(
+	prev: GroupedItemRendererProps,
+	next: GroupedItemRendererProps,
+): boolean {
+	const prevItem = prev.item;
+	const nextItem = next.item;
+
+	// Different types means different items
+	if (prevItem.type !== nextItem.type) return false;
+
+	switch (prevItem.type) {
+		case "user-message":
+			// Compare by message id and parts length
+			return (
+				nextItem.type === "user-message" &&
+				prevItem.message.id === nextItem.message.id &&
+				prevItem.message.parts.length === nextItem.message.parts.length
+			);
+
+		case "text":
+			return (
+				nextItem.type === "text" &&
+				prevItem.messageId === nextItem.messageId &&
+				prevItem.text === nextItem.text
+			);
+
+		case "reasoning":
+			return (
+				nextItem.type === "reasoning" &&
+				prevItem.messageId === nextItem.messageId &&
+				prevItem.text === nextItem.text &&
+				prevItem.isStreaming === nextItem.isStreaming
+			);
+
+		case "work-unit":
+			// Compare steps by their tool call IDs and length
+			if (nextItem.type !== "work-unit") return false;
+			if (prevItem.steps.length !== nextItem.steps.length) return false;
+			return prevItem.steps.every(
+				(step, i) =>
+					step.part.toolCallId === nextItem.steps[i]?.part.toolCallId,
+			);
+
+		default:
+			return false;
+	}
+}
+
 const GroupedItemRenderer = memo(function GroupedItemRenderer({
 	item,
 }: GroupedItemRendererProps) {
@@ -111,4 +159,4 @@ const GroupedItemRenderer = memo(function GroupedItemRenderer({
 		default:
 			return null;
 	}
-});
+}, areGroupedItemsEqual);
