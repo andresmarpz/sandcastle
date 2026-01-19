@@ -1,6 +1,6 @@
 {
 	"name": "@sandcastle/storage",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "Effect-based SQLite storage for Sandcastle entities.",
 	"module": "index.ts",
 	"type": "module",
