@@ -32,10 +32,12 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/alert";
 import { Badge } from "@/components/badge";
 import { Spinner } from "@/components/spinner";
+import { useChatSession, useSetChatHistory } from "@/features/chat/store";
 import {
-	useChatSession,
-	useSetChatHistory,
-} from "@/features/chat/store";
+	SessionStatusDot,
+	statusConfig,
+	useSessionStatusIndicator,
+} from "@/features/sidebar/sessions/session-status-indicator";
 import { ChatInput } from "./chat-input";
 import { GroupedMessageList } from "./grouped-message-list";
 
@@ -118,10 +120,6 @@ function ChatViewContent({
 
 	// Fetch session data for metadata display
 	const sessionResult = useAtomValue(sessionQuery(sessionId));
-	const session = useMemo(
-		() => Option.getOrElse(Result.value(sessionResult), () => null),
-		[sessionResult],
-	);
 
 	// Use the global chat store instead of useChat + useSessionEvents
 	const {
@@ -145,7 +143,8 @@ function ChatViewContent({
 
 	// Map session status to ChatStatus for ChatInput compatibility
 	// AI SDK ChatStatus is 'submitted' | 'streaming' | 'ready' | 'error'
-	const chatStatus: ChatStatus = sessionStatus === "streaming" ? "streaming" : "ready";
+	const chatStatus: ChatStatus =
+		sessionStatus === "streaming" ? "streaming" : "ready";
 
 	const showHistoryLoading =
 		historyStatus === "loading" && messages.length === 0;
@@ -244,10 +243,21 @@ function ChatViewContent({
 					</footer>
 				</div>
 
+				{Result.matchWithWaiting(sessionResult, {
+					onSuccess: (session) => (
+						<div className="relative hidden sm:block">
+							<SessionMetadataPanel
+								session={session.value}
+								status={sessionStatus}
+								isConnected={isConnected}
+							/>
+						</div>
+					),
+					onDefect: () => null,
+					onError: () => null,
+					onWaiting: () => null,
+				})}
 				{/* Right column - session metadata (hidden on small screens) */}
-				<div className="relative hidden sm:block">
-					<SessionMetadataPanel session={session} />
-				</div>
 			</div>
 		</div>
 	);
@@ -258,10 +268,17 @@ function ChatViewContent({
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface SessionMetadataPanelProps {
-	session: Session | null;
+	session: Session;
+	status: "idle" | "streaming";
+	isConnected: boolean;
 }
 
 function SessionMetadataPanel({ session }: SessionMetadataPanelProps) {
+	const sessionStatusIndicator = useSessionStatusIndicator({
+		sessionId: session?.id,
+		status: session?.status,
+	});
+
 	const createdAtLabel = useMemo(() => {
 		if (!session?.createdAt) return null;
 		const timestamp = Date.parse(session.createdAt);
@@ -294,6 +311,19 @@ function SessionMetadataPanel({ session }: SessionMetadataPanelProps) {
 	return (
 		<div className="sticky top-0 p-4">
 			<div className="flex flex-col gap-4 text-sm min-w-[240px]">
+				<div className="flex flex-col gap-1">
+					<span className="text-muted-foreground text-xs font-medium uppercase">
+						Status
+					</span>
+					<div className="flex items-center gap-2">
+						<SessionStatusDot status={sessionStatusIndicator} />
+
+						<span className="text-foreground">
+							{statusConfig[sessionStatusIndicator].label}
+						</span>
+					</div>
+				</div>
+
 				<div className="flex flex-col gap-1">
 					<span className="text-muted-foreground text-xs font-medium uppercase">
 						Session
@@ -329,10 +359,6 @@ function SessionMetadataPanel({ session }: SessionMetadataPanelProps) {
 		</div>
 	);
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Queue Panel
-// ─────────────────────────────────────────────────────────────────────────────
 
 function QueuePanel({ queue }: { queue: QueuedMessage[] }) {
 	const label = queue.length === 1 ? "queued message" : "queued messages";

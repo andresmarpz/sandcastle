@@ -5,8 +5,6 @@
  * Provides subscription management and React hooks.
  */
 
-// Store and types
-export { chatStore } from "./chat-store";
 export type {
 	ChatSessionState,
 	ChatStore,
@@ -14,21 +12,8 @@ export type {
 	ChatStoreState,
 	HistoryCursor,
 } from "./chat-store";
-
-// React hooks
-export {
-	useChatActions,
-	useChatConnectionState,
-	useChatMessages,
-	useChatSession,
-	useChatSessionSelector,
-	useChatSessionSnapshot,
-	useChatStatus,
-	useSetChatHistory,
-} from "./use-chat-session";
-
-// Message accumulator (for advanced use)
-export { MessageAccumulator } from "./message-accumulator";
+// Store and types
+export { chatStore } from "./chat-store";
 export type {
 	FilePart,
 	ReasoningPart,
@@ -38,3 +23,16 @@ export type {
 	ToolInvocationPart,
 	UIMessagePart,
 } from "./message-accumulator";
+
+// Message accumulator (for advanced use)
+export { MessageAccumulator } from "./message-accumulator";
+// React hooks
+export {
+	useChatActions,
+	useChatConnectionState,
+	useChatSession,
+	useChatSessionSelector,
+	useChatSessionSnapshot,
+	useChatStatus,
+	useSetChatHistory,
+} from "./use-chat-session";
