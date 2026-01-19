@@ -26,7 +26,7 @@ export default function Layout() {
 						<SidebarProvider className="flex flex-col">
 							<header
 								data-tauri-drag-region
-								className="bg-background sticky top-0 z-50 flex w-full items-center pl-6 sm:pl-0"
+								className="bg-background sticky top-0 z-50 flex w-full items-center pl-4 sm:pl-0"
 							>
 								<div
 									data-tauri-drag-region
