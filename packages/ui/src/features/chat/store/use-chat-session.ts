@@ -1,19 +1,7 @@
-/**
- * React Hooks for Chat Store
- *
- * Provides React bindings for the global chat store.
- * These hooks handle subscription lifecycle and provide
- * reactive access to session state.
- */
-
 import type { UIMessage } from "ai";
 import { useCallback, useEffect, useMemo } from "react";
 import { useStore } from "zustand";
-import { chatStore, type ChatSessionState } from "./chat-store";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Types
-// ─────────────────────────────────────────────────────────────────────────────
+import { type ChatSessionState, chatStore } from "./chat-store";
 
 export interface UseChatSessionResult extends ChatSessionState {
 	/** Send a message to the session */
@@ -21,10 +9,6 @@ export interface UseChatSessionResult extends ChatSessionState {
 	/** Stop the current stream */
 	stop: () => void;
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Hooks
-// ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * Main hook for chat sessions.
@@ -198,20 +182,9 @@ export function useChatSessionSelector<T>(
 }
 
 /**
- * Hook for reading messages with automatic subscription.
- *
- * Convenience wrapper around useChatSessionSelector.
- */
-export function useChatMessages(sessionId: string): UIMessage[] {
-	return useChatSessionSelector(sessionId, (s) => s.messages);
-}
-
-/**
  * Hook for reading session status.
  */
-export function useChatStatus(
-	sessionId: string,
-): "idle" | "streaming" {
+export function useChatStatus(sessionId: string): "idle" | "streaming" {
 	return useChatSessionSelector(sessionId, (s) => s.status);
 }
 

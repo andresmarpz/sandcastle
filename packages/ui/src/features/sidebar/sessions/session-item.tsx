@@ -7,10 +7,7 @@ import { formatDistanceToNow } from "date-fns";
 import * as Option from "effect/Option";
 import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
-import {
-	deleteSessionMutation,
-	SESSION_LIST_KEY,
-} from "@/api/session-atoms";
+import { deleteSessionMutation, SESSION_LIST_KEY } from "@/api/session-atoms";
 import { worktreeAtomFamily } from "@/api/worktree-atoms";
 import {
 	AlertDialog,
@@ -29,6 +26,10 @@ import {
 	ContextMenuSeparator,
 	ContextMenuTrigger,
 } from "@/components/context-menu";
+import {
+	SessionStatusDot,
+	useSessionStatusIndicator,
+} from "@/features/sidebar/sessions/session-status-indicator";
 import { cn } from "@/lib/utils";
 
 interface SessionItemProps {
@@ -56,6 +57,11 @@ export function SessionItem({ session, repositoryId }: SessionItemProps) {
 
 	const sessionPath = `/repository/${repositoryId}/sessions/${session.id}`;
 	const isActive = location.pathname === sessionPath;
+
+	const sessionStatusIndicator = useSessionStatusIndicator({
+		sessionId: session.id,
+		status: session.status,
+	});
 
 	const lastActivityLabel = useMemo(
 		() => formatRelativeTime(session.lastActivityAt),
@@ -103,15 +109,16 @@ export function SessionItem({ session, repositoryId }: SessionItemProps) {
 							)}
 						>
 							<div className="flex items-start gap-2">
-								<SessionStatusIndicator status={session.status} />
+								<SessionStatusDot
+									className="mt-1.5"
+									status={sessionStatusIndicator}
+								/>
 								<div className="flex-1 min-w-0">
-									<div className="flex items-center gap-2">
+									<div className="flex items-center justify-between gap-2">
 										<span className="truncate text-sm font-medium">
 											{session.title}
 										</span>
-										<SessionOriginBadge
-											worktreeId={session.worktreeId}
-										/>
+										<SessionOriginBadge worktreeId={session.worktreeId} />
 									</div>
 									<div className="text-muted-foreground text-xs mt-0.5">
 										{lastActivityLabel}
@@ -167,34 +174,6 @@ export function SessionItem({ session, repositoryId }: SessionItemProps) {
 				</AlertDialogContent>
 			</AlertDialog>
 		</>
-	);
-}
-
-interface SessionStatusIndicatorProps {
-	status: Session["status"];
-}
-
-function SessionStatusIndicator({ status }: SessionStatusIndicatorProps) {
-	const statusConfig = {
-		created: { color: "bg-muted-foreground", label: "Created" },
-		active: { color: "bg-green-500", label: "Active" },
-		paused: { color: "bg-yellow-500", label: "Paused" },
-		completed: { color: "bg-muted-foreground", label: "Completed" },
-		failed: { color: "bg-red-500", label: "Failed" },
-	};
-
-	const config = statusConfig[status] ?? statusConfig.created;
-
-	return (
-		<div
-			className={cn(
-				"size-2 rounded-full mt-1.5 shrink-0",
-				config.color,
-				status === "active" && "animate-pulse",
-			)}
-			title={config.label}
-			aria-label={config.label}
-		/>
 	);
 }
 
