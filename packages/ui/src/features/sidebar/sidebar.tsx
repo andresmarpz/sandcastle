@@ -10,6 +10,7 @@ import {
 } from "@/components/sidebar";
 import Rail from "@/features/sidebar/rail/rail";
 import { SessionList } from "@/features/sidebar/sessions";
+import { WorktreeSection } from "@/features/sidebar/sessions/worktree-section";
 import { cn } from "@/lib/utils";
 
 export function Sidebar() {
@@ -34,9 +35,9 @@ export function Sidebar() {
 			{/* Second sidebar - session list for the selected repository */}
 			<SidebarPrimitive
 				collapsible="none"
-				className="flex flex-1 border-l border-t md:rounded-tl-md"
+				className="flex flex-1 flex-col border-l border-t md:rounded-tl-md"
 			>
-				<SidebarContent className="pt-2 px-2">
+				<SidebarContent className="flex-1 overflow-y-auto pt-2 px-2">
 					<SidebarMenu>
 						{repositoryId ? (
 							<SessionList repositoryId={repositoryId} />
@@ -47,6 +48,9 @@ export function Sidebar() {
 						)}
 					</SidebarMenu>
 				</SidebarContent>
+
+				{/* Worktree section at bottom - toggleable, max 20% height */}
+				{repositoryId && <WorktreeSection repositoryId={repositoryId} />}
 			</SidebarPrimitive>
 
 			{open && <SidebarRail />}
