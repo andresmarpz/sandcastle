@@ -50,7 +50,7 @@ function SidebarMainContent() {
 			data-tauri-drag-region
 			data-state={open ? "expanded" : "collapsed"}
 			className={cn(
-				"relative h-[calc(100vh-var(--header-height))] overflow-hidden border-l border-t",
+				"relative h-[calc(100vh-var(--header-height))] overflow-hidden sm:border-l sm:border-t",
 				"data-[state=collapsed]:rounded-tl-md",
 			)}
 		>
