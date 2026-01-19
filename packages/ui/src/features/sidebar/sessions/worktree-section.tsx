@@ -2,13 +2,18 @@
 
 import { Result, useAtom, useAtomValue } from "@effect-atom/atom-react";
 import type { Worktree } from "@sandcastle/schemas";
-import { IconChevronDown, IconGitBranch, IconTrash } from "@tabler/icons-react";
+import {
+	IconChevronDown,
+	IconGitBranch,
+	IconLoader,
+	IconTrash,
+} from "@tabler/icons-react";
 import { formatDistanceToNow } from "date-fns";
 import * as Option from "effect/Option";
 import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import {
-	deleteWorktreeMutation,
+	deleteWorktreeMutationFamily,
 	WORKTREE_LIST_KEY,
 	worktreeListByRepositoryAtomFamily,
 } from "@/api/worktree-atoms";
@@ -22,18 +27,18 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from "@/components/alert-dialog";
-import {
-	ContextMenu,
-	ContextMenuContent,
-	ContextMenuItem,
-	ContextMenuTrigger,
-} from "@/components/context-menu";
 import { Badge } from "@/components/badge";
 import {
 	Collapsible,
 	CollapsiblePanel,
 	CollapsibleTrigger,
 } from "@/components/collapsible";
+import {
+	ContextMenu,
+	ContextMenuContent,
+	ContextMenuItem,
+	ContextMenuTrigger,
+} from "@/components/context-menu";
 import {
 	SidebarMenu,
 	SidebarMenuItem,
@@ -136,7 +141,12 @@ function WorktreeSubItem({ worktree }: WorktreeSubItemProps) {
 	const navigate = useNavigate();
 	const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-	const [deleteResult, deleteWorktree] = useAtom(deleteWorktreeMutation);
+	// Use a family-based mutation so each worktree has its own loading state
+	const deleteMutationAtom = useMemo(
+		() => deleteWorktreeMutationFamily(worktree.id),
+		[worktree.id],
+	);
+	const [deleteResult, deleteWorktree] = useAtom(deleteMutationAtom);
 	const isDeleting = deleteResult.waiting;
 
 	const createdAtLabel = useMemo(
@@ -147,6 +157,8 @@ function WorktreeSubItem({ worktree }: WorktreeSubItemProps) {
 	const isActive = location.pathname.startsWith(`/worktree/${worktree.id}`);
 
 	function handleSelect() {
+		// Don't navigate if we're deleting
+		if (isDeleting) return;
 		navigate(`/worktree/${worktree.id}`);
 	}
 
@@ -159,6 +171,7 @@ function WorktreeSubItem({ worktree }: WorktreeSubItemProps) {
 				`worktree:${worktree.id}`,
 			],
 		});
+		// Close dialog immediately - the spinner will show on the item
 		setIsDeleteDialogOpen(false);
 	}
 
@@ -171,14 +184,24 @@ function WorktreeSubItem({ worktree }: WorktreeSubItemProps) {
 							<SidebarMenuSubButton
 								onClick={handleSelect}
 								isActive={isActive}
-								className="h-auto flex-col items-start gap-0.5 py-1.5"
+								disabled={isDeleting}
+								className={cn(
+									"h-auto flex-col items-start gap-0.5 py-1.5",
+									isDeleting && "opacity-60",
+								)}
 							>
 								<span className="flex items-center gap-1.5 text-sm font-medium">
-									<IconGitBranch className="size-3 shrink-0" />
+									{isDeleting ? (
+										<IconLoader className="size-3 shrink-0 animate-spin" />
+									) : (
+										<IconGitBranch className="size-3 shrink-0" />
+									)}
 									<span className="truncate">{worktree.branch}</span>
 								</span>
 								<span className="text-muted-foreground text-xs">
-									{worktree.name} · {createdAtLabel}
+									{isDeleting
+										? "Deleting..."
+										: `${worktree.name} · ${createdAtLabel}`}
 								</span>
 							</SidebarMenuSubButton>
 						</SidebarMenuSubItem>
@@ -189,6 +212,7 @@ function WorktreeSubItem({ worktree }: WorktreeSubItemProps) {
 					<ContextMenuItem
 						variant="destructive"
 						onClick={() => setIsDeleteDialogOpen(true)}
+						disabled={isDeleting}
 					>
 						<IconTrash className="size-4" />
 						Delete
@@ -210,13 +234,9 @@ function WorktreeSubItem({ worktree }: WorktreeSubItemProps) {
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
-						<AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-						<AlertDialogAction
-							variant="destructive"
-							onClick={handleDelete}
-							disabled={isDeleting}
-						>
-							{isDeleting ? "Deleting..." : "Delete"}
+						<AlertDialogCancel>Cancel</AlertDialogCancel>
+						<AlertDialogAction variant="destructive" onClick={handleDelete}>
+							Delete
 						</AlertDialogAction>
 					</AlertDialogFooter>
 				</AlertDialogContent>
