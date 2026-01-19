@@ -1,10 +1,7 @@
-import { RegistryProvider } from "@effect-atom/atom-react";
 import { PlatformProvider } from "@sandcastle/ui/context/platform-context";
-import { ThemeProvider } from "@sandcastle/ui/context/theme-context";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Command } from "@tauri-apps/plugin-shell";
 import ReactDOM from "react-dom/client";
-import { BrowserRouter } from "react-router";
 
 import "@sandcastle/ui/globals.css";
 import "@fontsource-variable/inter";
@@ -36,20 +33,14 @@ const copyToClipboard = async (text: string) => {
 
 function App() {
 	return (
-		<BrowserRouter>
-			<ThemeProvider>
-				<PlatformProvider
-					openDirectory={openDirectory}
-					openInFileManager={openInFileManager}
-					openInEditor={openInEditor}
-					copyToClipboard={copyToClipboard}
-				>
-					<RegistryProvider>
-						<Layout />
-					</RegistryProvider>
-				</PlatformProvider>
-			</ThemeProvider>
-		</BrowserRouter>
+		<PlatformProvider
+			openDirectory={openDirectory}
+			openInFileManager={openInFileManager}
+			openInEditor={openInEditor}
+			copyToClipboard={copyToClipboard}
+		>
+			<Layout />
+		</PlatformProvider>
 	);
 }
 
