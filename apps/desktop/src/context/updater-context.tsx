@@ -65,7 +65,12 @@ export function UpdaterProvider({ children }: { children: React.ReactNode }) {
 				},
 			);
 		}
-	}, [updater.state, updater.update, currentVersion, updater.downloadAndInstall]);
+	}, [
+		updater.state,
+		updater.update,
+		currentVersion,
+		updater.downloadAndInstall,
+	]);
 
 	// Show downloading toast
 	useEffect(() => {
