@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.6](https://github.com/andresmarpz/sandcastle/compare/v0.1.5...v0.1.6) (2026-01-19)
+
+
+### Bug Fixes
+
+* **desktop:** enable updater artifacts generation ([8cdad7d](https://github.com/andresmarpz/sandcastle/commit/8cdad7dff28395097245e9d5d0091ea4c3c61c68))
+
 ## [0.1.5](https://github.com/andresmarpz/sandcastle/compare/v0.1.4...v0.1.5) (2026-01-19)
 
 
