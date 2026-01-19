@@ -1,15 +1,25 @@
 name: Release Desktop App
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'apps/desktop/**'
-      - 'packages/**'
-      - 'bun.lock'
+  # Called by release-please when a release is created
+  workflow_call:
+    inputs:
+      version:
+        description: 'Version to release'
+        required: true
+        type: string
+      tag_name:
+        description: 'Git tag name'
+        required: true
+        type: string
+
+  # Manual trigger for testing or re-running builds
   workflow_dispatch:
     inputs:
+      version:
+        description: 'Version to release (e.g., 0.2.0)'
+        required: false
+        type: string
       dry_run:
         description: 'Build without creating a release'
         required: false
@@ -24,43 +34,38 @@ permissions:
   contents: write
 
 jobs:
-  check-version:
-    name: Check Version
+  prepare:
+    name: Prepare Release
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
       tag: ${{ steps.version.outputs.tag }}
-      should_release: ${{ steps.check.outputs.should_release }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Get version from tauri.conf.json
+      - name: Determine version
         id: version
         run: |
-          VERSION=$(jq -r '.version' apps/desktop/src-tauri/tauri.conf.json)
-          TAG="desktop-v${VERSION}"
+          if [ -n "${{ inputs.version }}" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION=$(jq -r '.version' apps/desktop/src-tauri/tauri.conf.json)
+          fi
+
+          if [ -n "${{ inputs.tag_name }}" ]; then
+            TAG="${{ inputs.tag_name }}"
+          else
+            TAG="v${VERSION}"
+          fi
+
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
           echo "Version: ${VERSION}, Tag: ${TAG}"
 
-      - name: Check if tag exists
-        id: check
-        run: |
-          if git rev-parse "refs/tags/${{ steps.version.outputs.tag }}" >/dev/null 2>&1; then
-            echo "Tag ${{ steps.version.outputs.tag }} already exists"
-            echo "should_release=false" >> $GITHUB_OUTPUT
-          else
-            echo "Tag ${{ steps.version.outputs.tag }} does not exist, will create release"
-            echo "should_release=true" >> $GITHUB_OUTPUT
-          fi
-
   build-tauri:
     name: Build (${{ matrix.platform }})
-    needs: check-version
-    if: needs.check-version.outputs.should_release == 'true' || github.event.inputs.dry_run == 'true'
+    needs: prepare
     strategy:
       fail-fast: false
       matrix:
@@ -113,25 +118,18 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Apple codesigning (disabled for now - no certificate)
-          # APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          # APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          # APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          # APPLE_ID: ${{ secrets.APPLE_ID }}
-          # APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          # APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           projectPath: apps/desktop
           tauriScript: bunx tauri
           args: ${{ matrix.args }}
-          tagName: ${{ github.event.inputs.dry_run != 'true' && needs.check-version.outputs.tag || '' }}
-          releaseName: Desktop v${{ needs.check-version.outputs.version }}
+          tagName: ${{ github.event.inputs.dry_run != 'true' && needs.prepare.outputs.tag || '' }}
+          releaseName: Sandcastle v${{ needs.prepare.outputs.version }}
           releaseBody: |
-            ## Desktop App v${{ needs.check-version.outputs.version }}
+            See [CHANGELOG.md](https://github.com/andresmarpz/sandcastle/blob/main/CHANGELOG.md) for details.
 
-            Download the appropriate installer for your platform:
+            ## Downloads
             - **macOS (Apple Silicon)**: `.dmg` file for `aarch64`
             - **macOS (Intel)**: `.dmg` file for `x86_64`
             - **Windows**: `.msi` or `.exe` installer

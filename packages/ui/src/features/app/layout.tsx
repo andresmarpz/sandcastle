@@ -22,11 +22,20 @@ export default function Layout() {
 		<ThemeProvider>
 			<RegistryProvider defaultIdleTTL={5 * 60 * 1000}>
 				<BrowserRouter>
-					<div className="[--header-height:calc(--spacing(14))]">
+					<div className="[--header-height:calc(--spacing(10))]">
 						<SidebarProvider className="flex flex-col">
-							<header className="bg-background sticky top-0 z-50 flex w-full items-center pl-4 sm:pl-0">
-								<div className="hidden sm:ml-0 sm:block w-[72px]" />
-								<div className="flex h-(--header-height) w-full items-center gap-2">
+							<header
+								data-tauri-drag-region
+								className="bg-background sticky top-0 z-50 flex w-full items-center pl-4 sm:pl-0"
+							>
+								<div
+									data-tauri-drag-region
+									className="hidden sm:ml-0 sm:block w-[72px]"
+								/>
+								<div
+									data-tauri-drag-region
+									className="flex h-(--header-height) w-full items-center gap-2"
+								>
 									<SidebarTrigger />
 								</div>
 							</header>
