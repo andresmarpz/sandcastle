@@ -1,5 +1,5 @@
 import { PlatformProvider } from "@sandcastle/ui/context/platform-context";
-import { VersionProvider } from "@sandcastle/ui/api/version.tsx";
+import { VersionProvider } from "@sandcastle/ui/api/version";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Command } from "@tauri-apps/plugin-shell";
 import ReactDOM from "react-dom/client";

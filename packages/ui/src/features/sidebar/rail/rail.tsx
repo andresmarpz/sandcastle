@@ -3,8 +3,8 @@ import type { Repository } from "@sandcastle/schemas";
 import { IconSettings } from "@tabler/icons-react";
 import * as Option from "effect/Option";
 import { useMemo, useState } from "react";
-import { useVersion } from "@/api/version.tsx";
 import { repositoryListAtom } from "@/api/repository-atoms";
+import { useVersion } from "@/api/version";
 import {
 	SidebarContent,
 	SidebarFooter,

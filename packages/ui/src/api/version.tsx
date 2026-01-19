@@ -26,9 +26,7 @@ export function VersionProvider({
 		[currentVersion],
 	);
 	return (
-		<VersionContext.Provider value={value}>
-			{children}
-		</VersionContext.Provider>
+		<VersionContext.Provider value={value}>{children}</VersionContext.Provider>
 	);
 }
 
