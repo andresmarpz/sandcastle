@@ -69,6 +69,7 @@ export function ChatView({ sessionId, workingPath }: ChatViewProps) {
 		onWaiting: () =>
 			hasHistoryCache ? (
 				<ChatViewContent
+					key={sessionId}
 					sessionId={sessionId}
 					workingPath={workingPath}
 					initialMessages={initialMessages}
@@ -79,6 +80,7 @@ export function ChatView({ sessionId, workingPath }: ChatViewProps) {
 			),
 		onError: () => (
 			<ChatViewContent
+				key={sessionId}
 				sessionId={sessionId}
 				workingPath={workingPath}
 				initialMessages={initialMessages}
@@ -87,6 +89,7 @@ export function ChatView({ sessionId, workingPath }: ChatViewProps) {
 		),
 		onDefect: () => (
 			<ChatViewContent
+				key={sessionId}
 				sessionId={sessionId}
 				workingPath={workingPath}
 				initialMessages={initialMessages}
@@ -95,6 +98,7 @@ export function ChatView({ sessionId, workingPath }: ChatViewProps) {
 		),
 		onSuccess: () => (
 			<ChatViewContent
+				key={sessionId}
 				sessionId={sessionId}
 				workingPath={workingPath}
 				initialMessages={initialMessages}
@@ -168,14 +172,14 @@ function ChatViewContent({
 	// ].filter(Boolean) as Array<{ title: string; message: string }>;
 
 	return (
-		<div className="h-full w-full overflow-y-auto">
-			<div className="grid grid-cols-1 sm:grid-cols-[1fr_minmax(0,56rem)_1fr] min-h-full">
+		<div className="h-full w-full">
+			<div className="grid grid-cols-1 sm:grid-cols-[1fr_minmax(0,56rem)_1fr] h-full">
 				{/* Left column - empty spacer (hidden on small screens) */}
 				<div className="hidden sm:block" />
 
 				{/* Center column - main content */}
-				<div className="flex flex-col min-h-full">
-					<div className="flex-1">
+				<div className="flex flex-col h-full">
+					<div className="flex-1 min-h-0">
 						<Conversation>
 							<ConversationContent>
 								{showHistoryLoading ? (
