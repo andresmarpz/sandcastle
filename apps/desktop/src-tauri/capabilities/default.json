@@ -11,6 +11,8 @@
 			"identifier": "shell:allow-execute",
 			"allow": [{ "name": "open", "cmd": "open", "args": true }]
 		},
-		"core:window:allow-start-dragging"
+		"core:window:allow-start-dragging",
+		"updater:default",
+		"process:allow-restart"
 	]
 }
