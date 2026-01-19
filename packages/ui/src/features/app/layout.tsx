@@ -6,6 +6,7 @@ import {
 	SidebarTrigger,
 	useSidebar,
 } from "@/components/sidebar";
+import { Toaster } from "@/components/sonner";
 import { usePlatform } from "@/context/platform-context";
 import { ThemeProvider } from "@/context/theme-context";
 import { Sidebar } from "@/features/sidebar/sidebar";
@@ -47,6 +48,7 @@ export default function Layout() {
 					</div>
 				</BrowserRouter>
 			</RegistryProvider>
+			<Toaster />
 		</ThemeProvider>
 	);
 }

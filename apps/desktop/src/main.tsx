@@ -8,6 +8,7 @@ import "@fontsource-variable/inter";
 import "./tauri.css";
 import { StrictMode } from "react";
 import Layout from "@/features/app/layout";
+import { UpdaterProvider } from "@/context/updater-context";
 
 const openDirectory = async () => {
 	const selection = await open({ directory: true, multiple: false });
@@ -39,7 +40,9 @@ function App() {
 			openInEditor={openInEditor}
 			copyToClipboard={copyToClipboard}
 		>
-			<Layout />
+			<UpdaterProvider>
+				<Layout />
+			</UpdaterProvider>
 		</PlatformProvider>
 	);
 }
