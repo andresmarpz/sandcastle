@@ -119,7 +119,6 @@ function ChatViewContent({
 	historyStatus,
 }: ChatViewContentProps) {
 	const [mode, setMode] = useState<"plan" | "build" | "autonomous">("plan");
-	const autonomous = mode === "autonomous";
 
 	// Fetch session data for metadata display
 	const sessionResult = useAtomValue(sessionQuery(sessionId));
