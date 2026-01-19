@@ -1,19 +1,26 @@
 "use client";
 
-import { IconRobot, IconSquare } from "@tabler/icons-react";
+import { IconSquare } from "@tabler/icons-react";
 import type { ChatStatus, UIMessage } from "ai";
-import { type ChangeEvent, useCallback, useRef, useState } from "react";
+import {
+	type ChangeEvent,
+	useCallback,
+	useEffect,
+	useRef,
+	useState,
+} from "react";
 import {
 	PromptInput,
+	PromptInputActions,
 	PromptInputButton,
 	PromptInputFooter,
 	PromptInputSubmit,
 	PromptInputTextarea,
+	PromptInputTools,
 } from "@/components/ai-elements/prompt-input";
 import type { SendResult } from "@/features/chat/store";
-import { cn } from "@/lib/utils";
 import { FilePickerPopover } from "./file-search";
-import { PlanSelector } from "./plan-selector";
+import { type Mode, PlanSelector } from "./plan-selector";
 
 interface ChatInputProps {
 	onSend: (options: {
@@ -22,18 +29,20 @@ interface ChatInputProps {
 	}) => Promise<SendResult>;
 	onStop: () => void;
 	status: ChatStatus;
-	autonomous: boolean;
-	onAutonomousChange: (autonomous: boolean) => void;
+	mode?: Mode;
+	onModeChange?: (mode: Mode) => void;
 	workingPath?: string;
+	autoFocus?: boolean;
 }
 
 export function ChatInput({
 	onSend,
 	onStop,
 	status,
-	autonomous,
-	onAutonomousChange,
+	mode,
+	onModeChange,
 	workingPath,
+	autoFocus = false,
 }: ChatInputProps) {
 	const isStreaming = status === "streaming";
 	// Track when we're waiting for server acknowledgment
@@ -44,7 +53,14 @@ export function ChatInput({
 	const [atPosition, setAtPosition] = useState<number | null>(null);
 	const [inputValue, setInputValue] = useState("");
 	const containerRef = useRef<HTMLDivElement>(null);
-	const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+	const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+	// Auto-focus on mount when autoFocus is true
+	useEffect(() => {
+		if (autoFocus && textareaRef.current) {
+			textareaRef.current.focus();
+		}
+	}, [autoFocus]);
 
 	// Detect @ character to open file picker
 	const handleTextChange = useCallback(
@@ -53,8 +69,6 @@ export function ChatInput({
 			const cursor = e.currentTarget.selectionStart;
 			const prevValue = inputValue;
 
-			// Store ref to textarea
-			textareaRef.current = e.currentTarget;
 			setInputValue(text);
 
 			// Check if user just typed @ (text is longer and ends with @)
@@ -140,34 +154,31 @@ export function ChatInput({
 
 			<PromptInput onSubmit={handleSubmit}>
 				<PromptInputTextarea
+					ref={textareaRef}
 					placeholder="Type a message... (Cmd+Enter to send)"
 					disabled={isSending}
 					onChange={handleTextChange}
 					value={inputValue}
 				/>
 				<PromptInputFooter>
-					<PlanSelector />
-					<PromptInputButton
-						onClick={() => onAutonomousChange(!autonomous)}
-						className={cn(
-							autonomous &&
-								"bg-primary text-primary-foreground hover:bg-primary/90",
+					<PromptInputTools>
+						<PlanSelector value={mode} onValueChange={onModeChange} />
+					</PromptInputTools>
+					<PromptInputActions>
+						{isStreaming && (
+							<PromptInputButton
+								onClick={onStop}
+								variant="destructive"
+								title="Stop generation"
+							>
+								<IconSquare className="size-4" />
+							</PromptInputButton>
 						)}
-						title={autonomous ? "Autonomous mode ON" : "Autonomous mode OFF"}
-					>
-						<IconRobot className="h-4 w-4" />
-						Autonomous
-					</PromptInputButton>
-					{isStreaming && (
-						<PromptInputButton onClick={onStop} variant="destructive">
-							<IconSquare className="h-4 w-4" />
-							Stop
-						</PromptInputButton>
-					)}
-					<PromptInputSubmit
-						status={isSending ? "submitted" : "ready"}
-						disabled={isSending}
-					/>
+						<PromptInputSubmit
+							status={isSending ? "submitted" : "ready"}
+							disabled={isSending}
+						/>
+					</PromptInputActions>
 				</PromptInputFooter>
 			</PromptInput>
 		</div>

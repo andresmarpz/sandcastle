@@ -118,7 +118,8 @@ function ChatViewContent({
 	initialMessages,
 	historyStatus,
 }: ChatViewContentProps) {
-	const [autonomous, setAutonomous] = useState(false);
+	const [mode, setMode] = useState<"plan" | "build" | "autonomous">("plan");
+	const autonomous = mode === "autonomous";
 
 	// Fetch session data for metadata display
 	const sessionResult = useAtomValue(sessionQuery(sessionId));
@@ -218,8 +219,9 @@ function ChatViewContent({
 						onSend={sendMessage}
 						onStop={stop}
 						status={chatStatus}
-						autonomous={autonomous}
-						onAutonomousChange={setAutonomous}
+						mode={mode}
+						onModeChange={setMode}
+						autoFocus
 					/>
 				</div>
 				<div className="hidden sm:block" />
