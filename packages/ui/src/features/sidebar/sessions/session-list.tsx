@@ -1,8 +1,8 @@
 "use client";
 
 import { Result, useAtom, useAtomValue } from "@effect-atom/atom-react";
-import type { Session } from "@sandcastle/schemas";
-import { IconPlus } from "@tabler/icons-react";
+import type { Session, Worktree } from "@sandcastle/schemas";
+import { IconFolder, IconGitBranch, IconPlus } from "@tabler/icons-react";
 import * as Option from "effect/Option";
 import { useMemo } from "react";
 import { useNavigate } from "react-router";
@@ -12,6 +12,21 @@ import {
 	SESSION_LIST_KEY,
 	sessionListByRepositoryAtomFamily,
 } from "@/api/session-atoms";
+import {
+	createWorktreeMutation,
+	WORKTREE_LIST_KEY,
+	worktreeListByRepositoryAtomFamily,
+} from "@/api/worktree-atoms";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuSub,
+	DropdownMenuSubContent,
+	DropdownMenuSubTrigger,
+	DropdownMenuTrigger,
+} from "@/components/dropdown-menu";
 import { SidebarMenuButton, SidebarMenuItem } from "@/components/sidebar";
 import { Skeleton } from "@/components/skeleton";
 import { Spinner } from "@/components/spinner";
@@ -28,11 +43,20 @@ export function SessionList({ repositoryId }: SessionListProps) {
 		sessionListByRepositoryAtomFamily(repositoryId),
 	);
 	const repositoryResult = useAtomValue(repositoryAtomFamily(repositoryId));
+	const worktreesResult = useAtomValue(
+		worktreeListByRepositoryAtomFamily(repositoryId),
+	);
 
 	const [createResult, createSession] = useAtom(createSessionMutation, {
 		mode: "promiseExit",
 	});
 	const isCreating = createResult.waiting;
+
+	const [createWorktreeResult, createWorktree] = useAtom(
+		createWorktreeMutation,
+		{ mode: "promiseExit" },
+	);
+	const isCreatingWorktree = createWorktreeResult.waiting;
 
 	const sessions = useMemo(
 		() => Option.getOrElse(Result.value(sessionsResult), () => []),
@@ -44,6 +68,14 @@ export function SessionList({ repositoryId }: SessionListProps) {
 		[repositoryResult],
 	);
 
+	const worktrees = useMemo(
+		() => Option.getOrElse(Result.value(worktreesResult), () => []),
+		[worktreesResult],
+	);
+
+	const isLoadingWorktrees =
+		Result.isWaiting(worktreesResult) && worktrees.length === 0;
+
 	const hasSessionsCache = Option.isSome(Result.value(sessionsResult));
 
 	const sortedSessions = useMemo(() => {
@@ -54,7 +86,7 @@ export function SessionList({ repositoryId }: SessionListProps) {
 		});
 	}, [sessions]);
 
-	async function handleCreateSession() {
+	async function handleCreateSessionOnMain() {
 		if (!repository || isCreating) return;
 
 		const result = await createSession({
@@ -71,65 +103,103 @@ export function SessionList({ repositoryId }: SessionListProps) {
 		}
 	}
 
+	async function handleCreateSessionOnWorktree(worktree: Worktree) {
+		if (!repository || isCreating) return;
+
+		const result = await createSession({
+			payload: {
+				repositoryId,
+				worktreeId: worktree.id,
+				workingPath: worktree.path,
+				title: "New session",
+			},
+			reactivityKeys: [SESSION_LIST_KEY, `sessions:repository:${repositoryId}`],
+		});
+
+		if (result._tag === "Success") {
+			navigate(`/repository/${repositoryId}/sessions/${result.value.id}`);
+		}
+	}
+
+	async function handleCreateWorktree() {
+		if (isCreatingWorktree) return;
+
+		const result = await createWorktree({
+			payload: { repositoryId },
+			reactivityKeys: [
+				WORKTREE_LIST_KEY,
+				`worktrees:repo:${repositoryId}`,
+				SESSION_LIST_KEY,
+				`sessions:repository:${repositoryId}`,
+			],
+		});
+
+		if (result._tag === "Success") {
+			navigate(
+				`/repository/${repositoryId}/sessions/${result.value.initialSessionId}`,
+			);
+		}
+	}
+
+	const contentProps = {
+		sessions: sortedSessions,
+		repositoryId,
+		onCreateOnMain: handleCreateSessionOnMain,
+		onCreateOnWorktree: handleCreateSessionOnWorktree,
+		onCreateWorktree: handleCreateWorktree,
+		isCreating,
+		isCreatingWorktree,
+		worktrees,
+		isLoadingWorktrees,
+	};
+
 	return Result.matchWithWaiting(sessionsResult, {
 		onWaiting: () =>
 			hasSessionsCache ? (
-				<SessionListContent
-					sessions={sortedSessions}
-					repositoryId={repositoryId}
-					onCreate={handleCreateSession}
-					isCreating={isCreating}
-				/>
+				<SessionListContent {...contentProps} />
 			) : (
 				<SessionListSkeleton />
 			),
 		onError: () =>
 			hasSessionsCache ? (
-				<SessionListContent
-					sessions={sortedSessions}
-					repositoryId={repositoryId}
-					onCreate={handleCreateSession}
-					isCreating={isCreating}
-				/>
+				<SessionListContent {...contentProps} />
 			) : (
 				<SessionListError />
 			),
 		onDefect: () =>
 			hasSessionsCache ? (
-				<SessionListContent
-					sessions={sortedSessions}
-					repositoryId={repositoryId}
-					onCreate={handleCreateSession}
-					isCreating={isCreating}
-				/>
+				<SessionListContent {...contentProps} />
 			) : (
 				<SessionListError />
 			),
-		onSuccess: () => (
-			<SessionListContent
-				sessions={sortedSessions}
-				repositoryId={repositoryId}
-				onCreate={handleCreateSession}
-				isCreating={isCreating}
-			/>
-		),
+		onSuccess: () => <SessionListContent {...contentProps} />,
 	});
 }
 
 interface SessionListContentProps {
 	sessions: readonly Session[];
 	repositoryId: string;
-	onCreate: () => void;
+	onCreateOnMain: () => void;
+	onCreateOnWorktree: (worktree: Worktree) => void;
+	onCreateWorktree: () => void;
 	isCreating: boolean;
-	isLoading?: boolean;
+	isCreatingWorktree: boolean;
+	worktrees: readonly Worktree[];
+	isLoadingWorktrees: boolean;
 }
 
 function SessionListContent({
 	sessions,
 	repositoryId,
-	onCreate,
+	onCreateOnMain,
+	onCreateOnWorktree,
+	onCreateWorktree,
 	isCreating,
+	isCreatingWorktree,
+	worktrees,
 }: SessionListContentProps) {
+	const isDisabled = isCreating || isCreatingWorktree;
+
 	return (
 		<>
 			{sessions.map((session) => (
@@ -140,19 +210,59 @@ function SessionListContent({
 				/>
 			))}
 			<SidebarMenuItem>
-				<SidebarMenuButton onClick={onCreate} disabled={isCreating}>
-					{isCreating ? (
-						<>
-							<Spinner className="size-4" />
-							Creating...
-						</>
-					) : (
-						<>
-							<IconPlus className="size-3" />
-							New session
-						</>
-					)}
-				</SidebarMenuButton>
+				<DropdownMenu>
+					<DropdownMenuTrigger
+						disabled={isDisabled}
+						render={
+							<SidebarMenuButton disabled={isDisabled}>
+								{isDisabled ? (
+									<>
+										<Spinner className="size-4" />
+										Creating...
+									</>
+								) : (
+									<>
+										<IconPlus className="size-3" />
+										New session
+									</>
+								)}
+							</SidebarMenuButton>
+						}
+					/>
+					<DropdownMenuContent
+						align="start"
+						sideOffset={4}
+						className="min-w-[200px]"
+					>
+						<DropdownMenuItem onClick={onCreateOnMain}>
+							<IconFolder className="size-4" />
+							Main directory
+						</DropdownMenuItem>
+
+						<DropdownMenuSub>
+							<DropdownMenuSubTrigger>
+								<IconGitBranch className="size-4" />
+								Worktree
+							</DropdownMenuSubTrigger>
+							<DropdownMenuSubContent className="min-w-[180px]">
+								<DropdownMenuItem onClick={onCreateWorktree}>
+									<IconPlus className="size-4" />
+									Create new worktree
+								</DropdownMenuItem>
+
+								{worktrees.length > 0 && <DropdownMenuSeparator />}
+								{worktrees.map((worktree) => (
+									<DropdownMenuItem
+										key={worktree.id}
+										onClick={() => onCreateOnWorktree(worktree)}
+									>
+										{worktree.name}
+									</DropdownMenuItem>
+								))}
+							</DropdownMenuSubContent>
+						</DropdownMenuSub>
+					</DropdownMenuContent>
+				</DropdownMenu>
 			</SidebarMenuItem>
 		</>
 	);

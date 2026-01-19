@@ -13,7 +13,7 @@ export class FileMatch extends Schema.Class<FileMatch>("FileMatch")({
 export class FilesRpc extends RpcGroup.make(
 	Rpc.make("files.find", {
 		payload: {
-			worktreeId: Schema.String, // Worktree ID (server resolves to path)
+			workingPath: Schema.String, // Working directory path to search in
 			pattern: Schema.String, // Fuzzy search pattern
 			maxResults: Schema.optional(Schema.Number), // Limit results (default 20)
 		},
