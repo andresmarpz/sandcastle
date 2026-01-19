@@ -43,9 +43,6 @@
 		"homepage": "https://github.com/andresmarpz/sandcastle",
 		"macOS": {
 			"minimumSystemVersion": "10.15"
-		},
-		"linux": {
-			"section": "devel"
 		}
 	}
 }
