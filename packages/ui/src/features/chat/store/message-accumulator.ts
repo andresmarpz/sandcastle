@@ -26,7 +26,11 @@ export type ToolInvocationPart = {
 	toolName: string;
 	input: unknown;
 	inputText: string;
-	state: "input-streaming" | "input-available" | "output-available" | "output-error";
+	state:
+		| "input-streaming"
+		| "input-available"
+		| "output-available"
+		| "output-error";
 	output?: unknown;
 	// Extended metadata
 	title?: string;
@@ -78,7 +82,11 @@ interface ToolPartState {
 	index: number;
 	inputText: string;
 	toolName: string;
-	state: "input-streaming" | "input-available" | "output-available" | "output-error";
+	state:
+		| "input-streaming"
+		| "input-available"
+		| "output-available"
+		| "output-error";
 	title?: string;
 	providerExecuted?: boolean;
 	dynamic?: boolean;
