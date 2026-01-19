@@ -11,6 +11,7 @@ export type {
 	ChatStoreActions,
 	ChatStoreState,
 	HistoryCursor,
+	SendResult,
 } from "./chat-store";
 // Store and types
 export { chatStore } from "./chat-store";

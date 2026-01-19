@@ -76,19 +76,26 @@ export interface ChatStoreState {
 	visitors: Map<string, number>;
 }
 
+export interface SendResult {
+	status: "started" | "queued";
+	clientMessageId: string;
+}
+
 export interface ChatStoreActions {
 	/** Start tracking a session (call on mount) */
 	visit(sessionId: string): void;
 	/** Stop tracking a session (call on unmount) */
 	leave(sessionId: string): void;
-	/** Send a message to a session */
+	/** Send a message to a session. Returns when server acknowledges. */
 	send(
 		sessionId: string,
 		content: string,
 		parts?: UIMessage["parts"],
-	): Promise<void>;
+	): Promise<SendResult>;
 	/** Stop the current stream for a session */
 	stop(sessionId: string): Promise<void>;
+	/** Remove a message from the queue */
+	dequeue(sessionId: string, messageId: string): Promise<boolean>;
 	/** Get session state (returns default if not found) */
 	getSession(sessionId: string): ChatSessionState;
 	/** Set initial history for a session */
@@ -446,7 +453,7 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 			}
 
 			case "UserMessage": {
-				// Add user message to messages array
+				// Add user message to messages array (server is source of truth)
 				const userMessage: UIMessage = {
 					id: event.message.id,
 					role: "user",
@@ -456,22 +463,10 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 				};
 
 				updateSession(sessionId, (prev) => {
-					// Check if message already exists with server ID
+					// Check if message already exists (deduplication)
 					if (prev.messages.some((m) => m.id === userMessage.id)) {
 						return prev;
 					}
-
-					// Check if there's an optimistic message with the client ID that needs replacing
-					const optimisticIdx = prev.messages.findIndex(
-						(m) => m.id === event.message.clientMessageId,
-					);
-					if (optimisticIdx >= 0) {
-						// Replace optimistic message with server message (has correct ID)
-						const newMessages = [...prev.messages];
-						newMessages[optimisticIdx] = userMessage;
-						return { ...prev, messages: newMessages };
-					}
-
 					return { ...prev, messages: [...prev.messages, userMessage] };
 				});
 				break;
@@ -542,7 +537,11 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 			}
 		},
 
-		async send(sessionId: string, content: string, parts?: UIMessage["parts"]) {
+		async send(
+			sessionId: string,
+			content: string,
+			parts?: UIMessage["parts"],
+		): Promise<{ status: "started" | "queued"; clientMessageId: string }> {
 			const clientMessageId = `client-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
 			// Extract file parts for the RPC call
@@ -569,20 +568,8 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 					...(p.filename ? { filename: p.filename } : {}),
 				}));
 
-			// Add optimistic user message
-			const userMessage: UIMessage = {
-				id: clientMessageId,
-				role: "user",
-				parts: parts ?? [{ type: "text", text: content }],
-			};
-
-			updateSession(sessionId, (prev) => ({
-				...prev,
-				messages: [...prev.messages, userMessage],
-			}));
-
-			// Send via RPC
-			await runWithStreamingClient(
+			// Send via RPC - no optimistic update, wait for UserMessage event
+			const result = await runWithStreamingClient(
 				StreamingChatClient.pipe(
 					Effect.flatMap((client) =>
 						client.chat.send({
@@ -596,6 +583,11 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 					),
 				),
 			);
+
+			return {
+				status: result.status as "started" | "queued",
+				clientMessageId,
+			};
 		},
 
 		async stop(sessionId: string) {
@@ -608,6 +600,20 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 					),
 				),
 			);
+		},
+
+		async dequeue(sessionId: string, messageId: string): Promise<boolean> {
+			const result = await runWithStreamingClient(
+				StreamingChatClient.pipe(
+					Effect.flatMap((client) =>
+						client.chat.dequeue({
+							sessionId,
+							messageId,
+						}),
+					),
+				),
+			);
+			return result.removed;
 		},
 
 		getSession(sessionId: string) {
