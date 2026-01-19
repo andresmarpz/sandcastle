@@ -24,8 +24,9 @@
 					"jsonpath": "$.version"
 				},
 				{
-					"type": "generic",
-					"path": "apps/desktop/src-tauri/Cargo.toml"
+					"type": "toml",
+					"path": "apps/desktop/src-tauri/Cargo.toml",
+					"jsonpath": "$.package.version"
 				}
 			]
 		}
