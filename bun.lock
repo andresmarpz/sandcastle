@@ -12,7 +12,7 @@
     },
     "apps/desktop": {
       "name": "@sandcastle/desktop",
-      "version": "0.1.0-beta.1",
+      "version": "0.1.3",
       "dependencies": {
         "@base-ui/react": "^1.0.0",
         "@effect-atom/atom": "^0.4.11",
@@ -27,7 +27,9 @@
         "@tailwindcss/vite": "^4.1.18",
         "@tauri-apps/api": "^2",
         "@tauri-apps/plugin-dialog": "^2",
+        "@tauri-apps/plugin-process": "^2.3.1",
         "@tauri-apps/plugin-shell": "^2",
+        "@tauri-apps/plugin-updater": "^2.9.0",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
         "effect": "^3.19.14",
@@ -36,6 +38,7 @@
         "react-router": "7",
         "scheduler": "^0.25.0",
         "shadcn": "^3.6.3",
+        "sonner": "^2.0.7",
         "tailwind-merge": "^3.4.0",
       },
       "devDependencies": {
@@ -53,7 +56,7 @@
     },
     "apps/http": {
       "name": "@sandcastle/http",
-      "version": "0.1.0",
+      "version": "0.1.3",
       "dependencies": {
         "@anthropic-ai/claude-agent-sdk": "^0.2.5",
         "@anthropic-ai/sdk": "^0.71.2",
@@ -75,7 +78,7 @@
     },
     "apps/web": {
       "name": "web",
-      "version": "0.1.0",
+      "version": "0.1.3",
       "dependencies": {
         "@base-ui/react": "^1.0.0",
         "@effect-atom/atom": "^0.4.11",
@@ -105,7 +108,7 @@
     },
     "packages/petname": {
       "name": "@sandcastle/petname",
-      "version": "0.1.0",
+      "version": "0.1.3",
       "dependencies": {
         "effect": "^3.19.14",
       },
@@ -118,7 +121,7 @@
     },
     "packages/rpc": {
       "name": "@sandcastle/rpc",
-      "version": "0.1.0",
+      "version": "0.1.3",
       "dependencies": {
         "@effect/rpc": "^0.73.0",
         "@sandcastle/schemas": "workspace:*",
@@ -131,7 +134,7 @@
     },
     "packages/schemas": {
       "name": "@sandcastle/schemas",
-      "version": "0.1.0",
+      "version": "0.1.3",
       "dependencies": {
         "effect": "^3.19.14",
       },
@@ -144,7 +147,7 @@
     },
     "packages/storage": {
       "name": "@sandcastle/storage",
-      "version": "0.1.0",
+      "version": "0.1.3",
       "dependencies": {
         "@sandcastle/schemas": "workspace:*",
         "effect": "^3.19.14",
@@ -156,7 +159,7 @@
     },
     "packages/tooling": {
       "name": "@sandcastle/tooling",
-      "version": "0.1.0",
+      "version": "0.1.3",
       "devDependencies": {
         "@types/bun": "latest",
       },
@@ -166,7 +169,7 @@
     },
     "packages/ui": {
       "name": "@sandcastle/ui",
-      "version": "0.1.0",
+      "version": "0.1.3",
       "dependencies": {
         "@ai-sdk/react": "^3.0.30",
         "@base-ui/react": "^1.0.0",
@@ -195,6 +198,7 @@
         "lucide-react": "^0.511.0",
         "motion": "^12.25.0",
         "nanoid": "^5.1.6",
+        "next-themes": "^0.4.6",
         "react": "^19",
         "react-dom": "^19",
         "react-router": "^7.12.0",
@@ -202,6 +206,7 @@
         "remark-breaks": "^4.0.0",
         "shadcn": "^3.6.3",
         "shiki": "^3.21.0",
+        "sonner": "^2.0.7",
         "streamdown": "^1.6.11",
         "tailwind-merge": "^3.3.1",
         "tokenlens": "^1.3.1",
@@ -218,7 +223,7 @@
     },
     "packages/worktree": {
       "name": "@sandcastle/worktree",
-      "version": "0.1.0",
+      "version": "0.1.3",
       "dependencies": {
         "effect": "^3.19.14",
       },
@@ -806,7 +811,11 @@
 
     "@tauri-apps/plugin-dialog": ["@tauri-apps/plugin-dialog@2.4.2", "", { "dependencies": { "@tauri-apps/api": "^2.8.0" } }, "sha512-lNIn5CZuw8WZOn8zHzmFmDSzg5zfohWoa3mdULP0YFh/VogVdMVWZPcWSHlydsiJhRQYaTNSYKN7RmZKE2lCYQ=="],
 
+    "@tauri-apps/plugin-process": ["@tauri-apps/plugin-process@2.3.1", "", { "dependencies": { "@tauri-apps/api": "^2.8.0" } }, "sha512-nCa4fGVaDL/B9ai03VyPOjfAHRHSBz5v6F/ObsB73r/dA3MHHhZtldaDMIc0V/pnUw9ehzr2iEG+XkSEyC0JJA=="],
+
     "@tauri-apps/plugin-shell": ["@tauri-apps/plugin-shell@2.3.4", "", { "dependencies": { "@tauri-apps/api": "^2.8.0" } }, "sha512-ktsRWf8wHLD17aZEyqE8c5x98eNAuTizR1FSX475zQ4TxaiJnhwksLygQz+AGwckJL5bfEP13nWrlTNQJUpKpA=="],
+
+    "@tauri-apps/plugin-updater": ["@tauri-apps/plugin-updater@2.9.0", "", { "dependencies": { "@tauri-apps/api": "^2.6.0" } }, "sha512-j++sgY8XpeDvzImTrzWA08OqqGqgkNyxczLD7FjNJJx/uXxMZFz5nDcfkyoI/rCjYuj2101Tci/r/HFmOmoxCg=="],
 
     "@tokenlens/core": ["@tokenlens/core@1.3.0", "", {}, "sha512-d8YNHNC+q10bVpi95fELJwJyPVf1HfvBEI18eFQxRSZTdByXrP+f/ZtlhSzkx0Jl0aEmYVeBA5tPeeYRioLViQ=="],
 
@@ -1620,6 +1629,8 @@
 
     "next": ["next@16.1.1", "", { "dependencies": { "@next/env": "16.1.1", "@swc/helpers": "0.5.15", "baseline-browser-mapping": "^2.8.3", "caniuse-lite": "^1.0.30001579", "postcss": "8.4.31", "styled-jsx": "5.1.6" }, "optionalDependencies": { "@next/swc-darwin-arm64": "16.1.1", "@next/swc-darwin-x64": "16.1.1", "@next/swc-linux-arm64-gnu": "16.1.1", "@next/swc-linux-arm64-musl": "16.1.1", "@next/swc-linux-x64-gnu": "16.1.1", "@next/swc-linux-x64-musl": "16.1.1", "@next/swc-win32-arm64-msvc": "16.1.1", "@next/swc-win32-x64-msvc": "16.1.1", "sharp": "^0.34.4" }, "peerDependencies": { "@opentelemetry/api": "^1.1.0", "@playwright/test": "^1.51.1", "babel-plugin-react-compiler": "*", "react": "^18.2.0 || 19.0.0-rc-de68d2f4-20241204 || ^19.0.0", "react-dom": "^18.2.0 || 19.0.0-rc-de68d2f4-20241204 || ^19.0.0", "sass": "^1.3.0" }, "optionalPeers": ["@opentelemetry/api", "@playwright/test", "babel-plugin-react-compiler", "sass"], "bin": { "next": "dist/bin/next" } }, "sha512-QI+T7xrxt1pF6SQ/JYFz95ro/mg/1Znk5vBebsWwbpejj1T0A23hO7GYEaVac9QUOT2BIMiuzm0L99ooq7k0/w=="],
 
+    "next-themes": ["next-themes@0.4.6", "", { "peerDependencies": { "react": "^16.8 || ^17 || ^18 || ^19 || ^19.0.0-rc", "react-dom": "^16.8 || ^17 || ^18 || ^19 || ^19.0.0-rc" } }, "sha512-pZvgD5L0IEvX5/9GWyHMf3m8BKiVQwsCMHfoFosXtXBMnaS0ZnIJ9ST4b4NqLVKDEm8QBxoNNGNaBv2JNF6XNA=="],
+
     "node-addon-api": ["node-addon-api@7.1.1", "", {}, "sha512-5m3bsyrjFWE1xf7nz7YXdN4udnVtXK6/Yfgn5qnahL6bCkf2yKt4k3nuTKAtT4r3IG8JNR2ncsIMdZuAzJjHQQ=="],
 
     "node-domexception": ["node-domexception@1.0.0", "", {}, "sha512-/jKZoMpw0F8GRwl4/eLROPA3cfcXtLApP0QzLmUT/HuPCZWyB7IY9ZrMeKw2O/nFIqPQB3PVM9aYm0F312AXDQ=="],
@@ -1827,6 +1838,8 @@
     "signal-exit": ["signal-exit@4.1.0", "", {}, "sha512-bzyZ1e88w9O1iNJbKnOlvYTrWPDl46O1bG0D3XInv+9tkPrxrN8jUUTiFlDkkmKWgn1M6CfIA13SuGqOa9Korw=="],
 
     "sisteransi": ["sisteransi@1.0.5", "", {}, "sha512-bLGGlR1QxBcynn2d5YmDX4MGjlZvy2MRBDRNHLJ8VI6l6+9FUiyTFNJ0IveOSP0bcXgVDPRcfGqA0pjaqUpfVg=="],
+
+    "sonner": ["sonner@2.0.7", "", { "peerDependencies": { "react": "^18.0.0 || ^19.0.0 || ^19.0.0-rc", "react-dom": "^18.0.0 || ^19.0.0 || ^19.0.0-rc" } }, "sha512-W6ZN4p58k8aDKA4XPcx2hpIQXBRAgyiWVkYhT7CvK6D3iAu7xjvVyhQHg2/iaKJZ1XVJ4r7XuwGL+WGEK37i9w=="],
 
     "source-map": ["source-map@0.6.1", "", {}, "sha512-UjgapumWlbMhkBgzT7Ykc5YXUT46F0iKu8SGXq0bcwP5dz/h0Plj6enJqjz1Zbq2l5WaqYnrVbwWOWMyF3F47g=="],
 
