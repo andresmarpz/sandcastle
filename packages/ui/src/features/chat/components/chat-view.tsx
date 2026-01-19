@@ -41,6 +41,7 @@ import {
 } from "@/features/sidebar/sessions/session-status-indicator";
 import { ChatInput } from "./chat-input";
 import { GroupedMessageList } from "./grouped-message-list";
+import { OpenPathButton } from "./open-path-button";
 
 interface ChatViewProps {
 	sessionId: string;
@@ -218,6 +219,7 @@ function ChatViewContent({
 								session={session.value}
 								status={sessionStatus}
 								isConnected={isConnected}
+								workingPath={workingPath}
 							/>
 						</div>
 					),
@@ -239,9 +241,13 @@ interface SessionMetadataPanelProps {
 	session: Session;
 	status: "idle" | "streaming";
 	isConnected: boolean;
+	workingPath?: string;
 }
 
-function SessionMetadataPanel({ session }: SessionMetadataPanelProps) {
+function SessionMetadataPanel({
+	session,
+	workingPath,
+}: SessionMetadataPanelProps) {
 	const sessionStatusIndicator = useSessionStatusIndicator({
 		sessionId: session?.id,
 		status: session?.status,
@@ -323,6 +329,15 @@ function SessionMetadataPanel({ session }: SessionMetadataPanelProps) {
 						</span>
 					</div>
 				</div>
+
+				{workingPath && (
+					<div className="flex flex-col gap-1">
+						<span className="text-muted-foreground text-xs font-medium uppercase">
+							Working Directory
+						</span>
+						<OpenPathButton path={workingPath} />
+					</div>
+				)}
 			</div>
 		</div>
 	);
