@@ -220,6 +220,7 @@ function ChatViewContent({
 						status={chatStatus}
 						autonomous={autonomous}
 						onAutonomousChange={setAutonomous}
+						autoFocus
 					/>
 				</div>
 				<div className="hidden sm:block" />

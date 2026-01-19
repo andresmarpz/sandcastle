@@ -7,7 +7,7 @@ import {
 	IconPlus,
 	IconRobot,
 } from "@tabler/icons-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/button";
 import {
 	Command,
@@ -57,15 +57,11 @@ interface PlanSelectorProps {
 
 export function PlanSelector({ value, onValueChange }: PlanSelectorProps) {
 	const [open, setOpen] = useState(false);
-	const [selectedMode, setSelectedMode] = useState<Mode>(value ?? "plan");
+	const [internalMode, setInternalMode] = useState<Mode>(value ?? "plan");
 	const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
-	// Sync with controlled value prop
-	useEffect(() => {
-		if (value !== undefined && value !== selectedMode) {
-			setSelectedMode(value);
-		}
-	}, [value, selectedMode]);
+	// Use controlled value if provided, otherwise use internal state
+	const selectedMode = value ?? internalMode;
 
 	const handleModeSelect = (newValue: string) => {
 		if (newValue === "create") {
@@ -74,7 +70,9 @@ export function PlanSelector({ value, onValueChange }: PlanSelectorProps) {
 			return;
 		}
 		const mode = newValue as Mode;
-		setSelectedMode(mode);
+		// Update internal state for uncontrolled mode
+		setInternalMode(mode);
+		// Notify parent
 		onValueChange?.(mode);
 		setOpen(false);
 	};
@@ -91,7 +89,9 @@ export function PlanSelector({ value, onValueChange }: PlanSelectorProps) {
 					className="w-auto gap-1.5 px-2"
 				>
 					<SelectedIcon className={cn("size-3.5", selectedColor)} />
-					<span className="text-[13px]">{selectedModeData?.label ?? "Plan"}</span>
+					<span className="text-[13px]">
+						{selectedModeData?.label ?? "Plan"}
+					</span>
 					<IconChevronDown className="size-3 text-muted-foreground" />
 				</PopoverTrigger>
 				<PopoverContent className="w-48 p-0" align="start">
@@ -107,7 +107,9 @@ export function PlanSelector({ value, onValueChange }: PlanSelectorProps) {
 										onSelect={handleModeSelect}
 										data-checked={selectedMode === mode.value}
 									>
-										<mode.icon className={cn("size-3.5 shrink-0", mode.color)} />
+										<mode.icon
+											className={cn("size-3.5 shrink-0", mode.color)}
+										/>
 										<span>{mode.label}</span>
 									</CommandItem>
 								))}

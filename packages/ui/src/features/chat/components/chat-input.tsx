@@ -2,7 +2,13 @@
 
 import { IconSquare } from "@tabler/icons-react";
 import type { ChatStatus, UIMessage } from "ai";
-import { type ChangeEvent, useCallback, useRef, useState } from "react";
+import {
+	type ChangeEvent,
+	useCallback,
+	useEffect,
+	useRef,
+	useState,
+} from "react";
 import {
 	PromptInput,
 	PromptInputActions,
@@ -14,7 +20,7 @@ import {
 } from "@/components/ai-elements/prompt-input";
 import type { SendResult } from "@/features/chat/store";
 import { FilePickerPopover } from "./file-search";
-import { PlanSelector, type Mode } from "./plan-selector";
+import { type Mode, PlanSelector } from "./plan-selector";
 
 interface ChatInputProps {
 	onSend: (options: {
@@ -26,6 +32,7 @@ interface ChatInputProps {
 	autonomous: boolean;
 	onAutonomousChange: (autonomous: boolean) => void;
 	workingPath?: string;
+	autoFocus?: boolean;
 }
 
 export function ChatInput({
@@ -35,6 +42,7 @@ export function ChatInput({
 	autonomous,
 	onAutonomousChange,
 	workingPath,
+	autoFocus = false,
 }: ChatInputProps) {
 	const isStreaming = status === "streaming";
 	// Track when we're waiting for server acknowledgment
@@ -45,7 +53,14 @@ export function ChatInput({
 	const [atPosition, setAtPosition] = useState<number | null>(null);
 	const [inputValue, setInputValue] = useState("");
 	const containerRef = useRef<HTMLDivElement>(null);
-	const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+	const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+	// Auto-focus on mount when autoFocus is true
+	useEffect(() => {
+		if (autoFocus && textareaRef.current) {
+			textareaRef.current.focus();
+		}
+	}, [autoFocus]);
 
 	// Sync mode selector with autonomous state
 	const currentMode: Mode = autonomous ? "autonomous" : "plan";
@@ -64,8 +79,6 @@ export function ChatInput({
 			const cursor = e.currentTarget.selectionStart;
 			const prevValue = inputValue;
 
-			// Store ref to textarea
-			textareaRef.current = e.currentTarget;
 			setInputValue(text);
 
 			// Check if user just typed @ (text is longer and ends with @)
@@ -151,6 +164,7 @@ export function ChatInput({
 
 			<PromptInput onSubmit={handleSubmit}>
 				<PromptInputTextarea
+					ref={textareaRef}
 					placeholder="Type a message... (Cmd+Enter to send)"
 					disabled={isSending}
 					onChange={handleTextChange}
@@ -158,13 +172,19 @@ export function ChatInput({
 				/>
 				<PromptInputFooter>
 					<PromptInputTools>
-						<PlanSelector value={currentMode} onValueChange={handleModeChange} />
+						<PlanSelector
+							value={currentMode}
+							onValueChange={handleModeChange}
+						/>
 					</PromptInputTools>
 					<PromptInputActions>
 						{isStreaming && (
-							<PromptInputButton onClick={onStop} variant="destructive">
+							<PromptInputButton
+								onClick={onStop}
+								variant="destructive"
+								title="Stop generation"
+							>
 								<IconSquare className="size-4" />
-								Stop
 							</PromptInputButton>
 						)}
 						<PromptInputSubmit

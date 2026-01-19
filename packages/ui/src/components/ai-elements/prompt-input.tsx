@@ -948,7 +948,10 @@ export const PromptInputActions = ({
 	className,
 	...props
 }: PromptInputActionsProps) => (
-	<div className={cn("ml-auto flex items-center gap-1", className)} {...props} />
+	<div
+		className={cn("ml-auto flex items-center gap-1", className)}
+		{...props}
+	/>
 );
 
 export type PromptInputButtonProps = ComponentProps<typeof InputGroupButton>;
