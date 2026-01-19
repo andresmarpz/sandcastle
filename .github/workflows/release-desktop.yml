@@ -12,6 +12,10 @@ on:
         description: 'Git tag name'
         required: true
         type: string
+      release_id:
+        description: 'GitHub Release ID to upload artifacts to'
+        required: true
+        type: string
 
   # Manual trigger for testing or re-running builds
   workflow_dispatch:
@@ -124,18 +128,15 @@ jobs:
           projectPath: apps/desktop
           tauriScript: bunx tauri
           args: ${{ matrix.args }}
-          tagName: ${{ github.event.inputs.dry_run != 'true' && needs.prepare.outputs.tag || '' }}
-          releaseName: Sandcastle v${{ needs.prepare.outputs.version }}
-          releaseBody: |
-            See [CHANGELOG.md](https://github.com/andresmarpz/sandcastle/blob/main/CHANGELOG.md) for details.
-
-            ## Downloads
-            - **macOS (Apple Silicon)**: `.dmg` file for `aarch64`
-            - **macOS (Intel)**: `.dmg` file for `x86_64`
-            - **Windows**: `.msi` or `.exe` installer
-            - **Linux**: `.deb`, `.rpm`, or `.AppImage`
-          releaseDraft: true
-          prerelease: true
+          # When called from release-please, upload to existing release
+          # When manual dry_run, don't create/update any release
+          # When manual without dry_run, create new release with tag
+          releaseId: ${{ inputs.release_id }}
+          tagName: ${{ !inputs.release_id && github.event.inputs.dry_run != 'true' && needs.prepare.outputs.tag || '' }}
+          releaseName: ${{ !inputs.release_id && format('Sandcastle v{0}', needs.prepare.outputs.version) || '' }}
+          releaseBody: ${{ !inputs.release_id && 'See [CHANGELOG.md](https://github.com/andresmarpz/sandcastle/blob/main/CHANGELOG.md) for details.' || '' }}
+          releaseDraft: ${{ !inputs.release_id }}
+          prerelease: ${{ !inputs.release_id }}
 
       - name: Upload artifacts (dry run)
         if: github.event.inputs.dry_run == 'true'
