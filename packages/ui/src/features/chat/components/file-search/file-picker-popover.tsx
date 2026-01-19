@@ -12,7 +12,7 @@ import { FileSearchResults } from "./file-search-results";
 import { useDebouncedValue } from "./utils";
 
 export interface FilePickerPopoverProps {
-	worktreeId: string;
+	workingPath: string;
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	onSelect: (path: string) => void;
@@ -20,7 +20,7 @@ export interface FilePickerPopoverProps {
 }
 
 export function FilePickerPopover({
-	worktreeId,
+	workingPath,
 	open,
 	onOpenChange,
 	onSelect,
@@ -105,7 +105,7 @@ export function FilePickerPopover({
 							/>
 							<CommandList className="max-h-60">
 								<FileSearchResults
-									worktreeId={worktreeId}
+									workingPath={workingPath}
 									pattern={debouncedSearch}
 									onSelect={handleSelect}
 								/>

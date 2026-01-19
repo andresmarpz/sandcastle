@@ -56,20 +56,20 @@ function FileSearchResultsInner({
 }
 
 export interface FileSearchResultsProps {
-	worktreeId: string;
+	workingPath: string;
 	pattern: string;
 	onSelect: (path: string) => void;
 }
 
 export function FileSearchResults({
-	worktreeId,
+	workingPath,
 	pattern,
 	onSelect,
 }: FileSearchResultsProps) {
 	const atom = useMemo(() => {
 		if (!pattern || pattern.length === 0) return null;
-		return fileSearchAtomFamily({ worktreeId, pattern });
-	}, [worktreeId, pattern]);
+		return fileSearchAtomFamily({ workingPath, pattern });
+	}, [workingPath, pattern]);
 
 	if (!atom) {
 		return (

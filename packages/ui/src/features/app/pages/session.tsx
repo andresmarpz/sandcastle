@@ -37,7 +37,7 @@ function SessionPageContent({ sessionId }: { sessionId: string }) {
 			hasSessionCache ? (
 				<ChatView
 					sessionId={sessionId}
-					worktreeId={session.worktreeId ?? undefined}
+					workingPath={session.workingPath}
 				/>
 			) : (
 				<SessionLoading />
@@ -55,7 +55,7 @@ function SessionPageContent({ sessionId }: { sessionId: string }) {
 		onSuccess: () => (
 			<ChatView
 				sessionId={sessionId}
-				worktreeId={session?.worktreeId ?? undefined}
+				workingPath={session?.workingPath}
 			/>
 		),
 	});
