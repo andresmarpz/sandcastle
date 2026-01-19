@@ -169,13 +169,13 @@ function ChatViewContent({
 	// ].filter(Boolean) as Array<{ title: string; message: string }>;
 
 	return (
-		<div className="h-full w-full overflow-y-auto">
+		<div className="flex flex-col h-full w-full overflow-y-auto">
 			<div className="grid grid-cols-1 sm:grid-cols-[1fr_minmax(0,56rem)_1fr] min-h-full">
 				{/* Left column - empty spacer (hidden on small screens) */}
 				<div className="hidden sm:block" />
 
 				{/* Center column - main content */}
-				<div className="flex flex-col min-h-full">
+				<div className="flex flex-col">
 					<div className="flex-1">
 						<Conversation>
 							<ConversationContent>
@@ -214,7 +214,7 @@ function ChatViewContent({
 
 				{Result.matchWithWaiting(sessionResult, {
 					onSuccess: (session) => (
-						<div className="relative hidden sm:block">
+						<div className="hidden sm:block">
 							<SessionMetadataPanel
 								session={session.value}
 								status={sessionStatus}
