@@ -21,13 +21,13 @@ export type ReasoningPart = {
 };
 
 export type ToolInvocationPart = {
-	type: "tool-invocation";
+	type: "dynamic-tool";
 	toolCallId: string;
 	toolName: string;
-	args: unknown;
-	argsText: string;
-	state: "call" | "partial-call" | "result";
-	result?: unknown;
+	input: unknown;
+	inputText: string;
+	state: "input-streaming" | "input-available" | "output-available" | "output-error";
+	output?: unknown;
 	// Extended metadata
 	title?: string;
 	providerExecuted?: boolean;
@@ -76,9 +76,9 @@ interface ReasoningPartState {
 
 interface ToolPartState {
 	index: number;
-	argsText: string;
+	inputText: string;
 	toolName: string;
-	state: "partial-call" | "call" | "result";
+	state: "input-streaming" | "input-available" | "output-available" | "output-error";
 	title?: string;
 	providerExecuted?: boolean;
 	dynamic?: boolean;
@@ -162,20 +162,20 @@ export class MessageAccumulator {
 				const index = this.parts.length;
 				this.toolParts.set(event.toolCallId, {
 					index,
-					argsText: "",
+					inputText: "",
 					toolName: event.toolName,
-					state: "partial-call",
+					state: "input-streaming",
 					title: event.title,
 					providerExecuted: event.providerExecuted,
 					dynamic: event.dynamic,
 				});
 				this.parts.push({
-					type: "tool-invocation",
+					type: "dynamic-tool",
 					toolCallId: event.toolCallId,
 					toolName: event.toolName,
-					args: {},
-					argsText: "",
-					state: "partial-call",
+					input: {},
+					inputText: "",
+					state: "input-streaming",
 					title: event.title,
 					providerExecuted: event.providerExecuted,
 					dynamic: event.dynamic,
@@ -186,12 +186,12 @@ export class MessageAccumulator {
 			case "tool-input-delta": {
 				const state = this.toolParts.get(event.toolCallId);
 				if (state) {
-					state.argsText += event.inputTextDelta;
+					state.inputText += event.inputTextDelta;
 					const part = this.parts[state.index] as ToolInvocationPart;
-					part.argsText = state.argsText;
+					part.inputText = state.inputText;
 					// Try to parse partial JSON for preview
 					try {
-						part.args = JSON.parse(state.argsText);
+						part.input = JSON.parse(state.inputText);
 					} catch {
 						// Keep previous args if parse fails (partial JSON)
 					}
@@ -202,10 +202,10 @@ export class MessageAccumulator {
 			case "tool-input-available": {
 				const state = this.toolParts.get(event.toolCallId);
 				if (state) {
-					state.state = "call";
+					state.state = "input-available";
 					const part = this.parts[state.index] as ToolInvocationPart;
-					part.state = "call";
-					part.args = event.input;
+					part.state = "input-available";
+					part.input = event.input;
 					part.toolName = event.toolName;
 					if (event.title) part.title = event.title;
 					if (event.providerExecuted !== undefined)
@@ -216,20 +216,20 @@ export class MessageAccumulator {
 					const index = this.parts.length;
 					this.toolParts.set(event.toolCallId, {
 						index,
-						argsText: JSON.stringify(event.input),
+						inputText: JSON.stringify(event.input),
 						toolName: event.toolName,
-						state: "call",
+						state: "input-available",
 						title: event.title,
 						providerExecuted: event.providerExecuted,
 						dynamic: event.dynamic,
 					});
 					this.parts.push({
-						type: "tool-invocation",
+						type: "dynamic-tool",
 						toolCallId: event.toolCallId,
 						toolName: event.toolName,
-						args: event.input,
-						argsText: JSON.stringify(event.input),
-						state: "call",
+						input: event.input,
+						inputText: JSON.stringify(event.input),
+						state: "input-available",
 						title: event.title,
 						providerExecuted: event.providerExecuted,
 						dynamic: event.dynamic,
@@ -241,10 +241,10 @@ export class MessageAccumulator {
 			case "tool-input-error": {
 				const state = this.toolParts.get(event.toolCallId);
 				if (state) {
-					state.state = "call";
+					state.state = "input-available";
 					const part = this.parts[state.index] as ToolInvocationPart;
-					part.state = "call";
-					part.args = event.input;
+					part.state = "input-available";
+					part.input = event.input;
 				}
 				break;
 			}
@@ -252,10 +252,10 @@ export class MessageAccumulator {
 			case "tool-output-available": {
 				const state = this.toolParts.get(event.toolCallId);
 				if (state) {
-					state.state = "result";
+					state.state = "output-available";
 					const part = this.parts[state.index] as ToolInvocationPart;
-					part.state = "result";
-					part.result = event.output;
+					part.state = "output-available";
+					part.output = event.output;
 				}
 				break;
 			}
@@ -263,10 +263,10 @@ export class MessageAccumulator {
 			case "tool-output-error": {
 				const state = this.toolParts.get(event.toolCallId);
 				if (state) {
-					state.state = "result";
+					state.state = "output-error";
 					const part = this.parts[state.index] as ToolInvocationPart;
-					part.state = "result";
-					part.result = { error: event.errorText };
+					part.state = "output-error";
+					part.output = { error: event.errorText };
 				}
 				break;
 			}
@@ -274,10 +274,10 @@ export class MessageAccumulator {
 			case "tool-output-denied": {
 				const state = this.toolParts.get(event.toolCallId);
 				if (state) {
-					state.state = "result";
+					state.state = "output-error";
 					const part = this.parts[state.index] as ToolInvocationPart;
-					part.state = "result";
-					part.result = { denied: true };
+					part.state = "output-error";
+					part.output = { denied: true };
 				}
 				break;
 			}
