@@ -68,6 +68,7 @@ export class ChatRpc extends RpcGroup.make(
 			content: Schema.String,
 			parts: Schema.optional(Schema.Array(MessagePart)),
 			clientMessageId: Schema.String,
+			mode: Schema.optional(Schema.Literal("plan", "build")),
 		},
 		success: SendMessageResult,
 		error: Schema.Union(ChatSessionNotFoundRpcError, ChatOperationRpcError),

@@ -22,6 +22,7 @@ export const ChatRpcHandlers = ChatRpc.toLayer(
 					params.content,
 					params.clientMessageId,
 					params.parts,
+					params.mode,
 				),
 
 			"chat.interrupt": (params) => hub.interrupt(params.sessionId),

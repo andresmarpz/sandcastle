@@ -13,6 +13,7 @@ export interface UseChatSessionResult extends ChatSessionState {
 	sendMessage: (options: {
 		text: string;
 		parts?: UIMessage["parts"];
+		mode?: "plan" | "build";
 	}) => Promise<SendResult>;
 	/** Stop the current stream */
 	stop: () => void;
@@ -63,8 +64,16 @@ export function useChatSession(sessionId: string): UseChatSessionResult {
 
 	// Memoized actions
 	const sendMessage = useCallback(
-		({ text, parts }: { text: string; parts?: UIMessage["parts"] }) => {
-			return chatStore.getState().send(sessionId, text, parts);
+		({
+			text,
+			parts,
+			mode,
+		}: {
+			text: string;
+			parts?: UIMessage["parts"];
+			mode?: "plan" | "build";
+		}) => {
+			return chatStore.getState().send(sessionId, text, parts, mode);
 		},
 		[sessionId],
 	);
@@ -107,8 +116,16 @@ export function useChatSession(sessionId: string): UseChatSessionResult {
  */
 export function useChatActions(sessionId: string) {
 	const sendMessage = useCallback(
-		({ text, parts }: { text: string; parts?: UIMessage["parts"] }) => {
-			return chatStore.getState().send(sessionId, text, parts);
+		({
+			text,
+			parts,
+			mode,
+		}: {
+			text: string;
+			parts?: UIMessage["parts"];
+			mode?: "plan" | "build";
+		}) => {
+			return chatStore.getState().send(sessionId, text, parts, mode);
 		},
 		[sessionId],
 	);

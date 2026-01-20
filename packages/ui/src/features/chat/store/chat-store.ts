@@ -91,6 +91,7 @@ export interface ChatStoreActions {
 		sessionId: string,
 		content: string,
 		parts?: UIMessage["parts"],
+		mode?: "plan" | "build",
 	): Promise<SendResult>;
 	/** Stop the current stream for a session */
 	stop(sessionId: string): Promise<void>;
@@ -541,6 +542,7 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 			sessionId: string,
 			content: string,
 			parts?: UIMessage["parts"],
+			mode?: "plan" | "build",
 		): Promise<{ status: "started" | "queued"; clientMessageId: string }> {
 			const clientMessageId = `client-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
@@ -579,6 +581,7 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 							...(fileParts && fileParts.length > 0
 								? { parts: fileParts }
 								: {}),
+							...(mode ? { mode } : {}),
 						}),
 					),
 				),

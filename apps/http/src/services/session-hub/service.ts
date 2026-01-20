@@ -41,6 +41,7 @@ export interface SessionHubInterface {
 		content: string,
 		clientMessageId: string,
 		parts?: readonly MessagePart[],
+		mode?: "plan" | "build",
 	) => Effect.Effect<
 		SendMessageResult,
 		ChatSessionNotFoundRpcError | ChatOperationRpcError

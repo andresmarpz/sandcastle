@@ -37,10 +37,6 @@ import type {
 	SessionState,
 } from "./types";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Structured Logging
-// ─────────────────────────────────────────────────────────────────────────────
-
 type LogLevel = "INFO" | "WARN" | "ERROR";
 
 interface LogContext {
@@ -507,6 +503,7 @@ export const makeSessionHub = Effect.gen(function* () {
 		content: string,
 		clientMessageId: string,
 		parts?: readonly MessagePart[],
+		mode?: "plan" | "build",
 	): Effect.Effect<SendMessageResult, ChatOperationRpcError> =>
 		Effect.gen(function* () {
 			const messageId = crypto.randomUUID();
@@ -590,8 +587,15 @@ export const makeSessionHub = Effect.gen(function* () {
 			const queryHandle = yield* claudeSDK
 				.query(content, {
 					cwd: dbSession.workingPath,
-					resume: claudeSessionId ?? undefined,
-					permissionMode: "bypassPermissions",
+					...(claudeSessionId && {
+						resume: claudeSessionId,
+					}),
+					permissionMode: mode === "plan" ? "plan" : "bypassPermissions",
+					systemPrompt: {
+						preset: "claude_code",
+						type: "preset",
+					},
+					settingSources: ["project", "user", "local"],
 				})
 				.pipe(
 					Effect.tapError((e) =>
@@ -656,7 +660,7 @@ export const makeSessionHub = Effect.gen(function* () {
 	// ─── Service Implementation ──────────────────────────────────────────────
 
 	const service: SessionHubInterface = {
-		sendMessage: (sessionId, content, clientMessageId, parts) =>
+		sendMessage: (sessionId, content, clientMessageId, parts, mode) =>
 			Effect.gen(function* () {
 				structuredLog("INFO", "send_message_begin", {
 					sessionId,
@@ -713,6 +717,7 @@ export const makeSessionHub = Effect.gen(function* () {
 					content,
 					clientMessageId,
 					parts,
+					mode,
 				);
 			}),
 
@@ -762,7 +767,7 @@ export const makeSessionHub = Effect.gen(function* () {
 				structuredLog("INFO", "subscribe_initial_state_sent", { sessionId });
 
 				// Subscribe to PubSub and forward events to mailbox
-				const fiber = yield* Stream.fromPubSub(session.pubsub).pipe(
+				yield* Stream.fromPubSub(session.pubsub).pipe(
 					Stream.tap((event) =>
 						Effect.sync(() => {
 							structuredLog("INFO", "pubsub_event_received", {
