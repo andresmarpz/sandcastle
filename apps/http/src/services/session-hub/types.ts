@@ -18,12 +18,17 @@ import type { QueryHandle } from "../../agents/claude";
 /**
  * Represents a pending tool request awaiting user response.
  * Used to track promises that MCP handlers are awaiting.
+ *
+ * Note: The `input` is not stored here - it's already available in the
+ * `tool-input-available` stream event (persisted in buffer/DB). The pending
+ * approval is just a transaction linked to an existing tool call by toolCallId.
  */
 export interface PendingToolRequest {
+	readonly toolCallId: string;
+	readonly toolName: string;
+	readonly createdAt: number;
 	readonly resolve: (value: ToolApprovalResponse) => void;
 	readonly reject: (reason: unknown) => void;
-	readonly createdAt: number;
-	readonly toolName: string;
 }
 
 /**

@@ -784,6 +784,15 @@ export const makeSessionHub = Effect.gen(function* () {
 				const historyCursor = yield* Ref.get(session.historyCursorRef);
 				const buffer = yield* Ref.get(session.bufferRef);
 				const turnContext = yield* Ref.get(session.activeTurnContextRef);
+				const pendingRequests = yield* Ref.get(session.pendingToolRequestsRef);
+
+				// Convert pending requests to approval references (just toolCallId + toolName)
+				const pendingApprovals = Array.from(pendingRequests.values()).map(
+					(req) => ({
+						toolCallId: req.toolCallId,
+						toolName: req.toolName,
+					}),
+				);
 
 				const initialState: SessionEvent = {
 					_tag: "InitialState",
@@ -795,6 +804,7 @@ export const makeSessionHub = Effect.gen(function* () {
 					},
 					buffer: [...buffer],
 					...(turnContext ? { turnContext } : {}),
+					...(pendingApprovals.length > 0 ? { pendingApprovals } : {}),
 				};
 
 				structuredLog("INFO", "subscribe_initial_state", {
@@ -804,6 +814,7 @@ export const makeSessionHub = Effect.gen(function* () {
 					queueLength: queue.length,
 					bufferLength: buffer.length,
 					hasTurnContext: turnContext !== null,
+					pendingApprovalsCount: pendingApprovals.length,
 				});
 
 				// Send initial state
