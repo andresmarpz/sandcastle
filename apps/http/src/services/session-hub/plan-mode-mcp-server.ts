@@ -31,28 +31,38 @@ export interface CreatePlanModeMcpServerParams {
 
 /**
  * Extract the tool use ID from the extra parameter passed to MCP handlers.
- * Falls back to a generated UUID if not found.
+ * Throws if not found, since we cannot match approvals without it.
  */
 function extractToolUseId(extra: unknown): string {
-	// The extra parameter may contain toolUseId in various structures
-	if (extra && typeof extra === "object") {
-		if ("toolUseId" in extra && typeof extra.toolUseId === "string") {
-			return extra.toolUseId;
-		}
-		// Check nested structures
-		if (
-			"context" in extra &&
-			typeof extra.context === "object" &&
-			extra.context !== null
-		) {
-			const context = extra.context as Record<string, unknown>;
-			if ("toolUseId" in context && typeof context.toolUseId === "string") {
-				return context.toolUseId;
+	if (extra && typeof extra === "object" && "_meta" in extra) {
+		const meta = extra._meta;
+		if (meta && typeof meta === "object" && "claudecode/toolUseId" in meta) {
+			const toolUseId = (meta as Record<string, unknown>)[
+				"claudecode/toolUseId"
+			];
+			if (typeof toolUseId === "string") {
+				return toolUseId;
 			}
 		}
 	}
-	// Fallback to generated ID
-	return crypto.randomUUID();
+	throw new Error(
+		"Failed to extract toolUseId from MCP handler extra parameter. " +
+			"Cannot process tool approval without a valid toolUseId.",
+	);
+}
+
+/**
+ * Custom error for plan approval timeouts with user-friendly message.
+ */
+class PlanApprovalTimeoutError extends Error {
+	constructor(timeoutMs: number) {
+		const timeoutMinutes = Math.round(timeoutMs / 60000);
+		super(
+			`Plan approval timed out after ${timeoutMinutes} minute${timeoutMinutes !== 1 ? "s" : ""}. ` +
+				"The plan was not approved in time. Please try again. If this persists, please file an issue.",
+		);
+		this.name = "PlanApprovalTimeoutError";
+	}
 }
 
 /**
@@ -61,7 +71,7 @@ function extractToolUseId(extra: unknown): string {
 function createTimeout(ms: number): Promise<never> {
 	return new Promise((_, reject) => {
 		setTimeout(() => {
-			reject(new Error(`Tool response timeout after ${ms}ms`));
+			reject(new PlanApprovalTimeoutError(ms));
 		}, ms);
 	});
 }
@@ -120,12 +130,13 @@ export function createPlanModeMcpServer(params: CreatePlanModeMcpServerParams) {
 					const { promise, resolve, reject } =
 						Promise.withResolvers<ToolApprovalResponse>();
 
-					// Store pending request
+					// Store pending request (input is available from tool-input-available event)
 					pendingRequests.set(toolUseId, {
+						toolCallId: toolUseId,
+						toolName,
+						createdAt: Date.now(),
 						resolve,
 						reject,
-						createdAt: Date.now(),
-						toolName,
 					});
 
 					// Emit event to UI
@@ -215,12 +226,13 @@ export function createPlanModeMcpServer(params: CreatePlanModeMcpServerParams) {
 					const { promise, resolve, reject } =
 						Promise.withResolvers<ToolApprovalResponse>();
 
-					// Store pending request
+					// Store pending request (input is available from tool-input-available event)
 					pendingRequests.set(toolUseId, {
+						toolCallId: toolUseId,
+						toolName,
+						createdAt: Date.now(),
 						resolve,
 						reject,
-						createdAt: Date.now(),
-						toolName,
 					});
 
 					// Emit event to UI
