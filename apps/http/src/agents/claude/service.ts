@@ -1,11 +1,11 @@
 import { Context, type Effect } from "effect";
 import type { ClaudeSDKError } from "./errors";
-import type { QueryHandle, QueryOptions } from "./types";
+import type { Options, QueryHandle } from "./types";
 
 export interface ClaudeSDKServiceInterface {
 	readonly query: (
 		prompt: string,
-		options: QueryOptions,
+		options: Options,
 	) => Effect.Effect<QueryHandle, ClaudeSDKError>;
 }
 

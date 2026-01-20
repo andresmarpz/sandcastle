@@ -1,3 +1,4 @@
+import type { ToolApprovalResponse } from "@sandcastle/schemas";
 import type { UIMessage } from "ai";
 import { useCallback, useEffect, useMemo } from "react";
 import { useStore } from "zustand";
@@ -6,6 +7,7 @@ import {
 	type ChatSessionState,
 	chatStore,
 	type SendResult,
+	type ToolApprovalRequest,
 } from "./chat-store";
 
 export interface UseChatSessionResult extends ChatSessionState {
@@ -13,6 +15,7 @@ export interface UseChatSessionResult extends ChatSessionState {
 	sendMessage: (options: {
 		text: string;
 		parts?: UIMessage["parts"];
+		mode?: "plan" | "build";
 	}) => Promise<SendResult>;
 	/** Stop the current stream */
 	stop: () => void;
@@ -63,8 +66,16 @@ export function useChatSession(sessionId: string): UseChatSessionResult {
 
 	// Memoized actions
 	const sendMessage = useCallback(
-		({ text, parts }: { text: string; parts?: UIMessage["parts"] }) => {
-			return chatStore.getState().send(sessionId, text, parts);
+		({
+			text,
+			parts,
+			mode,
+		}: {
+			text: string;
+			parts?: UIMessage["parts"];
+			mode?: "plan" | "build";
+		}) => {
+			return chatStore.getState().send(sessionId, text, parts, mode);
 		},
 		[sessionId],
 	);
@@ -107,8 +118,16 @@ export function useChatSession(sessionId: string): UseChatSessionResult {
  */
 export function useChatActions(sessionId: string) {
 	const sendMessage = useCallback(
-		({ text, parts }: { text: string; parts?: UIMessage["parts"] }) => {
-			return chatStore.getState().send(sessionId, text, parts);
+		({
+			text,
+			parts,
+			mode,
+		}: {
+			text: string;
+			parts?: UIMessage["parts"];
+			mode?: "plan" | "build";
+		}) => {
+			return chatStore.getState().send(sessionId, text, parts, mode);
 		},
 		[sessionId],
 	);
@@ -211,4 +230,107 @@ export function useChatConnectionState(sessionId: string): {
 	const isConnected = useChatSessionSelector(sessionId, (s) => s.isConnected);
 	const error = useChatSessionSelector(sessionId, (s) => s.error);
 	return useMemo(() => ({ isConnected, error }), [isConnected, error]);
+}
+
+/**
+ * Hook for reading pending tool approval requests.
+ *
+ * Returns an array of pending requests for the session.
+ *
+ * @example
+ * ```tsx
+ * function ApprovalDialogs({ sessionId }: { sessionId: string }) {
+ *   const pendingApprovals = usePendingToolApprovals(sessionId)
+ *
+ *   return pendingApprovals.map(request => (
+ *     <ToolApprovalDialog key={request.toolCallId} request={request} />
+ *   ))
+ * }
+ * ```
+ */
+export function usePendingToolApprovals(
+	sessionId: string,
+): ToolApprovalRequest[] {
+	return useStore(
+		chatStore,
+		useShallow((state) => {
+			const session = state.getSession(sessionId);
+			return Array.from(session.pendingApprovalRequests.values());
+		}),
+	);
+}
+
+/**
+ * Hook for responding to tool approval requests.
+ *
+ * Returns a callback that sends the response and removes
+ * the request from the pending map.
+ *
+ * @example
+ * ```tsx
+ * function ApprovalDialog({ sessionId, request }: Props) {
+ *   const respond = useRespondToToolApproval(sessionId)
+ *
+ *   const handleApprove = () => {
+ *     respond({
+ *       type: "tool-approval-response",
+ *       toolCallId: request.toolCallId,
+ *       toolName: request.toolName,
+ *       approved: true,
+ *       payload: { type: "ExitPlanModePayload" }
+ *     })
+ *   }
+ *
+ *   return <button onClick={handleApprove}>Approve</button>
+ * }
+ * ```
+ */
+export function useRespondToToolApproval(
+	sessionId: string,
+): (response: ToolApprovalResponse) => Promise<boolean> {
+	return useCallback(
+		(response: ToolApprovalResponse) => {
+			return chatStore.getState().respondToToolApproval(sessionId, response);
+		},
+		[sessionId],
+	);
+}
+
+/**
+ * Hook for setting the session mode (plan/build).
+ *
+ * The mode can also change automatically when the server
+ * emits a mode-change event (e.g., after ExitPlanMode approval).
+ *
+ * @example
+ * ```tsx
+ * function ModeSelector({ sessionId }: { sessionId: string }) {
+ *   const { mode } = useChatSession(sessionId)
+ *   const setMode = useSetChatMode(sessionId)
+ *
+ *   return (
+ *     <select value={mode} onChange={(e) => setMode(e.target.value as "plan" | "build")}>
+ *       <option value="plan">Plan</option>
+ *       <option value="build">Build</option>
+ *     </select>
+ *   )
+ * }
+ * ```
+ */
+export function useSetChatMode(
+	sessionId: string,
+): (mode: "plan" | "build") => void {
+	return useCallback(
+		(mode: "plan" | "build") => {
+			chatStore.getState().setMode(sessionId, mode);
+		},
+		[sessionId],
+	);
+}
+
+/**
+ * Hook for reading the current session mode.
+ */
+export function useChatMode(sessionId: string): "plan" | "build" {
+	return useChatSessionSelector(sessionId, (s) => s.mode);
 }

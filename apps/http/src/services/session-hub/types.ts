@@ -5,6 +5,7 @@ import type {
 	QueuedMessage,
 	SessionEvent,
 	StreamingStatus,
+	ToolApprovalResponse,
 } from "@sandcastle/schemas";
 import type { Fiber, PubSub, Ref } from "effect";
 import type {
@@ -13,6 +14,17 @@ import type {
 	StreamState,
 } from "../../adapters/claude";
 import type { QueryHandle } from "../../agents/claude";
+
+/**
+ * Represents a pending tool request awaiting user response.
+ * Used to track promises that MCP handlers are awaiting.
+ */
+export interface PendingToolRequest {
+	readonly resolve: (value: ToolApprovalResponse) => void;
+	readonly reject: (reason: unknown) => void;
+	readonly createdAt: number;
+	readonly toolName: string;
+}
 
 /**
  * Context for the current active turn (for late subscriber catch-up).
@@ -83,6 +95,9 @@ export interface SessionState {
 
 	/** Context for active turn (for late subscriber catch-up) */
 	readonly activeTurnContextRef: Ref.Ref<ActiveTurnContext | null>;
+
+	/** Pending tool requests awaiting user response (for plan mode) */
+	readonly pendingToolRequestsRef: Ref.Ref<Map<string, PendingToolRequest>>;
 }
 
 /**

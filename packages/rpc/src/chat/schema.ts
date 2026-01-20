@@ -5,10 +5,15 @@ import {
 	QueuedMessage,
 	SessionEvent,
 	SessionSnapshot,
+	ToolApprovalResponse,
 } from "@sandcastle/schemas";
 import { Schema } from "effect";
 
-import { ChatOperationRpcError, ChatSessionNotFoundRpcError } from "./errors";
+import {
+	ChatOperationRpcError,
+	ChatSessionNotFoundRpcError,
+	ToolApprovalNotFoundRpcError,
+} from "./errors";
 
 /** Result of sending a message */
 export class SendMessageResult extends Schema.Class<SendMessageResult>(
@@ -68,6 +73,7 @@ export class ChatRpc extends RpcGroup.make(
 			content: Schema.String,
 			parts: Schema.optional(Schema.Array(MessagePart)),
 			clientMessageId: Schema.String,
+			mode: Schema.optional(Schema.Literal("plan", "build")),
 		},
 		success: SendMessageResult,
 		error: Schema.Union(ChatSessionNotFoundRpcError, ChatOperationRpcError),
@@ -125,5 +131,21 @@ export class ChatRpc extends RpcGroup.make(
 		},
 		success: GetHistoryResult,
 		error: ChatSessionNotFoundRpcError,
+	}),
+
+	/**
+	 * Respond to a tool approval request.
+	 * Resolves the pending MCP tool handler Promise with the user's decision.
+	 */
+	Rpc.make("chat.respondToToolApproval", {
+		payload: {
+			sessionId: Schema.String,
+			response: ToolApprovalResponse,
+		},
+		success: Schema.Struct({ acknowledged: Schema.Boolean }),
+		error: Schema.Union(
+			ChatSessionNotFoundRpcError,
+			ToolApprovalNotFoundRpcError,
+		),
 	}),
 ) {}

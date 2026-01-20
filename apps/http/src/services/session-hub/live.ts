@@ -5,6 +5,7 @@ import {
 	DequeueResult,
 	InterruptResult,
 	SendMessageResult,
+	ToolApprovalNotFoundRpcError,
 } from "@sandcastle/rpc";
 import type {
 	ChatMessage,
@@ -13,6 +14,7 @@ import type {
 	QueuedMessage,
 	SessionEvent,
 	SessionSnapshot,
+	ToolApprovalResponse,
 } from "@sandcastle/schemas";
 import { StorageService, StorageServiceDefault } from "@sandcastle/storage";
 import { Effect, Fiber, Layer, Mailbox, PubSub, Ref, Stream } from "effect";
@@ -30,16 +32,14 @@ import {
 	ClaudeSDKServiceLive,
 	type QueryHandle,
 } from "../../agents/claude";
+import { createPlanModeMcpServer } from "./plan-mode-mcp-server";
 import { SessionHub, type SessionHubInterface } from "./service";
 import type {
 	ActiveTurnContext,
 	HistoryCursor as HistoryCursorType,
+	PendingToolRequest,
 	SessionState,
 } from "./types";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Structured Logging
-// ─────────────────────────────────────────────────────────────────────────────
 
 type LogLevel = "INFO" | "WARN" | "ERROR";
 
@@ -98,6 +98,9 @@ const createSessionState = (
 		const activeTurnContextRef = yield* Ref.make<ActiveTurnContext | null>(
 			null,
 		);
+		const pendingToolRequestsRef = yield* Ref.make<
+			Map<string, PendingToolRequest>
+		>(new Map());
 
 		return {
 			pubsub,
@@ -112,6 +115,7 @@ const createSessionState = (
 			streamStateRef,
 			claudeSessionIdRef,
 			activeTurnContextRef,
+			pendingToolRequestsRef,
 		} satisfies SessionState;
 	});
 
@@ -203,6 +207,10 @@ export const makeSessionHub = Effect.gen(function* () {
 			Ref.set(session.accumulatorRef, null),
 			Ref.set(session.streamStateRef, createStreamState()),
 			Ref.set(session.activeTurnContextRef, null),
+			Ref.set(
+				session.pendingToolRequestsRef,
+				new Map<string, PendingToolRequest>(),
+			),
 		]);
 
 	// ─── Helper: Auto-Dequeue ────────────────────────────────────────────────
@@ -507,6 +515,7 @@ export const makeSessionHub = Effect.gen(function* () {
 		content: string,
 		clientMessageId: string,
 		parts?: readonly MessagePart[],
+		mode?: "plan" | "build",
 	): Effect.Effect<SendMessageResult, ChatOperationRpcError> =>
 		Effect.gen(function* () {
 			const messageId = crypto.randomUUID();
@@ -585,13 +594,53 @@ export const makeSessionHub = Effect.gen(function* () {
 				),
 			);
 
-			// 5. Start Claude stream
+			// 5. Create MCP server for plan mode interactive tools
+			const pendingRequests = yield* Ref.get(session.pendingToolRequestsRef);
+			const emitEvent = (
+				event: import("@sandcastle/schemas").ChatStreamEvent,
+			) => {
+				// Emit synchronously - we don't need to await this
+				// Using Effect.runFork to not block the handler
+				Effect.runFork(
+					broadcast(session, {
+						_tag: "StreamEvent",
+						turnId,
+						event,
+					}),
+				);
+			};
+			const planModeMcpServer = createPlanModeMcpServer({
+				pendingRequests,
+				emitEvent,
+			});
+
+			// 6. Start Claude stream
 			const claudeSessionId = yield* Ref.get(session.claudeSessionIdRef);
 			const queryHandle = yield* claudeSDK
 				.query(content, {
 					cwd: dbSession.workingPath,
-					resume: claudeSessionId ?? undefined,
-					permissionMode: "bypassPermissions",
+					...(claudeSessionId && {
+						resume: claudeSessionId,
+					}),
+					permissionMode: mode === "plan" ? "plan" : "bypassPermissions",
+					systemPrompt: {
+						preset: "claude_code",
+						type: "preset",
+					},
+					settingSources: ["project", "user", "local"],
+					mcpServers: {
+						"plan-mode-ui": planModeMcpServer,
+					},
+					// In plan mode:
+					// 1. Disable built-in interactive tools so our MCP server handlers take over
+					// 2. Auto-allow our MCP tools so they execute without permission prompts
+					...(mode === "plan" && {
+						disallowedTools: ["ExitPlanMode", "AskUserQuestion"],
+						allowedTools: [
+							"mcp__plan-mode-ui__ExitPlanMode",
+							"mcp__plan-mode-ui__AskUserQuestion",
+						],
+					}),
 				})
 				.pipe(
 					Effect.tapError((e) =>
@@ -623,14 +672,14 @@ export const makeSessionHub = Effect.gen(function* () {
 				resumeSessionId: claudeSessionId ?? undefined,
 			});
 
-			// 6. Create accumulator for persistence
+			// 7. Create accumulator for persistence
 			const accumulator = ClaudeCodeAgentAdapter.createAccumulator({
 				generateId: () => crypto.randomUUID(),
 				storageSessionId: sessionId,
 			});
 			yield* Ref.set(session.accumulatorRef, accumulator);
 
-			// 7. Fork stream processing fiber (use forkDaemon so it's not tied to request scope)
+			// 8. Fork stream processing fiber (use forkDaemon so it's not tied to request scope)
 			structuredLog("INFO", "forking_stream_fiber", {
 				sessionId,
 				turnId,
@@ -656,7 +705,7 @@ export const makeSessionHub = Effect.gen(function* () {
 	// ─── Service Implementation ──────────────────────────────────────────────
 
 	const service: SessionHubInterface = {
-		sendMessage: (sessionId, content, clientMessageId, parts) =>
+		sendMessage: (sessionId, content, clientMessageId, parts, mode) =>
 			Effect.gen(function* () {
 				structuredLog("INFO", "send_message_begin", {
 					sessionId,
@@ -713,6 +762,7 @@ export const makeSessionHub = Effect.gen(function* () {
 					content,
 					clientMessageId,
 					parts,
+					mode,
 				);
 			}),
 
@@ -762,7 +812,7 @@ export const makeSessionHub = Effect.gen(function* () {
 				structuredLog("INFO", "subscribe_initial_state_sent", { sessionId });
 
 				// Subscribe to PubSub and forward events to mailbox
-				const fiber = yield* Stream.fromPubSub(session.pubsub).pipe(
+				yield* Stream.fromPubSub(session.pubsub).pipe(
 					Stream.tap((event) =>
 						Effect.sync(() => {
 							structuredLog("INFO", "pubsub_event_received", {
@@ -817,7 +867,17 @@ export const makeSessionHub = Effect.gen(function* () {
 					return new InterruptResult({ interrupted: false });
 				}
 
-				// 1. Get the running fiber and query handle
+				// 1. Reject all pending tool requests
+				const pendingRequests = yield* Ref.get(session.pendingToolRequestsRef);
+				for (const [_id, pending] of pendingRequests) {
+					pending.reject(new Error("Session interrupted"));
+				}
+				yield* Ref.set(
+					session.pendingToolRequestsRef,
+					new Map<string, PendingToolRequest>(),
+				);
+
+				// 2. Get the running fiber and query handle
 				const fiber = yield* Ref.get(session.fiberRef);
 				const queryHandle = yield* Ref.get(session.queryHandleRef);
 				const turnId = yield* Ref.get(session.activeTurnIdRef);
@@ -826,19 +886,20 @@ export const makeSessionHub = Effect.gen(function* () {
 				structuredLog("WARN", "session_interrupted", {
 					sessionId,
 					turnId: turnId ?? undefined,
+					pendingRequestsRejected: pendingRequests.size,
 				});
 
-				// 2. Interrupt Claude SDK (graceful)
+				// 3. Interrupt Claude SDK (graceful)
 				if (queryHandle) {
 					yield* queryHandle.interrupt.pipe(Effect.ignore);
 				}
 
-				// 3. Interrupt the processing fiber
+				// 4. Interrupt the processing fiber
 				if (fiber) {
 					yield* Fiber.interrupt(fiber);
 				}
 
-				// 4. Save partial progress and cleanup
+				// 5. Save partial progress and cleanup
 				if (turnId) {
 					yield* onStreamComplete(session, turnId, sessionId, "interrupted");
 				} else {
@@ -1004,6 +1065,105 @@ export const makeSessionHub = Effect.gen(function* () {
 					interruptedSessions: interruptedCount,
 					totalSessions: sessionIds.length,
 				});
+			}),
+
+		respondToToolApproval: (
+			sessionId: string,
+			response: ToolApprovalResponse,
+		) =>
+			Effect.gen(function* () {
+				// 1. Get session
+				const session = yield* getOrCreateSession(sessionId);
+
+				// 2. Get pending requests map
+				const pendingRequests = yield* Ref.get(session.pendingToolRequestsRef);
+
+				// 3. Look up pending request
+				const pending = pendingRequests.get(response.toolCallId);
+				if (!pending) {
+					structuredLog("WARN", "tool_approval_not_found", {
+						sessionId,
+						toolCallId: response.toolCallId,
+						toolName: response.toolName,
+						pendingRequestCount: pendingRequests.size,
+					});
+					return yield* Effect.fail(
+						new ToolApprovalNotFoundRpcError({
+							toolCallId: response.toolCallId,
+						}),
+					);
+				}
+
+				// 4. Validate tool name matches
+				if (pending.toolName !== response.toolName) {
+					structuredLog("WARN", "tool_approval_name_mismatch", {
+						sessionId,
+						toolCallId: response.toolCallId,
+						expectedToolName: pending.toolName,
+						actualToolName: response.toolName,
+					});
+				}
+
+				// 5. Resolve the pending promise to unblock the MCP handler
+				pending.resolve(response);
+
+				structuredLog("INFO", "tool_approval_resolved", {
+					sessionId,
+					toolCallId: response.toolCallId,
+					toolName: response.toolName,
+					approved: response.approved,
+				});
+
+				// 6. Remove from map (the MCP handler's finally block also does this, but we clean up early)
+				pendingRequests.delete(response.toolCallId);
+
+				// 7. Handle ExitPlanMode approval: switch to build mode
+				if (response.toolName === "ExitPlanMode" && response.approved) {
+					const queryHandle = yield* Ref.get(session.queryHandleRef);
+					if (queryHandle) {
+						// Switch Claude SDK permission mode to allow execution
+						yield* queryHandle.setPermissionMode("bypassPermissions").pipe(
+							Effect.tap(() =>
+								Effect.sync(() => {
+									structuredLog("INFO", "permission_mode_changed", {
+										sessionId,
+										newMode: "bypassPermissions",
+									});
+								}),
+							),
+							Effect.catchAll((error) =>
+								Effect.sync(() => {
+									structuredLog("ERROR", "permission_mode_change_failed", {
+										sessionId,
+										error: {
+											type:
+												error instanceof Error
+													? error.constructor.name
+													: "UnknownError",
+											message:
+												error instanceof Error ? error.message : String(error),
+										},
+									});
+								}),
+							),
+						);
+					}
+
+					// Emit mode-change event to notify UI
+					const turnId = yield* Ref.get(session.activeTurnIdRef);
+					if (turnId) {
+						yield* broadcast(session, {
+							_tag: "StreamEvent",
+							turnId,
+							event: {
+								type: "mode-change",
+								mode: "build",
+							},
+						});
+					}
+				}
+
+				return { acknowledged: true };
 			}),
 	};
 

@@ -343,6 +343,7 @@ export class MessageAccumulator {
 			case "finish-step":
 			case "abort":
 			case "error":
+			case "mode-change":
 				break;
 
 			default: {

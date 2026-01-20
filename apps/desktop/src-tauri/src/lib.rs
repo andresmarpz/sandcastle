@@ -34,14 +34,13 @@ pub fn run() {
 
                 let ns_window = window.ns_window().unwrap() as id;
                 unsafe {
-                    // Use a neutral color that works with both light/dark themes
-                    // This will be overridden by the app's CSS background
+                    // Use opaque background for better compositing performance
                     let bg_color = NSColor::colorWithRed_green_blue_alpha_(
                         nil,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0, // Fully transparent
+                        0.08,
+                        0.08,
+                        0.08,
+                        1.0, // Fully opaque
                     );
                     ns_window.setBackgroundColor_(bg_color);
                 }

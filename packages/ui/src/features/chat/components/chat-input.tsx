@@ -27,6 +27,7 @@ interface ChatInputProps {
 	onSend: (options: {
 		text: string;
 		parts?: UIMessage["parts"];
+		mode?: Mode;
 	}) => Promise<SendResult>;
 	onStop: () => void;
 	status: ChatStatus;
@@ -131,13 +132,13 @@ export function ChatInput({
 
 			setIsSending(true);
 			try {
-				await onSend({ text });
+				await onSend({ text, mode });
 				setInputValue("");
 			} finally {
 				setIsSending(false);
 			}
 		},
-		[onSend],
+		[onSend, mode],
 	);
 
 	return (

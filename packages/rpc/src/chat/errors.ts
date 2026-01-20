@@ -31,9 +31,20 @@ export class ChatOperationRpcError extends Schema.TaggedError<ChatOperationRpcEr
 	},
 ) {}
 
+/**
+ * Tool approval request not found (no pending request with that toolCallId)
+ */
+export class ToolApprovalNotFoundRpcError extends Schema.TaggedError<ToolApprovalNotFoundRpcError>()(
+	"ToolApprovalNotFoundRpcError",
+	{
+		toolCallId: Schema.String,
+	},
+) {}
+
 export const ChatRpcError = Schema.Union(
 	ChatSessionNotFoundRpcError,
 	ChatSessionBusyRpcError,
 	ChatOperationRpcError,
+	ToolApprovalNotFoundRpcError,
 );
 export type ChatRpcError = typeof ChatRpcError.Type;

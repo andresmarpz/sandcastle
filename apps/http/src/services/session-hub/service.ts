@@ -4,11 +4,13 @@ import type {
 	DequeueResult,
 	InterruptResult,
 	SendMessageResult,
+	ToolApprovalNotFoundRpcError,
 } from "@sandcastle/rpc";
 import type {
 	MessagePart,
 	SessionEvent,
 	SessionSnapshot,
+	ToolApprovalResponse,
 } from "@sandcastle/schemas";
 import { Context, type Effect, type Mailbox, type Scope } from "effect";
 
@@ -41,6 +43,7 @@ export interface SessionHubInterface {
 		content: string,
 		clientMessageId: string,
 		parts?: readonly MessagePart[],
+		mode?: "plan" | "build",
 	) => Effect.Effect<
 		SendMessageResult,
 		ChatSessionNotFoundRpcError | ChatOperationRpcError
@@ -130,6 +133,23 @@ export interface SessionHubInterface {
 	 * The BunRuntime handles SIGTERM/SIGINT signals automatically.
 	 */
 	readonly shutdown: () => Effect.Effect<void>;
+
+	/**
+	 * Respond to a tool approval request.
+	 *
+	 * Resolves the pending MCP tool handler Promise with the user's decision.
+	 * This enables human-in-the-loop workflows for tools like AskUserQuestion and ExitPlanMode.
+	 *
+	 * - If the toolCallId matches a pending request: resolves it and returns `{ acknowledged: true }`
+	 * - If no pending request exists: returns ToolApprovalNotFoundRpcError
+	 */
+	readonly respondToToolApproval: (
+		sessionId: string,
+		response: ToolApprovalResponse,
+	) => Effect.Effect<
+		{ acknowledged: boolean },
+		ChatSessionNotFoundRpcError | ToolApprovalNotFoundRpcError
+	>;
 }
 
 /**

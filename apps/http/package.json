@@ -29,7 +29,8 @@
 		"@sandcastle/storage": "workspace:*",
 		"@sandcastle/worktree": "workspace:*",
 		"effect": "^3.19.14",
-		"fzf": "^0.5.2"
+		"fzf": "^0.5.2",
+		"zod": "^3.24.0"
 	},
 	"devDependencies": {
 		"@types/bun": "latest",
