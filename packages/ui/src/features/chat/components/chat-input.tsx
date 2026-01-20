@@ -20,6 +20,7 @@ import {
 } from "@/components/ai-elements/prompt-input";
 import type { SendResult } from "@/features/chat/store";
 import { FilePickerPopover } from "./file-search";
+import { HarnessSelector } from "./harness-selector";
 import { type Mode, PlanSelector } from "./plan-selector";
 
 interface ChatInputProps {
@@ -162,6 +163,7 @@ export function ChatInput({
 				/>
 				<PromptInputFooter>
 					<PromptInputTools>
+						<HarnessSelector />
 						<PlanSelector value={mode} onValueChange={onModeChange} />
 					</PromptInputTools>
 					<PromptInputActions>
