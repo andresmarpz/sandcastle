@@ -1,15 +1,13 @@
-import { getBackendUrl } from "@/lib/backend-url";
+import { getBackendUrlOrDefault } from "@/lib/backend-url";
 
 /**
  * API configuration for RPC client connections.
  *
- * The backend URL is read from localStorage. If not set, returns
- * a placeholder - the app should be gated to show a setup screen.
+ * The backend URL is read from localStorage. If not set, falls back
+ * to the default localhost:3000 URL.
  */
 function getApiBaseUrl(): string {
-	const storedUrl = getBackendUrl();
-	// Return stored URL or placeholder (app should gate before making requests)
-	return storedUrl ?? "";
+	return getBackendUrlOrDefault();
 }
 
 const API_BASE_URL = getApiBaseUrl();
