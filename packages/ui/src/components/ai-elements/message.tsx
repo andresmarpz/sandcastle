@@ -59,8 +59,9 @@ export const MessageContent = memo(function MessageContent({
 	return (
 		<div
 			className={cn(
-				"is-user:dark flex w-fit max-w-full min-w-0 flex-col gap-4 overflow-hidden text-sm",
-				"group-[.is-user]:ml-auto group-[.is-user]:rounded-lg group-[.is-user]:bg-secondary group-[.is-user]:px-4 group-[.is-user]:py-3 group-[.is-user]:text-foreground",
+				"flex max-w-full flex-col gap-4 overflow-hidden text-sm",
+				"w-[85%]",
+				"group-[.is-user]:ml-auto group-[.is-user]:w-fit group-[.is-user]:rounded-lg group-[.is-user]:bg-secondary group-[.is-user]:px-4 group-[.is-user]:py-3 group-[.is-user]:text-foreground",
 				"group-[.is-assistant]:text-foreground",
 				className,
 			)}
@@ -324,9 +325,11 @@ export const MessageResponse = memo(
 	({ className, ...props }: MessageResponseProps) => (
 		<Streamdown
 			className={cn(
-				"size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 max-w-prose",
+				"size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
+				"[&_ul]:pl-4 [&_ol]:pl-4 [&_li]:wrap-break-word",
 				className,
 			)}
+			shikiTheme={["github-light", "github-dark"]}
 			{...props}
 		/>
 	),

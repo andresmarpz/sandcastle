@@ -2,14 +2,12 @@
 
 import type {
 	AskUserQuestionPayload,
-	ExitPlanModePayload,
 	ToolApprovalPayload,
 	ToolApprovalResponse,
 } from "@sandcastle/schemas";
 import { useCallback } from "react";
 import type { ToolApprovalRequest } from "@/features/chat/store";
 import { AskUserQuestionApproval } from "./ask-user-question-approval";
-import { ExitPlanModeApproval } from "./exit-plan-mode-approval";
 
 interface ToolApprovalDialogProps {
 	sessionId: string;
@@ -24,19 +22,6 @@ export function ToolApprovalDialog({
 }: ToolApprovalDialogProps) {
 	const handleAskUserQuestionRespond = useCallback(
 		(approved: boolean, payload?: AskUserQuestionPayload) => {
-			onRespond({
-				type: "tool-approval-response",
-				toolCallId: request.toolCallId,
-				toolName: request.toolName,
-				approved,
-				payload,
-			});
-		},
-		[request, onRespond],
-	);
-
-	const handleExitPlanModeRespond = useCallback(
-		(approved: boolean, payload?: ExitPlanModePayload) => {
 			onRespond({
 				type: "tool-approval-response",
 				toolCallId: request.toolCallId,
@@ -71,13 +56,7 @@ export function ToolApprovalDialog({
 				/>
 			);
 
-		case "ExitPlanMode":
-			return (
-				<ExitPlanModeApproval
-					request={request}
-					onRespond={handleExitPlanModeRespond}
-				/>
-			);
+		// ExitPlanMode is now handled inline in ChatInput, not here
 
 		default:
 			// Fallback for unknown tools - simple approve/reject

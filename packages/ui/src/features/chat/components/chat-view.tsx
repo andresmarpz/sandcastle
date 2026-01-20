@@ -7,7 +7,7 @@ import { IconX } from "@tabler/icons-react";
 import type { ChatStatus, UIMessage } from "ai";
 import { formatDistanceToNow } from "date-fns";
 import * as Option from "effect/Option";
-import { useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { chatHistoryQuery } from "@/api/chat-atoms";
 import { sessionQuery } from "@/api/session-atoms";
 import {
@@ -35,6 +35,7 @@ import {
 import { Spinner } from "@/components/spinner";
 import {
 	useChatSession,
+	usePendingExitPlanApproval,
 	usePendingToolApprovals,
 	useRespondToToolApproval,
 	useSetChatHistory,
@@ -46,6 +47,7 @@ import {
 	useSessionStatusIndicator,
 } from "@/features/sidebar/sessions/session-status-indicator";
 import { ChatInput } from "./chat-input";
+import { isExitPlanModeTool } from "./group-messages";
 import { GroupedMessageList } from "./grouped-message-list";
 import { OpenPathButton } from "./open-path-button";
 import { ToolApprovalDialog } from "./tool-approval";
@@ -155,7 +157,51 @@ function ChatViewContent({
 
 	// Tool approval hooks
 	const pendingApprovals = usePendingToolApprovals(sessionId);
+	const pendingPlanApproval = usePendingExitPlanApproval(sessionId);
 	const respondToApproval = useRespondToToolApproval(sessionId);
+
+	// Filter out ExitPlanMode from generic approvals (handled by ChatInput)
+	const nonPlanApprovals = useMemo(
+		() => pendingApprovals.filter((r) => !isExitPlanModeTool(r.toolName)),
+		[pendingApprovals],
+	);
+
+	// Plan approval handlers
+	const handleApprovePlan = useCallback(() => {
+		if (!pendingPlanApproval) return;
+		respondToApproval({
+			type: "tool-approval-response",
+			toolCallId: pendingPlanApproval.toolCallId,
+			toolName: pendingPlanApproval.toolName,
+			approved: true,
+			payload: { type: "ExitPlanModePayload" },
+		});
+	}, [pendingPlanApproval, respondToApproval]);
+
+	const handleRejectPlan = useCallback(
+		(feedback: string) => {
+			if (!pendingPlanApproval) return;
+			respondToApproval({
+				type: "tool-approval-response",
+				toolCallId: pendingPlanApproval.toolCallId,
+				toolName: pendingPlanApproval.toolName,
+				approved: false,
+				payload: { type: "ExitPlanModePayload", feedback },
+			});
+		},
+		[pendingPlanApproval, respondToApproval],
+	);
+
+	const handleCancelPlan = useCallback(() => {
+		if (!pendingPlanApproval) return;
+		respondToApproval({
+			type: "tool-approval-response",
+			toolCallId: pendingPlanApproval.toolCallId,
+			toolName: pendingPlanApproval.toolName,
+			approved: false,
+			payload: { type: "ExitPlanModePayload" },
+		});
+	}, [pendingPlanApproval, respondToApproval]);
 
 	// Map session status to ChatStatus for ChatInput compatibility
 	// AI SDK ChatStatus is 'submitted' | 'streaming' | 'ready' | 'error'
@@ -194,7 +240,7 @@ function ChatViewContent({
 								Loading chat history...
 							</div>
 						) : messages.length > 0 ? (
-							<GroupedMessageList messages={messages} />
+							<GroupedMessageList messages={messages} sessionId={sessionId} />
 						) : (
 							<ConversationEmptyState
 								title="No messages yet"
@@ -202,10 +248,10 @@ function ChatViewContent({
 							/>
 						)}
 
-						{/* Tool approval dialogs - rendered inline after messages */}
-						{pendingApprovals.length > 0 && (
+						{/* Tool approval dialogs - rendered inline after messages (excludes ExitPlanMode, handled by ChatInput) */}
+						{nonPlanApprovals.length > 0 && (
 							<div className="flex flex-col gap-4">
-								{pendingApprovals.map((request) => (
+								{nonPlanApprovals.map((request) => (
 									<ToolApprovalDialog
 										key={request.toolCallId}
 										sessionId={sessionId}
@@ -248,6 +294,10 @@ function ChatViewContent({
 						mode={mode}
 						onModeChange={setMode}
 						autoFocus
+						pendingPlanApproval={pendingPlanApproval}
+						onApprovePlan={handleApprovePlan}
+						onRejectPlan={handleRejectPlan}
+						onCancelPlan={handleCancelPlan}
 					/>
 				</div>
 				<div className="hidden sm:block" />

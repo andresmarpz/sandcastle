@@ -36,9 +36,14 @@ export type Mode = (typeof MODES)[number]["value"];
 interface PlanSelectorProps {
 	value?: Mode;
 	onValueChange?: (value: Mode) => void;
+	disabled?: boolean;
 }
 
-export function PlanSelector({ value, onValueChange }: PlanSelectorProps) {
+export function PlanSelector({
+	value,
+	onValueChange,
+	disabled = false,
+}: PlanSelectorProps) {
 	const [internalMode, setInternalMode] = useState<Mode>(value ?? "plan");
 
 	// Use controlled value if provided, otherwise use internal state
@@ -55,6 +60,22 @@ export function PlanSelector({ value, onValueChange }: PlanSelectorProps) {
 	const selectedModeData = MODES.find((m) => m.value === selectedMode);
 	const SelectedIcon = selectedModeData?.icon ?? IconListCheck;
 	const selectedColor = selectedModeData?.color ?? "text-green-500";
+
+	// When disabled, show the current mode but prevent interaction
+	if (disabled) {
+		return (
+			<Button
+				variant="outline"
+				size="sm"
+				disabled
+				className="w-auto gap-1.5 px-2 opacity-60"
+			>
+				<SelectedIcon className={cn("size-3.5", selectedColor)} />
+				<span className="text-[13px]">{selectedModeData?.label ?? "Plan"}</span>
+				<IconChevronDown className="size-3 text-muted-foreground" />
+			</Button>
+		);
+	}
 
 	return (
 		<DropdownMenu>

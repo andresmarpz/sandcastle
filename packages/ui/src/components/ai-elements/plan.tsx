@@ -136,17 +136,19 @@ export const PlanTrigger = ({
 	...props
 }: PlanTriggerProps) => (
 	<CollapsibleTrigger
-		render={
+		render={(props) => (
 			<Button
-				className={cn("size-8", className)}
 				data-slot="plan-trigger"
-				size="icon"
 				variant="ghost"
-			/>
-		}
+				// holy shit, we keep it like this because <CollapsibleTrigger> has "flex w-full" by default
+				// and if we don't override the classes, it looks super weird and the button won't respect its size-8
+				{...props}
+				className="size-8"
+			>
+				<IconSelector className="size-4" />
+				<span className="sr-only">Toggle plan</span>
+			</Button>
+		)}
 		{...props}
-	>
-		<IconSelector className="size-4" />
-		<span className="sr-only">Toggle plan</span>
-	</CollapsibleTrigger>
+	/>
 );

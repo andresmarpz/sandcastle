@@ -13,23 +13,30 @@ import {
 	getToolTitle,
 	groupMessages,
 } from "./group-messages";
+import { PlanPart } from "./parts/plan-part";
 import { ReasoningPart } from "./parts/reasoning-part";
 import { getToolIcon, WorkStep } from "./work-step";
 import { WorkUnit, WorkUnitContent, WorkUnitHeader } from "./work-unit";
 
 interface GroupedMessageListProps {
 	messages: UIMessage[];
+	sessionId: string;
 }
 
 export const GroupedMessageList = memo(function GroupedMessageList({
 	messages,
+	sessionId,
 }: GroupedMessageListProps) {
 	const groupedItems = useMemo(() => groupMessages(messages), [messages]);
 
 	return (
 		<>
 			{groupedItems.map((item, index) => (
-				<GroupedItemRenderer key={`${item.type}-${index}`} item={item} />
+				<GroupedItemRenderer
+					key={`${item.type}-${index}`}
+					item={item}
+					sessionId={sessionId}
+				/>
 			))}
 		</>
 	);
@@ -37,12 +44,16 @@ export const GroupedMessageList = memo(function GroupedMessageList({
 
 interface GroupedItemRendererProps {
 	item: GroupedItem;
+	sessionId: string;
 }
 
 function areGroupedItemsEqual(
 	prev: GroupedItemRendererProps,
 	next: GroupedItemRendererProps,
 ): boolean {
+	// Check sessionId equality first
+	if (prev.sessionId !== next.sessionId) return false;
+
 	const prevItem = prev.item;
 	const nextItem = next.item;
 
@@ -82,6 +93,14 @@ function areGroupedItemsEqual(
 					step.part.toolCallId === nextItem.steps[i]?.part.toolCallId,
 			);
 
+		case "plan":
+			// Compare plan items by tool call ID and state
+			return (
+				nextItem.type === "plan" &&
+				prevItem.part.toolCallId === nextItem.part.toolCallId &&
+				prevItem.part.state === nextItem.part.state
+			);
+
 		default:
 			return false;
 	}
@@ -89,6 +108,7 @@ function areGroupedItemsEqual(
 
 const GroupedItemRenderer = memo(function GroupedItemRenderer({
 	item,
+	sessionId,
 }: GroupedItemRendererProps) {
 	switch (item.type) {
 		case "user-message":
@@ -152,6 +172,15 @@ const GroupedItemRenderer = memo(function GroupedItemRenderer({
 								})}
 							</WorkUnitContent>
 						</WorkUnit>
+					</MessageContent>
+				</Message>
+			);
+
+		case "plan":
+			return (
+				<Message from="assistant">
+					<MessageContent>
+						<PlanPart part={item.part} sessionId={sessionId} />
 					</MessageContent>
 				</Message>
 			);

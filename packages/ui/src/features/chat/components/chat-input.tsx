@@ -1,6 +1,6 @@
 "use client";
 
-import { IconSquare } from "@tabler/icons-react";
+import { IconCheck, IconPencil, IconSquare, IconX } from "@tabler/icons-react";
 import type { ChatStatus, UIMessage } from "ai";
 import {
 	type ChangeEvent,
@@ -14,11 +14,18 @@ import {
 	PromptInputActions,
 	PromptInputButton,
 	PromptInputFooter,
-	PromptInputSubmit,
 	PromptInputTextarea,
 	PromptInputTools,
 } from "@/components/ai-elements/prompt-input";
-import type { SendResult } from "@/features/chat/store";
+import { Button } from "@/components/button";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipProvider,
+	TooltipTrigger,
+} from "@/components/tooltip";
+import type { SendResult, ToolApprovalRequest } from "@/features/chat/store";
+import { cn } from "@/lib/utils";
 import { FilePickerPopover } from "./file-search";
 import { HarnessSelector } from "./harness-selector";
 import { type Mode, PlanSelector } from "./plan-selector";
@@ -35,6 +42,10 @@ interface ChatInputProps {
 	onModeChange?: (mode: Mode) => void;
 	workingPath?: string;
 	autoFocus?: boolean;
+	pendingPlanApproval?: ToolApprovalRequest | null;
+	onApprovePlan?: () => void;
+	onRejectPlan?: (feedback: string) => void;
+	onCancelPlan?: () => void;
 }
 
 export function ChatInput({
@@ -45,8 +56,13 @@ export function ChatInput({
 	onModeChange,
 	workingPath,
 	autoFocus = false,
+	pendingPlanApproval,
+	onApprovePlan,
+	onRejectPlan,
+	onCancelPlan,
 }: ChatInputProps) {
 	const isStreaming = status === "streaming";
+	const hasPendingPlan = !!pendingPlanApproval;
 	// Track when we're waiting for server acknowledgment
 	const [isSending, setIsSending] = useState(false);
 
@@ -141,6 +157,14 @@ export function ChatInput({
 		[onSend, mode],
 	);
 
+	// Handle "Request Changes" for plan approval
+	const handleRequestChanges = useCallback(() => {
+		if (onRejectPlan && inputValue.trim()) {
+			onRejectPlan(inputValue.trim());
+			setInputValue("");
+		}
+	}, [onRejectPlan, inputValue]);
+
 	return (
 		<div ref={containerRef} className="relative p-2 pt-0">
 			{/* File picker popover - only available when workingPath is set */}
@@ -154,33 +178,86 @@ export function ChatInput({
 				/>
 			)}
 
-			<PromptInput onSubmit={handleSubmit}>
+			<PromptInput
+				onSubmit={hasPendingPlan ? () => {} : handleSubmit}
+				className={cn(hasPendingPlan && "border-dashed")}
+			>
 				<PromptInputTextarea
 					ref={textareaRef}
-					placeholder="Type a message... (Cmd+Enter to send)"
+					placeholder={
+						hasPendingPlan
+							? "Describe changes you'd like to the plan..."
+							: "Type a message... (Cmd+Enter to send)"
+					}
 					disabled={isSending}
 					onChange={handleTextChange}
 					value={inputValue}
+					className={cn(hasPendingPlan && "border-dashed")}
 				/>
 				<PromptInputFooter>
 					<PromptInputTools>
 						<HarnessSelector />
-						<PlanSelector value={mode} onValueChange={onModeChange} />
+						<PlanSelector
+							value={mode}
+							onValueChange={onModeChange}
+							disabled={hasPendingPlan}
+						/>
 					</PromptInputTools>
 					<PromptInputActions>
-						{isStreaming && (
-							<PromptInputButton
-								onClick={onStop}
-								variant="destructive"
-								title="Stop generation"
-							>
-								<IconSquare className="size-4" />
-							</PromptInputButton>
+						{hasPendingPlan ? (
+							<>
+								<Button variant="ghost" size="sm" onClick={onCancelPlan}>
+									<IconX className="size-4 mr-1" />
+									Cancel
+								</Button>
+								<TooltipProvider>
+									<Tooltip>
+										<TooltipTrigger
+											render={
+												<Button
+													variant="outline"
+													size="sm"
+													onClick={handleRequestChanges}
+													disabled={!inputValue.trim()}
+													className="pointer-events-none cursor-default"
+												/>
+											}
+										>
+											<IconPencil className="size-4 mr-1" />
+											Request Changes
+										</TooltipTrigger>
+										<TooltipContent>
+											{inputValue.trim()
+												? "Send feedback to iterate on the plan"
+												: "Type your feedback first"}
+										</TooltipContent>
+									</Tooltip>
+								</TooltipProvider>
+								<Button size="sm" onClick={onApprovePlan}>
+									<IconCheck className="size-4 mr-1" />
+									Approve
+								</Button>
+							</>
+						) : (
+							<>
+								{isStreaming && (
+									<PromptInputButton
+										onClick={onStop}
+										variant="destructive"
+										title="Stop generation"
+									>
+										<IconSquare className="size-4" />
+									</PromptInputButton>
+								)}
+								<Button
+									type="submit"
+									size="sm"
+									disabled={isSending || !inputValue.trim()}
+								>
+									Send
+								</Button>
+							</>
 						)}
-						<PromptInputSubmit
-							status={isSending ? "submitted" : "ready"}
-							disabled={isSending}
-						/>
 					</PromptInputActions>
 				</PromptInputFooter>
 			</PromptInput>

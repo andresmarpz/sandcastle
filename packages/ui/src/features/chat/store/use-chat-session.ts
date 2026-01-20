@@ -3,6 +3,7 @@ import type { UIMessage } from "ai";
 import { useCallback, useEffect, useMemo } from "react";
 import { useStore } from "zustand";
 import { useShallow } from "zustand/react/shallow";
+import { isExitPlanModeTool } from "@/features/chat/components/group-messages";
 import {
 	type ChatSessionState,
 	chatStore,
@@ -333,4 +334,72 @@ export function useSetChatMode(
  */
 export function useChatMode(sessionId: string): "plan" | "build" {
 	return useChatSessionSelector(sessionId, (s) => s.mode);
+}
+
+/**
+ * Hook for reading the pending ExitPlanMode approval request.
+ *
+ * Returns the first ExitPlanMode approval request if one exists,
+ * otherwise returns null. This is used for inline plan approval UI.
+ *
+ * @example
+ * ```tsx
+ * function PlanApprovalBar({ sessionId }: { sessionId: string }) {
+ *   const pendingPlan = usePendingExitPlanApproval(sessionId)
+ *
+ *   if (!pendingPlan) return null
+ *
+ *   return (
+ *     <div>
+ *       Plan ready for approval
+ *       <button onClick={() => approve(pendingPlan.toolCallId)}>Approve</button>
+ *     </div>
+ *   )
+ * }
+ * ```
+ */
+export function usePendingExitPlanApproval(
+	sessionId: string,
+): ToolApprovalRequest | null {
+	return useStore(
+		chatStore,
+		useShallow((state) => {
+			const session = state.getSession(sessionId);
+			for (const request of session.pendingApprovalRequests.values()) {
+				if (isExitPlanModeTool(request.toolName)) {
+					return request;
+				}
+			}
+			return null;
+		}),
+	);
+}
+
+/**
+ * Hook for checking if a plan (ExitPlanMode tool call) has been approved.
+ *
+ * Used to show "Approved" badge on inline plan components after approval.
+ *
+ * @example
+ * ```tsx
+ * function PlanPart({ sessionId, toolCallId }: Props) {
+ *   const isApproved = useIsApprovedPlan(sessionId, toolCallId)
+ *
+ *   return (
+ *     <Plan defaultOpen={!isApproved}>
+ *       {isApproved && <Badge>Approved</Badge>}
+ *       <PlanContent>...</PlanContent>
+ *     </Plan>
+ *   )
+ * }
+ * ```
+ */
+export function useIsApprovedPlan(
+	sessionId: string,
+	toolCallId: string,
+): boolean {
+	return useStore(chatStore, (state) => {
+		const session = state.getSession(sessionId);
+		return session.approvedPlanToolCallIds.has(toolCallId);
+	});
 }
