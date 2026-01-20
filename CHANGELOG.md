@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.11](https://github.com/andresmarpz/sandcastle/compare/v0.1.10...v0.1.11) (2026-01-20)
+
+
+### Features
+
+* add harness selector dropdown to chat input ([#60](https://github.com/andresmarpz/sandcastle/issues/60)) ([98d4a3b](https://github.com/andresmarpz/sandcastle/commit/98d4a3b7896c2b74d9302a0e46fbf95c5e367f69))
+
+
+### Bug Fixes
+
+* **ui:** use default backend URL when localStorage is not set ([#63](https://github.com/andresmarpz/sandcastle/issues/63)) ([05c8192](https://github.com/andresmarpz/sandcastle/commit/05c8192d7f2a646f95a9bc1b412efa31c113971e))
+
 ## [0.1.10](https://github.com/andresmarpz/sandcastle/compare/v0.1.9...v0.1.10) (2026-01-19)
 
 
