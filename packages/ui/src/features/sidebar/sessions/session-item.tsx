@@ -26,11 +26,11 @@ import {
 	ContextMenuSeparator,
 	ContextMenuTrigger,
 } from "@/components/context-menu";
+import { SidebarMenuButton, SidebarMenuItem } from "@/components/sidebar";
 import {
 	SessionStatusDot,
 	useSessionStatusIndicator,
 } from "@/features/sidebar/sessions/session-status-indicator";
-import { cn } from "@/lib/utils";
 
 interface SessionItemProps {
 	session: Session;
@@ -96,21 +96,17 @@ export function SessionItem({ session, repositoryId }: SessionItemProps) {
 
 	return (
 		<>
-			<ContextMenu>
-				<ContextMenuTrigger
-					render={
-						<button
-							type="button"
-							onClick={handleSelect}
-							className={cn(
-								"w-full rounded-md px-2 py-2 text-left transition-colors",
-								"hover:bg-accent",
-								isActive && "bg-accent",
-							)}
-						>
-							<div className="flex items-start gap-2">
+			<SidebarMenuItem>
+				<ContextMenu>
+					<ContextMenuTrigger
+						render={
+							<SidebarMenuButton
+								onClick={handleSelect}
+								isActive={isActive}
+								className="h-auto py-2 items-start"
+							>
 								<SessionStatusDot
-									className="mt-1.5"
+									className="mt-0.5"
 									status={sessionStatusIndicator}
 								/>
 								<div className="flex-1 min-w-0">
@@ -124,30 +120,30 @@ export function SessionItem({ session, repositoryId }: SessionItemProps) {
 										{lastActivityLabel}
 									</div>
 								</div>
-							</div>
-						</button>
-					}
-				/>
+							</SidebarMenuButton>
+						}
+					/>
 
-				<ContextMenuContent className="min-w-[160px]">
-					<ContextMenuItem onClick={handleRename}>
-						<IconPencil className="size-4" />
-						Rename
-					</ContextMenuItem>
-					<ContextMenuItem onClick={handleArchive}>
-						<IconArchive className="size-4" />
-						Archive
-					</ContextMenuItem>
-					<ContextMenuSeparator />
-					<ContextMenuItem
-						variant="destructive"
-						onClick={() => setIsDeleteDialogOpen(true)}
-					>
-						<IconTrash className="size-4" />
-						Delete
-					</ContextMenuItem>
-				</ContextMenuContent>
-			</ContextMenu>
+					<ContextMenuContent className="min-w-[160px]">
+						<ContextMenuItem onClick={handleRename}>
+							<IconPencil className="size-4" />
+							Rename
+						</ContextMenuItem>
+						<ContextMenuItem onClick={handleArchive}>
+							<IconArchive className="size-4" />
+							Archive
+						</ContextMenuItem>
+						<ContextMenuSeparator />
+						<ContextMenuItem
+							variant="destructive"
+							onClick={() => setIsDeleteDialogOpen(true)}
+						>
+							<IconTrash className="size-4" />
+							Delete
+						</ContextMenuItem>
+					</ContextMenuContent>
+				</ContextMenu>
+			</SidebarMenuItem>
 
 			<AlertDialog
 				open={isDeleteDialogOpen}
