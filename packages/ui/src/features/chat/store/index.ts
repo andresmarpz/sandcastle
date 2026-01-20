@@ -32,6 +32,7 @@ export { MessageAccumulator } from "./message-accumulator";
 export {
 	useChatActions,
 	useChatConnectionState,
+	useChatMode,
 	useChatSession,
 	useChatSessionSelector,
 	useChatSessionSnapshot,
@@ -39,4 +40,5 @@ export {
 	usePendingToolApprovals,
 	useRespondToToolApproval,
 	useSetChatHistory,
+	useSetChatMode,
 } from "./use-chat-session";

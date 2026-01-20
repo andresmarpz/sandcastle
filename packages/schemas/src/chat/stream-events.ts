@@ -259,6 +259,14 @@ export const StreamEventError = Schema.Struct({
 });
 export type StreamEventError = typeof StreamEventError.Type;
 
+/** Mode change event - emitted when permission mode changes (e.g., plan -> build) */
+export const StreamEventModeChange = Schema.Struct({
+	type: Schema.Literal("mode-change"),
+	/** The new mode (matches PlanSelector values) */
+	mode: Schema.Literal("plan", "build"),
+});
+export type StreamEventModeChange = typeof StreamEventModeChange.Type;
+
 /** Union of all stream events (AI SDK v6: UIMessageChunk) */
 export const ChatStreamEvent = Schema.Union(
 	// Text events
@@ -292,5 +300,7 @@ export const ChatStreamEvent = Schema.Union(
 	StreamEventAbort,
 	StreamEventMessageMetadata,
 	StreamEventError,
+	// Mode change event
+	StreamEventModeChange,
 );
 export type ChatStreamEvent = typeof ChatStreamEvent.Type;

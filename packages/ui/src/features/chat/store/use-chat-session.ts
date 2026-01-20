@@ -295,3 +295,42 @@ export function useRespondToToolApproval(
 		[sessionId],
 	);
 }
+
+/**
+ * Hook for setting the session mode (plan/build).
+ *
+ * The mode can also change automatically when the server
+ * emits a mode-change event (e.g., after ExitPlanMode approval).
+ *
+ * @example
+ * ```tsx
+ * function ModeSelector({ sessionId }: { sessionId: string }) {
+ *   const { mode } = useChatSession(sessionId)
+ *   const setMode = useSetChatMode(sessionId)
+ *
+ *   return (
+ *     <select value={mode} onChange={(e) => setMode(e.target.value as "plan" | "build")}>
+ *       <option value="plan">Plan</option>
+ *       <option value="build">Build</option>
+ *     </select>
+ *   )
+ * }
+ * ```
+ */
+export function useSetChatMode(
+	sessionId: string,
+): (mode: "plan" | "build") => void {
+	return useCallback(
+		(mode: "plan" | "build") => {
+			chatStore.getState().setMode(sessionId, mode);
+		},
+		[sessionId],
+	);
+}
+
+/**
+ * Hook for reading the current session mode.
+ */
+export function useChatMode(sessionId: string): "plan" | "build" {
+	return useChatSessionSelector(sessionId, (s) => s.mode);
+}

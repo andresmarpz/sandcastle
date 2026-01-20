@@ -628,11 +628,19 @@ export const makeSessionHub = Effect.gen(function* () {
 						type: "preset",
 					},
 					settingSources: ["project", "user", "local"],
-					rawOptions: {
-						mcpServers: {
-							"plan-mode-ui": planModeMcpServer,
-						},
+					mcpServers: {
+						"plan-mode-ui": planModeMcpServer,
 					},
+					// In plan mode:
+					// 1. Disable built-in interactive tools so our MCP server handlers take over
+					// 2. Auto-allow our MCP tools so they execute without permission prompts
+					...(mode === "plan" && {
+						disallowedTools: ["ExitPlanMode", "AskUserQuestion"],
+						allowedTools: [
+							"mcp__plan-mode-ui__ExitPlanMode",
+							"mcp__plan-mode-ui__AskUserQuestion",
+						],
+					}),
 				})
 				.pipe(
 					Effect.tapError((e) =>
@@ -1108,6 +1116,52 @@ export const makeSessionHub = Effect.gen(function* () {
 
 				// 6. Remove from map (the MCP handler's finally block also does this, but we clean up early)
 				pendingRequests.delete(response.toolCallId);
+
+				// 7. Handle ExitPlanMode approval: switch to build mode
+				if (response.toolName === "ExitPlanMode" && response.approved) {
+					const queryHandle = yield* Ref.get(session.queryHandleRef);
+					if (queryHandle) {
+						// Switch Claude SDK permission mode to allow execution
+						yield* queryHandle.setPermissionMode("bypassPermissions").pipe(
+							Effect.tap(() =>
+								Effect.sync(() => {
+									structuredLog("INFO", "permission_mode_changed", {
+										sessionId,
+										newMode: "bypassPermissions",
+									});
+								}),
+							),
+							Effect.catchAll((error) =>
+								Effect.sync(() => {
+									structuredLog("ERROR", "permission_mode_change_failed", {
+										sessionId,
+										error: {
+											type:
+												error instanceof Error
+													? error.constructor.name
+													: "UnknownError",
+											message:
+												error instanceof Error ? error.message : String(error),
+										},
+									});
+								}),
+							),
+						);
+					}
+
+					// Emit mode-change event to notify UI
+					const turnId = yield* Ref.get(session.activeTurnIdRef);
+					if (turnId) {
+						yield* broadcast(session, {
+							_tag: "StreamEvent",
+							turnId,
+							event: {
+								type: "mode-change",
+								mode: "build",
+							},
+						});
+					}
+				}
 
 				return { acknowledged: true };
 			}),

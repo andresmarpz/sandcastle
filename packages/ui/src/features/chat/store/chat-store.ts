@@ -70,6 +70,8 @@ export interface ChatSessionState {
 	historyLoaded: boolean;
 	/** Pending tool approval requests (keyed by toolCallId) */
 	pendingApprovalRequests: Map<string, ToolApprovalRequest>;
+	/** Current mode (plan or build) - updated when ExitPlanMode is approved */
+	mode: "plan" | "build";
 }
 
 interface SubscriptionState {
@@ -121,6 +123,8 @@ export interface ChatStoreActions {
 		sessionId: string,
 		response: ToolApprovalResponse,
 	): Promise<boolean>;
+	/** Set the current mode for a session */
+	setMode(sessionId: string, mode: "plan" | "build"): void;
 }
 
 export type ChatStore = ChatStoreState & ChatStoreActions;
@@ -143,6 +147,7 @@ const DEFAULT_SESSION_STATE: ChatSessionState = {
 	historyCursor: null,
 	historyLoaded: false,
 	pendingApprovalRequests: new Map(),
+	mode: "plan",
 };
 
 // Frozen singleton to return for sessions that don't exist yet
@@ -159,6 +164,7 @@ const EMPTY_SESSION_STATE: ChatSessionState = {
 	historyCursor: null,
 	historyLoaded: false,
 	pendingApprovalRequests: EMPTY_APPROVAL_REQUESTS,
+	mode: "plan",
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -440,6 +446,20 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 						return { ...prev, pendingApprovalRequests: newPendingRequests };
 					});
 					// Don't pass to accumulator - approval requests are handled separately
+					return;
+				}
+
+				// Handle mode-change event (emitted when ExitPlanMode is approved)
+				if (streamEvent.type === "mode-change") {
+					const modeEvent = event.event as {
+						type: "mode-change";
+						mode: "plan" | "build";
+					};
+					updateSession(sessionId, (prev) => ({
+						...prev,
+						mode: modeEvent.mode,
+					}));
+					// Don't pass to accumulator - mode changes are handled separately
 					return;
 				}
 
@@ -760,6 +780,13 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 				),
 			);
 			return result.acknowledged;
+		},
+
+		setMode(sessionId: string, mode: "plan" | "build") {
+			updateSession(sessionId, (prev) => ({
+				...prev,
+				mode,
+			}));
 		},
 	};
 });

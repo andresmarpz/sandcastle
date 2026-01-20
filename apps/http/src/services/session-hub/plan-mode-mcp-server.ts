@@ -192,6 +192,9 @@ export function createPlanModeMcpServer(params: CreatePlanModeMcpServerParams) {
 				"ExitPlanMode",
 				"Signal that the plan is ready for user approval",
 				{
+					// Note: These fields match Claude Code's built-in ExitPlanMode tool definition
+					// Claude sends the plan content when calling this tool
+					plan: z.string().optional(),
 					allowedPrompts: z
 						.array(
 							z.object({

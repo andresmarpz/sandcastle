@@ -7,7 +7,7 @@ import { IconX } from "@tabler/icons-react";
 import type { ChatStatus, UIMessage } from "ai";
 import { formatDistanceToNow } from "date-fns";
 import * as Option from "effect/Option";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { chatHistoryQuery } from "@/api/chat-atoms";
 import { sessionQuery } from "@/api/session-atoms";
 import {
@@ -38,6 +38,7 @@ import {
 	usePendingToolApprovals,
 	useRespondToToolApproval,
 	useSetChatHistory,
+	useSetChatMode,
 } from "@/features/chat/store";
 import {
 	SessionStatusDot,
@@ -124,8 +125,6 @@ function ChatViewContent({
 	initialMessages,
 	historyStatus,
 }: ChatViewContentProps) {
-	const [mode, setMode] = useState<"plan" | "build">("plan");
-
 	// Fetch session data for metadata display
 	const sessionResult = useAtomValue(sessionQuery(sessionId));
 
@@ -137,10 +136,14 @@ function ChatViewContent({
 		isConnected,
 		error: _sessionError,
 		historyLoaded,
+		mode,
 		sendMessage,
 		stop,
 		dequeue,
 	} = useChatSession(sessionId);
+
+	// Mode can be updated by user or by server (after ExitPlanMode approval)
+	const setMode = useSetChatMode(sessionId);
 
 	// Set initial history when available
 	const setHistory = useSetChatHistory(sessionId);
