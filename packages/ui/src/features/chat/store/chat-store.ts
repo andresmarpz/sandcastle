@@ -80,6 +80,8 @@ export interface ChatSessionState {
 	approvedPlanToolCallIds: Set<string>;
 	/** Tool call IDs for answered AskUserQuestion requests (for inline questions badge) */
 	answeredQuestionToolCallIds: Set<string>;
+	/** Whether session has unread content (set on SessionStopped, cleared on visit) */
+	hasUnreadContent: boolean;
 }
 
 interface SubscriptionState {
@@ -160,6 +162,7 @@ const DEFAULT_SESSION_STATE: ChatSessionState = {
 	mode: "plan",
 	approvedPlanToolCallIds: new Set(),
 	answeredQuestionToolCallIds: new Set(),
+	hasUnreadContent: false,
 };
 
 // Frozen singleton to return for sessions that don't exist yet
@@ -179,6 +182,7 @@ const EMPTY_SESSION_STATE: ChatSessionState = {
 	mode: "plan",
 	approvedPlanToolCallIds: EMPTY_APPROVED_PLAN_IDS,
 	answeredQuestionToolCallIds: EMPTY_ANSWERED_QUESTION_IDS,
+	hasUnreadContent: false,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -451,6 +455,7 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 								pendingApprovalRequests: new Map(),
 								approvedPlanToolCallIds: new Set(),
 								answeredQuestionToolCallIds: new Set(),
+								hasUnreadContent: true,
 							};
 						}
 						return {
@@ -461,6 +466,7 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 							pendingApprovalRequests: new Map(),
 							approvedPlanToolCallIds: new Set(),
 							answeredQuestionToolCallIds: new Set(),
+							hasUnreadContent: true,
 						};
 					});
 				} else {
@@ -471,6 +477,7 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 						pendingApprovalRequests: new Map(),
 						approvedPlanToolCallIds: new Set(),
 						answeredQuestionToolCallIds: new Set(),
+						hasUnreadContent: true,
 					}));
 				}
 
@@ -632,6 +639,12 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 
 			// Ensure session exists
 			getOrCreateSession(sessionId);
+
+			// Clear unread content flag when user opens session
+			updateSession(sessionId, (prev) => ({
+				...prev,
+				hasUnreadContent: false,
+			}));
 
 			// Start subscription if first visitor
 			if (currentCount === 0) {

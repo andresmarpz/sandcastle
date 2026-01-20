@@ -29,10 +29,16 @@ interface Props {
 }
 
 export function useSessionStatusIndicator({ sessionId, status }: Props) {
-	const [subscribed, chatStatus] = useChatSessionSelector(
-		sessionId,
-		useShallow((state) => [state.isConnected, state.status]),
-	);
+	const [subscribed, chatStatus, hasPendingApprovals, hasUnreadContent] =
+		useChatSessionSelector(
+			sessionId,
+			useShallow((state) => [
+				state.isConnected,
+				state.status,
+				state.pendingApprovalRequests.size > 0,
+				state.hasUnreadContent,
+			]),
+		);
 
 	const indicatorStatus = useMemo((): IndicatorStatus => {
 		// Backend error states take priority
@@ -44,6 +50,14 @@ export function useSessionStatusIndicator({ sessionId, status }: Props) {
 		if (subscribed) {
 			if (chatStatus === "streaming") {
 				return "streaming";
+			}
+			// Pending approvals take priority over unread content
+			if (hasPendingApprovals) {
+				return "waiting_input";
+			}
+			// Show needs_attention if there's unread content
+			if (hasUnreadContent) {
+				return "needs_attention";
 			}
 			return "ready";
 		}
@@ -57,7 +71,7 @@ export function useSessionStatusIndicator({ sessionId, status }: Props) {
 			default:
 				return "idle";
 		}
-	}, [status, chatStatus, subscribed]);
+	}, [status, chatStatus, subscribed, hasPendingApprovals, hasUnreadContent]);
 
 	return indicatorStatus;
 }
