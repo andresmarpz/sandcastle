@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.1.12](https://github.com/andresmarpz/sandcastle/compare/v0.1.11...v0.1.12) (2026-01-20)
+
+
+### Features
+
+* ask user question and plan mode working ([0fdd655](https://github.com/andresmarpz/sandcastle/commit/0fdd655ceeb1e350800eef251122632c00ddc9e5))
+* create modes with tool approval flow ([#65](https://github.com/andresmarpz/sandcastle/issues/65)) ([ecb6c72](https://github.com/andresmarpz/sandcastle/commit/ecb6c726d50b71230adcddc14d277056ea8c2a5d))
+* many improvements to plan mode ui ([3764c27](https://github.com/andresmarpz/sandcastle/commit/3764c27e2ba3e2221ce475eece23bf9dc422e22a))
+* **ui:** increase sidebar min width and collapse threshold by 60px ([8bff566](https://github.com/andresmarpz/sandcastle/commit/8bff5663af4587212f2c9bef6613ba788b08d143))
+
+
+### Bug Fixes
+
+* pending tool approvals after stream resume ([b0f6ef8](https://github.com/andresmarpz/sandcastle/commit/b0f6ef8160dbdbd121757abdb81b821daf5131a7))
+
 ## [0.1.11](https://github.com/andresmarpz/sandcastle/compare/v0.1.10...v0.1.11) (2026-01-20)
 
 
