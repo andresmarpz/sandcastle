@@ -39,6 +39,17 @@ export const TurnContext = Schema.Struct({
 });
 export type TurnContext = typeof TurnContext.Type;
 
+/**
+ * Pending approval reference for reconnection.
+ * Links to an existing tool call by toolCallId - the input data
+ * is available from the tool-input-available event in the buffer.
+ */
+export const PendingApproval = Schema.Struct({
+	toolCallId: Schema.String,
+	toolName: Schema.String,
+});
+export type PendingApproval = typeof PendingApproval.Type;
+
 /** Session events streamed to subscribers */
 export const SessionEvent = Schema.Union(
 	Schema.Struct({
@@ -46,6 +57,8 @@ export const SessionEvent = Schema.Union(
 		snapshot: SessionSnapshot,
 		buffer: Schema.Array(ChatStreamEvent),
 		turnContext: Schema.optional(TurnContext),
+		/** Pending tool approvals that need user response (for reconnection) */
+		pendingApprovals: Schema.optional(Schema.Array(PendingApproval)),
 	}),
 	Schema.Struct({
 		_tag: Schema.Literal("SessionStarted"),

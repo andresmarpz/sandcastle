@@ -22,6 +22,7 @@ import type {
 import type { UIMessage } from "ai";
 import { Cause, Effect, Exit, Fiber, Stream } from "effect";
 import { createStore } from "zustand/vanilla";
+import { isExitPlanModeTool } from "@/features/chat/components/group-messages";
 import {
 	forkWithStreamingClient,
 	getStreamingConnectionState,
@@ -72,6 +73,8 @@ export interface ChatSessionState {
 	pendingApprovalRequests: Map<string, ToolApprovalRequest>;
 	/** Current mode (plan or build) - updated when ExitPlanMode is approved */
 	mode: "plan" | "build";
+	/** Tool call IDs for approved ExitPlanMode requests (for inline plan badge) */
+	approvedPlanToolCallIds: Set<string>;
 }
 
 interface SubscriptionState {
@@ -136,6 +139,7 @@ export type ChatStore = ChatStoreState & ChatStoreActions;
 const MAX_SESSIONS = 20;
 
 const EMPTY_APPROVAL_REQUESTS: Map<string, ToolApprovalRequest> = new Map();
+const EMPTY_APPROVED_PLAN_IDS: Set<string> = new Set();
 
 const DEFAULT_SESSION_STATE: ChatSessionState = {
 	messages: [],
@@ -148,6 +152,7 @@ const DEFAULT_SESSION_STATE: ChatSessionState = {
 	historyLoaded: false,
 	pendingApprovalRequests: new Map(),
 	mode: "plan",
+	approvedPlanToolCallIds: new Set(),
 };
 
 // Frozen singleton to return for sessions that don't exist yet
@@ -165,6 +170,7 @@ const EMPTY_SESSION_STATE: ChatSessionState = {
 	historyLoaded: false,
 	pendingApprovalRequests: EMPTY_APPROVAL_REQUESTS,
 	mode: "plan",
+	approvedPlanToolCallIds: EMPTY_APPROVED_PLAN_IDS,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -326,6 +332,7 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 
 		switch (event._tag) {
 			case "InitialState": {
+				console.log(event);
 				// Initialize session state from snapshot
 				updateSession(sessionId, (prev) => ({
 					...prev,
@@ -373,6 +380,35 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 						});
 					}
 				}
+
+				// Restore pending approvals from server state (for reconnection)
+				if (event.pendingApprovals && event.pendingApprovals.length > 0) {
+					const pendingRequests = new Map<string, ToolApprovalRequest>();
+
+					for (const approval of event.pendingApprovals) {
+						// Find the matching tool-input-available event in the buffer
+						const toolInputEvent = event.buffer.find(
+							(e) =>
+								e.type === "tool-input-available" &&
+								(e as { toolCallId?: string }).toolCallId ===
+									approval.toolCallId,
+						) as
+							| { toolCallId: string; toolName: string; input: unknown }
+							| undefined;
+
+						pendingRequests.set(approval.toolCallId, {
+							toolCallId: approval.toolCallId,
+							toolName: approval.toolName,
+							input: toolInputEvent?.input ?? {},
+							receivedAt: Date.now(),
+						});
+					}
+
+					updateSession(sessionId, (prev) => ({
+						...prev,
+						pendingApprovalRequests: pendingRequests,
+					}));
+				}
 				break;
 			}
 
@@ -405,6 +441,7 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 								status: "idle",
 								activeTurnId: null,
 								pendingApprovalRequests: new Map(),
+								approvedPlanToolCallIds: new Set(),
 							};
 						}
 						return {
@@ -413,6 +450,7 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 							status: "idle",
 							activeTurnId: null,
 							pendingApprovalRequests: new Map(),
+							approvedPlanToolCallIds: new Set(),
 						};
 					});
 				} else {
@@ -421,6 +459,7 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 						status: "idle",
 						activeTurnId: null,
 						pendingApprovalRequests: new Map(),
+						approvedPlanToolCallIds: new Set(),
 					}));
 				}
 
@@ -761,6 +800,15 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 			sessionId: string,
 			response: ToolApprovalResponse,
 		): Promise<boolean> {
+			// Track approved ExitPlanMode tool calls for inline badge display
+			if (isExitPlanModeTool(response.toolName) && response.approved) {
+				updateSession(sessionId, (prev) => {
+					const newApprovedPlanIds = new Set(prev.approvedPlanToolCallIds);
+					newApprovedPlanIds.add(response.toolCallId);
+					return { ...prev, approvedPlanToolCallIds: newApprovedPlanIds };
+				});
+			}
+
 			// Remove from pending requests immediately (optimistic)
 			updateSession(sessionId, (prev) => {
 				const newPendingRequests = new Map(prev.pendingApprovalRequests);

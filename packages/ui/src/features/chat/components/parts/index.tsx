@@ -1,9 +1,11 @@
 import type { UIMessage } from "ai";
 import { memo } from "react";
+import { isExitPlanModeTool } from "../group-messages";
 import { BashPart } from "./bash-part";
 import { EditPart } from "./edit-part";
 import { GlobPart } from "./glob-part";
 import { GrepPart } from "./grep-part";
+import { PlanPart } from "./plan-part";
 import { ReadPart } from "./read-part";
 import { ReasoningPart } from "./reasoning-part";
 import { TextPart } from "./text-part";
@@ -16,12 +18,16 @@ type MessagePart = UIMessage["parts"][number];
 
 interface PartRendererProps {
 	part: MessagePart;
+	sessionId?: string;
 }
 
 function arePartsEqual(
 	prev: PartRendererProps,
 	next: PartRendererProps,
 ): boolean {
+	// Check sessionId equality first
+	if (prev.sessionId !== next.sessionId) return false;
+
 	const p = prev.part;
 	const n = next.part;
 
@@ -47,6 +53,7 @@ function arePartsEqual(
 
 export const PartRenderer = memo(function PartRenderer({
 	part,
+	sessionId,
 }: PartRendererProps) {
 	if (part.type === "text") {
 		return <TextPart text={part.text} />;
@@ -64,6 +71,22 @@ export const PartRenderer = memo(function PartRenderer({
 	// Handle tool parts (both static tool-* and dynamic-tool types)
 	if (part.type.startsWith("tool-") || part.type === "dynamic-tool") {
 		const toolPart = part as ToolCallPart;
+
+		// Use dedicated component for ExitPlanMode (plan approval)
+		// Handles both direct name and MCP-prefixed name (mcp__plan-mode-ui__ExitPlanMode)
+		if (
+			part.type === "tool-ExitPlanMode" ||
+			(part.type === "dynamic-tool" &&
+				toolPart.toolName &&
+				isExitPlanModeTool(toolPart.toolName))
+		) {
+			// PlanPart requires sessionId for approval state hooks
+			if (sessionId) {
+				return <PlanPart part={toolPart} sessionId={sessionId} />;
+			}
+			// Fallback to generic tool part if no sessionId
+			return <ToolPart part={toolPart} />;
+		}
 
 		// Use dedicated component for TodoWrite
 		if (
