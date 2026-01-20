@@ -122,6 +122,8 @@
 @layer base {
 	* {
 		@apply border-border outline-ring/50;
+		backface-visibility: hidden;
+		-webkit-backface-visibility: hidden;
 	}
 	body {
 		@apply font-sans text-sm bg-background text-foreground;

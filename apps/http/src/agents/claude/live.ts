@@ -2,21 +2,7 @@ import { query as sdkQuery } from "@anthropic-ai/claude-agent-sdk";
 import { Effect, Layer, Stream } from "effect";
 import { ClaudeSDKError } from "./errors";
 import { ClaudeSDKService, type ClaudeSDKServiceInterface } from "./service";
-import type { QueryHandle, QueryOptions } from "./types";
-
-const buildOptions = (options: QueryOptions) => ({
-	cwd: options.cwd,
-	abortController: options.abortController,
-	resume: options.resume,
-	model: options.model,
-	systemPrompt: options.systemPrompt,
-	permissionMode: options.permissionMode,
-	maxTurns: options.maxTurns,
-	maxBudgetUsd: options.maxBudgetUsd,
-	includePartialMessages: options.includePartialMessages,
-	allowDangerouslySkipPermissions: options.allowDangerouslySkipPermissions,
-	...options.rawOptions,
-});
+import type { QueryHandle } from "./types";
 
 const createQueryHandle = (q: ReturnType<typeof sdkQuery>): QueryHandle => ({
 	stream: Stream.fromAsyncIterable(
@@ -55,7 +41,7 @@ export const makeClaudeSDKService = Effect.sync(
 		query: (prompt, options) =>
 			Effect.try({
 				try: () => {
-					const q = sdkQuery({ prompt, options: buildOptions(options) });
+					const q = sdkQuery({ prompt, options });
 					return createQueryHandle(q);
 				},
 				catch: (e) => new ClaudeSDKError({ message: "Query failed", cause: e }),

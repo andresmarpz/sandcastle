@@ -91,11 +91,58 @@ export type StreamEventToolInputError = typeof StreamEventToolInputError.Type;
 
 export const StreamEventToolApprovalRequest = Schema.Struct({
 	type: Schema.Literal("tool-approval-request"),
-	approvalId: Schema.String,
 	toolCallId: Schema.String,
+	toolName: Schema.String,
+	input: Schema.Unknown,
+	/** ID of the message containing context (e.g., plan content for ExitPlanMode) */
+	messageId: Schema.optional(Schema.String),
 });
 export type StreamEventToolApprovalRequest =
 	typeof StreamEventToolApprovalRequest.Type;
+
+// ============================================================================
+// Tool Approval Response Payloads
+// ============================================================================
+
+/** Payload for AskUserQuestion responses */
+export const AskUserQuestionPayload = Schema.Struct({
+	type: Schema.Literal("AskUserQuestionPayload"),
+	/** Map of question index to selected answer(s) */
+	answers: Schema.Record({
+		key: Schema.String,
+		value: Schema.Union(Schema.String, Schema.Array(Schema.String)),
+	}),
+});
+export type AskUserQuestionPayload = typeof AskUserQuestionPayload.Type;
+
+/** Payload for ExitPlanMode responses */
+export const ExitPlanModePayload = Schema.Struct({
+	type: Schema.Literal("ExitPlanModePayload"),
+	/** Optional feedback when rejecting a plan */
+	feedback: Schema.optional(Schema.String),
+});
+export type ExitPlanModePayload = typeof ExitPlanModePayload.Type;
+
+/** Union of tool-specific response payloads */
+export const ToolApprovalPayload = Schema.Union(
+	AskUserQuestionPayload,
+	ExitPlanModePayload,
+);
+export type ToolApprovalPayload = typeof ToolApprovalPayload.Type;
+
+/** Response to a tool approval request (sent via RPC) */
+export const ToolApprovalResponse = Schema.Struct({
+	type: Schema.Literal("tool-approval-response"),
+	/** Must match the toolCallId from the request */
+	toolCallId: Schema.String,
+	/** Echo back for validation/logging */
+	toolName: Schema.String,
+	/** Universal approve/deny flag */
+	approved: Schema.Boolean,
+	/** Tool-specific response data */
+	payload: Schema.optional(ToolApprovalPayload),
+});
+export type ToolApprovalResponse = typeof ToolApprovalResponse.Type;
 
 export const StreamEventToolOutputAvailable = Schema.Struct({
 	type: Schema.Literal("tool-output-available"),
@@ -212,6 +259,14 @@ export const StreamEventError = Schema.Struct({
 });
 export type StreamEventError = typeof StreamEventError.Type;
 
+/** Mode change event - emitted when permission mode changes (e.g., plan -> build) */
+export const StreamEventModeChange = Schema.Struct({
+	type: Schema.Literal("mode-change"),
+	/** The new mode (matches PlanSelector values) */
+	mode: Schema.Literal("plan", "build"),
+});
+export type StreamEventModeChange = typeof StreamEventModeChange.Type;
+
 /** Union of all stream events (AI SDK v6: UIMessageChunk) */
 export const ChatStreamEvent = Schema.Union(
 	// Text events
@@ -245,5 +300,7 @@ export const ChatStreamEvent = Schema.Union(
 	StreamEventAbort,
 	StreamEventMessageMetadata,
 	StreamEventError,
+	// Mode change event
+	StreamEventModeChange,
 );
 export type ChatStreamEvent = typeof ChatStreamEvent.Type;
