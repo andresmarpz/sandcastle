@@ -63,8 +63,9 @@ export function ExitPlanModeApproval({
 				</CardDescription>
 			</CardHeader>
 
-			{showFeedback && (
-				<CardContent>
+			<CardContent>
+				<p>{(_request.input as { plan?: string }).plan ?? ""}</p>
+				{showFeedback && (
 					<div className="space-y-2">
 						<label
 							htmlFor="feedback"
@@ -80,8 +81,8 @@ export function ExitPlanModeApproval({
 							rows={3}
 						/>
 					</div>
-				</CardContent>
-			)}
+				)}
+			</CardContent>
 
 			<CardFooter className="justify-end gap-2">
 				{showFeedback ? (
