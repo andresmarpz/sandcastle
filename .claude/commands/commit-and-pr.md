@@ -27,12 +27,11 @@ Review the diff output:
 
 ## Step 2: Run Quality Checks
 
-Run appropriate quality scripts before committing:
+Run quality checks before committing:
 
 ```bash
-bun run lint
-bun run typecheck
-bun test
+bun biome
+bun typecheck
 ```
 
 If checks fail, fix the issues before proceeding.

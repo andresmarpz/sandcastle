@@ -44,14 +44,10 @@ For more information, read the Bun API docs in `node_modules/bun-types/docs/**.m
 - Only check typecheck on files you have changed.
 - No need to run 'bun build' ever.
 
-### Worktree Setup
+### Steps after finishing work entirely
 
-If you are running inside a worktree:
-
-1. Run `bun i` before starting to work
-2. After making changes:
-   - Run `bun biome` to format code and check lints
-   - Run `bun typecheck` to ensure you didn't introduce TypeScript errors
+1. Run `bun biome` to format code and check lints
+2. Run `bun typecheck` to ensure you didn't introduce TypeScript errors
 
 Do not bypass these checks with `@ts-ignore`, `@ts-expect-error`, or by disabling Biome rules. Address the root cause instead.
 
