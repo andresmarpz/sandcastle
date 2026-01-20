@@ -85,7 +85,7 @@ export function PlanSelector({ value, onValueChange }: PlanSelectorProps) {
 		<>
 			<Popover open={open} onOpenChange={setOpen}>
 				<PopoverTrigger
-					render={<Button variant="outline" size="xs" />}
+					render={<Button variant="outline" size="sm" />}
 					className="w-auto gap-1.5 px-2"
 				>
 					<SelectedIcon className={cn("size-3.5", selectedColor)} />

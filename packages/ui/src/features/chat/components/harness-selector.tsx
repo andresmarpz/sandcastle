@@ -39,7 +39,7 @@ export function HarnessSelector() {
 	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger
-				render={<Button variant="outline" size="xs" />}
+				render={<Button variant="outline" size="sm" />}
 				className="w-auto gap-1.5 px-2"
 			>
 				<selectedHarness.icon className="size-3.5" />
