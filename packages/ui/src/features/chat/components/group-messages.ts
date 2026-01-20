@@ -117,7 +117,6 @@ export function groupMessages(messages: UIMessage[]): GroupedItem[] {
 				part.type.startsWith("tool-") ||
 				part.type === "dynamic-tool"
 			) {
-				console.log(part);
 				const toolPart = part as ToolCallPart;
 				const toolName = getPartToolName(toolPart);
 
