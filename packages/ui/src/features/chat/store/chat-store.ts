@@ -340,7 +340,6 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 
 		switch (event._tag) {
 			case "InitialState": {
-				console.log(event);
 				// Initialize session state from snapshot
 				updateSession(sessionId, (prev) => ({
 					...prev,
