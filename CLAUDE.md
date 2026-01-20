@@ -68,3 +68,12 @@ Search the real source code to figure out how the library works. Use an Explore 
 ### Effect Atom (effect-atom) library
 
 Prefer reading the existing doc first at 'docs/effect-atom-guide.md'. If you need further investigation the source code is at `~/.local/share/effect-solutions/effect-atom`.
+
+## Git Committing or Making a PR
+
+When committing work or creating a pull request, always use the `/commit-and-pr` skill. This skill ensures:
+
+- Conventional commit messages (one-liner only)
+- Quality checks are run before committing
+- PR titles use conventional commit format
+- PR descriptions include a summary with bullet points of changes made
