@@ -33,7 +33,12 @@ import {
 	QueueSectionTrigger,
 } from "@/components/ai-elements/queue";
 import { Spinner } from "@/components/spinner";
-import { useChatSession, useSetChatHistory } from "@/features/chat/store";
+import {
+	useChatSession,
+	usePendingToolApprovals,
+	useRespondToToolApproval,
+	useSetChatHistory,
+} from "@/features/chat/store";
 import {
 	SessionStatusDot,
 	statusConfig,
@@ -42,6 +47,7 @@ import {
 import { ChatInput } from "./chat-input";
 import { GroupedMessageList } from "./grouped-message-list";
 import { OpenPathButton } from "./open-path-button";
+import { ToolApprovalDialog } from "./tool-approval";
 
 interface ChatViewProps {
 	sessionId: string;
@@ -144,6 +150,10 @@ function ChatViewContent({
 		}
 	}, [initialMessages, historyLoaded, setHistory]);
 
+	// Tool approval hooks
+	const pendingApprovals = usePendingToolApprovals(sessionId);
+	const respondToApproval = useRespondToToolApproval(sessionId);
+
 	// Map session status to ChatStatus for ChatInput compatibility
 	// AI SDK ChatStatus is 'submitted' | 'streaming' | 'ready' | 'error'
 	const chatStatus: ChatStatus =
@@ -187,6 +197,20 @@ function ChatViewContent({
 								title="No messages yet"
 								description="Send a message to start the session."
 							/>
+						)}
+
+						{/* Tool approval dialogs - rendered inline after messages */}
+						{pendingApprovals.length > 0 && (
+							<div className="flex flex-col gap-4">
+								{pendingApprovals.map((request) => (
+									<ToolApprovalDialog
+										key={request.toolCallId}
+										sessionId={sessionId}
+										request={request}
+										onRespond={respondToApproval}
+									/>
+								))}
+							</div>
 						)}
 					</div>
 

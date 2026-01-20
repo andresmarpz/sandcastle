@@ -2,6 +2,7 @@ import {
 	ChatRpc,
 	ChatSessionNotFoundRpcError,
 	GetHistoryResult,
+	ToolApprovalNotFoundRpcError,
 } from "@sandcastle/rpc";
 import { StorageService, StorageServiceDefault } from "@sandcastle/storage";
 import { Effect, Layer } from "effect";
@@ -58,6 +59,9 @@ export const ChatRpcHandlers = ChatRpc.toLayer(
 
 					return new GetHistoryResult({ messages: allMessages });
 				}),
+
+			"chat.respondToToolApproval": (params) =>
+				hub.respondToToolApproval(params.sessionId, params.response),
 		});
 	}),
 );

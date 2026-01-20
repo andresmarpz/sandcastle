@@ -12,6 +12,7 @@ export type {
 	ChatStoreState,
 	HistoryCursor,
 	SendResult,
+	ToolApprovalRequest,
 } from "./chat-store";
 // Store and types
 export { chatStore } from "./chat-store";
@@ -35,5 +36,7 @@ export {
 	useChatSessionSelector,
 	useChatSessionSnapshot,
 	useChatStatus,
+	usePendingToolApprovals,
+	useRespondToToolApproval,
 	useSetChatHistory,
 } from "./use-chat-session";

@@ -16,6 +16,8 @@ import type {
 	ChatMessage,
 	QueuedMessage,
 	SessionEvent,
+	StreamEventToolApprovalRequest,
+	ToolApprovalResponse,
 } from "@sandcastle/schemas";
 import type { UIMessage } from "ai";
 import { Cause, Effect, Exit, Fiber, Stream } from "effect";
@@ -40,6 +42,15 @@ export interface HistoryCursor {
 	timestamp: string;
 }
 
+/** Tool approval request with metadata for UI rendering */
+export interface ToolApprovalRequest {
+	toolCallId: string;
+	toolName: string;
+	input: unknown;
+	messageId?: string;
+	receivedAt: number;
+}
+
 export interface ChatSessionState {
 	/** All messages in the session (history + streaming) */
 	messages: UIMessage[];
@@ -57,6 +68,8 @@ export interface ChatSessionState {
 	historyCursor: HistoryCursor | null;
 	/** Whether initial history has been loaded */
 	historyLoaded: boolean;
+	/** Pending tool approval requests (keyed by toolCallId) */
+	pendingApprovalRequests: Map<string, ToolApprovalRequest>;
 }
 
 interface SubscriptionState {
@@ -103,6 +116,11 @@ export interface ChatStoreActions {
 	setHistory(sessionId: string, messages: UIMessage[]): void;
 	/** Append messages from history gap */
 	appendHistoryGap(sessionId: string, messages: ChatMessage[]): void;
+	/** Respond to a tool approval request */
+	respondToToolApproval(
+		sessionId: string,
+		response: ToolApprovalResponse,
+	): Promise<boolean>;
 }
 
 export type ChatStore = ChatStoreState & ChatStoreActions;
@@ -113,6 +131,8 @@ export type ChatStore = ChatStoreState & ChatStoreActions;
 
 const MAX_SESSIONS = 20;
 
+const EMPTY_APPROVAL_REQUESTS: Map<string, ToolApprovalRequest> = new Map();
+
 const DEFAULT_SESSION_STATE: ChatSessionState = {
 	messages: [],
 	status: "idle",
@@ -122,6 +142,7 @@ const DEFAULT_SESSION_STATE: ChatSessionState = {
 	error: null,
 	historyCursor: null,
 	historyLoaded: false,
+	pendingApprovalRequests: new Map(),
 };
 
 // Frozen singleton to return for sessions that don't exist yet
@@ -137,6 +158,7 @@ const EMPTY_SESSION_STATE: ChatSessionState = {
 	error: null,
 	historyCursor: null,
 	historyLoaded: false,
+	pendingApprovalRequests: EMPTY_APPROVAL_REQUESTS,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -376,6 +398,7 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 								messages: newMessages,
 								status: "idle",
 								activeTurnId: null,
+								pendingApprovalRequests: new Map(),
 							};
 						}
 						return {
@@ -383,6 +406,7 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 							messages: [...prev.messages, finalMessage],
 							status: "idle",
 							activeTurnId: null,
+							pendingApprovalRequests: new Map(),
 						};
 					});
 				} else {
@@ -390,6 +414,7 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 						...prev,
 						status: "idle",
 						activeTurnId: null,
+						pendingApprovalRequests: new Map(),
 					}));
 				}
 
@@ -398,6 +423,26 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 			}
 
 			case "StreamEvent": {
+				// Check for tool approval request before processing through accumulator
+				const streamEvent = event.event as { type?: string };
+				if (streamEvent.type === "tool-approval-request") {
+					const approvalEvent = event.event as StreamEventToolApprovalRequest;
+					const request: ToolApprovalRequest = {
+						toolCallId: approvalEvent.toolCallId,
+						toolName: approvalEvent.toolName,
+						input: approvalEvent.input,
+						messageId: approvalEvent.messageId,
+						receivedAt: Date.now(),
+					};
+					updateSession(sessionId, (prev) => {
+						const newPendingRequests = new Map(prev.pendingApprovalRequests);
+						newPendingRequests.set(request.toolCallId, request);
+						return { ...prev, pendingApprovalRequests: newPendingRequests };
+					});
+					// Don't pass to accumulator - approval requests are handled separately
+					return;
+				}
+
 				// Process stream event through accumulator
 				const session = state.sessions.get(sessionId);
 				if (
@@ -690,6 +735,31 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 					},
 				};
 			});
+		},
+
+		async respondToToolApproval(
+			sessionId: string,
+			response: ToolApprovalResponse,
+		): Promise<boolean> {
+			// Remove from pending requests immediately (optimistic)
+			updateSession(sessionId, (prev) => {
+				const newPendingRequests = new Map(prev.pendingApprovalRequests);
+				newPendingRequests.delete(response.toolCallId);
+				return { ...prev, pendingApprovalRequests: newPendingRequests };
+			});
+
+			// Send response via RPC
+			const result = await runWithStreamingClient(
+				StreamingChatClient.pipe(
+					Effect.flatMap((client) =>
+						client.chat.respondToToolApproval({
+							sessionId,
+							response,
+						}),
+					),
+				),
+			);
+			return result.acknowledged;
 		},
 	};
 });

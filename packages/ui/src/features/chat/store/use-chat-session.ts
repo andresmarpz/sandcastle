@@ -1,3 +1,4 @@
+import type { ToolApprovalResponse } from "@sandcastle/schemas";
 import type { UIMessage } from "ai";
 import { useCallback, useEffect, useMemo } from "react";
 import { useStore } from "zustand";
@@ -6,6 +7,7 @@ import {
 	type ChatSessionState,
 	chatStore,
 	type SendResult,
+	type ToolApprovalRequest,
 } from "./chat-store";
 
 export interface UseChatSessionResult extends ChatSessionState {
@@ -228,4 +230,68 @@ export function useChatConnectionState(sessionId: string): {
 	const isConnected = useChatSessionSelector(sessionId, (s) => s.isConnected);
 	const error = useChatSessionSelector(sessionId, (s) => s.error);
 	return useMemo(() => ({ isConnected, error }), [isConnected, error]);
+}
+
+/**
+ * Hook for reading pending tool approval requests.
+ *
+ * Returns an array of pending requests for the session.
+ *
+ * @example
+ * ```tsx
+ * function ApprovalDialogs({ sessionId }: { sessionId: string }) {
+ *   const pendingApprovals = usePendingToolApprovals(sessionId)
+ *
+ *   return pendingApprovals.map(request => (
+ *     <ToolApprovalDialog key={request.toolCallId} request={request} />
+ *   ))
+ * }
+ * ```
+ */
+export function usePendingToolApprovals(
+	sessionId: string,
+): ToolApprovalRequest[] {
+	return useStore(
+		chatStore,
+		useShallow((state) => {
+			const session = state.getSession(sessionId);
+			return Array.from(session.pendingApprovalRequests.values());
+		}),
+	);
+}
+
+/**
+ * Hook for responding to tool approval requests.
+ *
+ * Returns a callback that sends the response and removes
+ * the request from the pending map.
+ *
+ * @example
+ * ```tsx
+ * function ApprovalDialog({ sessionId, request }: Props) {
+ *   const respond = useRespondToToolApproval(sessionId)
+ *
+ *   const handleApprove = () => {
+ *     respond({
+ *       type: "tool-approval-response",
+ *       toolCallId: request.toolCallId,
+ *       toolName: request.toolName,
+ *       approved: true,
+ *       payload: { type: "ExitPlanModePayload" }
+ *     })
+ *   }
+ *
+ *   return <button onClick={handleApprove}>Approve</button>
+ * }
+ * ```
+ */
+export function useRespondToToolApproval(
+	sessionId: string,
+): (response: ToolApprovalResponse) => Promise<boolean> {
+	return useCallback(
+		(response: ToolApprovalResponse) => {
+			return chatStore.getState().respondToToolApproval(sessionId, response);
+		},
+		[sessionId],
+	);
 }

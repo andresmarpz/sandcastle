@@ -12,7 +12,7 @@
     },
     "apps/desktop": {
       "name": "@sandcastle/desktop",
-      "version": "0.1.6",
+      "version": "0.1.11",
       "dependencies": {
         "@base-ui/react": "^1.0.0",
         "@effect-atom/atom": "^0.4.11",
@@ -56,7 +56,7 @@
     },
     "apps/http": {
       "name": "@sandcastle/http",
-      "version": "0.1.6",
+      "version": "0.1.11",
       "dependencies": {
         "@anthropic-ai/claude-agent-sdk": "^0.2.5",
         "@anthropic-ai/sdk": "^0.71.2",
@@ -70,6 +70,7 @@
         "@sandcastle/worktree": "workspace:*",
         "effect": "^3.19.14",
         "fzf": "^0.5.2",
+        "zod": "^3.24.0",
       },
       "devDependencies": {
         "@types/bun": "latest",
@@ -78,7 +79,7 @@
     },
     "apps/web": {
       "name": "web",
-      "version": "0.1.6",
+      "version": "0.1.11",
       "dependencies": {
         "@base-ui/react": "^1.0.0",
         "@effect-atom/atom": "^0.4.11",
@@ -108,7 +109,7 @@
     },
     "packages/petname": {
       "name": "@sandcastle/petname",
-      "version": "0.1.6",
+      "version": "0.1.11",
       "dependencies": {
         "effect": "^3.19.14",
       },
@@ -121,7 +122,7 @@
     },
     "packages/rpc": {
       "name": "@sandcastle/rpc",
-      "version": "0.1.6",
+      "version": "0.1.11",
       "dependencies": {
         "@effect/rpc": "^0.73.0",
         "@sandcastle/schemas": "workspace:*",
@@ -134,7 +135,7 @@
     },
     "packages/schemas": {
       "name": "@sandcastle/schemas",
-      "version": "0.1.6",
+      "version": "0.1.11",
       "dependencies": {
         "effect": "^3.19.14",
       },
@@ -147,7 +148,7 @@
     },
     "packages/storage": {
       "name": "@sandcastle/storage",
-      "version": "0.1.6",
+      "version": "0.1.11",
       "dependencies": {
         "@sandcastle/schemas": "workspace:*",
         "effect": "^3.19.14",
@@ -159,7 +160,7 @@
     },
     "packages/tooling": {
       "name": "@sandcastle/tooling",
-      "version": "0.1.6",
+      "version": "0.1.11",
       "devDependencies": {
         "@types/bun": "latest",
       },
@@ -169,7 +170,7 @@
     },
     "packages/ui": {
       "name": "@sandcastle/ui",
-      "version": "0.1.6",
+      "version": "0.1.11",
       "dependencies": {
         "@ai-sdk/react": "^3.0.30",
         "@base-ui/react": "^1.0.0",
@@ -223,7 +224,7 @@
     },
     "packages/worktree": {
       "name": "@sandcastle/worktree",
-      "version": "0.1.6",
+      "version": "0.1.11",
       "dependencies": {
         "effect": "^3.19.14",
       },
