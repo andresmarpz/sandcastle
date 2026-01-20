@@ -23,10 +23,10 @@ const SIDEBAR_WIDTH_COOKIE_NAME = "sidebar_width";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 const SIDEBAR_WIDTH_ICON = "4rem";
 const SIDEBAR_KEYBOARD_SHORTCUT = "b";
-const SIDEBAR_MIN_WIDTH = 290;
+const SIDEBAR_MIN_WIDTH = 350;
 const SIDEBAR_MAX_WIDTH = 480;
-const SIDEBAR_DEFAULT_WIDTH = 290;
-const SIDEBAR_COLLAPSE_THRESHOLD = 240;
+const SIDEBAR_DEFAULT_WIDTH = 350;
+const SIDEBAR_COLLAPSE_THRESHOLD = 300;
 
 type SidebarContextProps = {
 	state: "expanded" | "collapsed";
