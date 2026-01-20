@@ -46,8 +46,9 @@ For more information, read the Bun API docs in `node_modules/bun-types/docs/**.m
 
 ### Steps after finishing work entirely
 
-1. Run `bun biome` to format code and check lints
-2. Run `bun typecheck` to ensure you didn't introduce TypeScript errors
+1. Run `bun i` to check if dependencies are installed
+2. Run `bun biome` to format code and check lints
+3. Run `bun typecheck` to ensure you didn't introduce TypeScript errors
 
 Do not bypass these checks with `@ts-ignore`, `@ts-expect-error`, or by disabling Biome rules. Address the root cause instead.
 
