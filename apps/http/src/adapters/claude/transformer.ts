@@ -23,6 +23,7 @@ import type {
 import type { AdapterConfig } from "../types";
 import {
 	completeToolCall,
+	getToolCall,
 	registerToolCall,
 	setMessageId,
 	setSessionId,
@@ -32,6 +33,69 @@ import type { StreamState } from "./types";
 interface ProcessResult {
 	events: ChatStreamEvent[];
 	newState: StreamState;
+}
+
+/**
+ * Check if a tool name is ExitPlanMode (direct or MCP-prefixed)
+ */
+function isExitPlanModeTool(toolName: string): boolean {
+	return (
+		toolName === "ExitPlanMode" ||
+		toolName === "mcp__plan-mode-ui__ExitPlanMode"
+	);
+}
+
+/**
+ * Parse ExitPlanMode output to extract approval status and feedback.
+ * Returns undefined if the output doesn't match expected patterns.
+ */
+function parseExitPlanModeOutput(output: unknown):
+	| {
+			approved: boolean;
+			feedback?: string;
+	  }
+	| undefined {
+	// Extract text content from output
+	let text: string | undefined;
+
+	if (typeof output === "string") {
+		text = output;
+	} else if (Array.isArray(output)) {
+		// Handle array format: [{ type: "text", text: "..." }]
+		const textBlock = output.find(
+			(block) =>
+				typeof block === "object" &&
+				block !== null &&
+				"type" in block &&
+				block.type === "text",
+		);
+		if (
+			textBlock &&
+			"text" in textBlock &&
+			typeof textBlock.text === "string"
+		) {
+			text = textBlock.text;
+		}
+	}
+
+	if (!text) return undefined;
+
+	// Check for approval pattern
+	if (text.includes("Plan approved")) {
+		return { approved: true };
+	}
+
+	// Check for rejection pattern
+	if (text.includes("Plan rejected")) {
+		// Extract feedback if present (format: "Plan rejected. User feedback: ...")
+		const feedbackMatch = text.match(/User feedback:\s*(.+)$/);
+		return {
+			approved: false,
+			feedback: feedbackMatch?.[1]?.trim() || undefined,
+		};
+	}
+
+	return undefined;
 }
 
 /**
@@ -235,10 +299,21 @@ function processUserMessage(
 				} satisfies StreamEventToolOutputError);
 			} else {
 				// Emit success event for completed tool execution
+				// Check if this is an ExitPlanMode tool and extract approval info
+				const toolCall = getToolCall(state, block.tool_use_id);
+				const approvalInfo =
+					toolCall && isExitPlanModeTool(toolCall.toolName)
+						? parseExitPlanModeOutput(block.content)
+						: undefined;
+
 				events.push({
 					type: "tool-output-available",
 					toolCallId: block.tool_use_id,
 					output: block.content,
+					...(approvalInfo && {
+						approved: approvalInfo.approved,
+						...(approvalInfo.feedback && { feedback: approvalInfo.feedback }),
+					}),
 				} satisfies StreamEventToolOutputAvailable);
 			}
 

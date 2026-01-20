@@ -634,13 +634,11 @@ export const makeSessionHub = Effect.gen(function* () {
 					// In plan mode:
 					// 1. Disable built-in interactive tools so our MCP server handlers take over
 					// 2. Auto-allow our MCP tools so they execute without permission prompts
-					...(mode === "plan" && {
-						disallowedTools: ["ExitPlanMode", "AskUserQuestion"],
-						allowedTools: [
-							"mcp__plan-mode-ui__ExitPlanMode",
-							"mcp__plan-mode-ui__AskUserQuestion",
-						],
-					}),
+					disallowedTools: ["ExitPlanMode", "AskUserQuestion"],
+					allowedTools: [
+						"mcp__plan-mode-ui__ExitPlanMode",
+						"mcp__plan-mode-ui__AskUserQuestion",
+					],
 				})
 				.pipe(
 					Effect.tapError((e) =>

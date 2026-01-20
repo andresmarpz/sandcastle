@@ -14,6 +14,7 @@ import {
 	groupMessages,
 } from "./group-messages";
 import { PlanPart } from "./parts/plan-part";
+import { QuestionsPart } from "./parts/questions-part";
 import { ReasoningPart } from "./parts/reasoning-part";
 import { getToolIcon, WorkStep } from "./work-step";
 import { WorkUnit, WorkUnitContent, WorkUnitHeader } from "./work-unit";
@@ -101,6 +102,14 @@ function areGroupedItemsEqual(
 				prevItem.part.state === nextItem.part.state
 			);
 
+		case "questions":
+			// Compare questions items by tool call ID and state
+			return (
+				nextItem.type === "questions" &&
+				prevItem.part.toolCallId === nextItem.part.toolCallId &&
+				prevItem.part.state === nextItem.part.state
+			);
+
 		default:
 			return false;
 	}
@@ -181,6 +190,15 @@ const GroupedItemRenderer = memo(function GroupedItemRenderer({
 				<Message from="assistant">
 					<MessageContent>
 						<PlanPart part={item.part} sessionId={sessionId} />
+					</MessageContent>
+				</Message>
+			);
+
+		case "questions":
+			return (
+				<Message from="assistant">
+					<MessageContent>
+						<QuestionsPart part={item.part} sessionId={sessionId} />
 					</MessageContent>
 				</Message>
 			);

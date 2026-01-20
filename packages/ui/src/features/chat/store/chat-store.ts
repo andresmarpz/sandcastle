@@ -22,7 +22,10 @@ import type {
 import type { UIMessage } from "ai";
 import { Cause, Effect, Exit, Fiber, Stream } from "effect";
 import { createStore } from "zustand/vanilla";
-import { isExitPlanModeTool } from "@/features/chat/components/group-messages";
+import {
+	isAskUserQuestionTool,
+	isExitPlanModeTool,
+} from "@/features/chat/components/group-messages";
 import {
 	forkWithStreamingClient,
 	getStreamingConnectionState,
@@ -75,6 +78,8 @@ export interface ChatSessionState {
 	mode: "plan" | "build";
 	/** Tool call IDs for approved ExitPlanMode requests (for inline plan badge) */
 	approvedPlanToolCallIds: Set<string>;
+	/** Tool call IDs for answered AskUserQuestion requests (for inline questions badge) */
+	answeredQuestionToolCallIds: Set<string>;
 }
 
 interface SubscriptionState {
@@ -140,6 +145,7 @@ const MAX_SESSIONS = 20;
 
 const EMPTY_APPROVAL_REQUESTS: Map<string, ToolApprovalRequest> = new Map();
 const EMPTY_APPROVED_PLAN_IDS: Set<string> = new Set();
+const EMPTY_ANSWERED_QUESTION_IDS: Set<string> = new Set();
 
 const DEFAULT_SESSION_STATE: ChatSessionState = {
 	messages: [],
@@ -153,6 +159,7 @@ const DEFAULT_SESSION_STATE: ChatSessionState = {
 	pendingApprovalRequests: new Map(),
 	mode: "plan",
 	approvedPlanToolCallIds: new Set(),
+	answeredQuestionToolCallIds: new Set(),
 };
 
 // Frozen singleton to return for sessions that don't exist yet
@@ -171,6 +178,7 @@ const EMPTY_SESSION_STATE: ChatSessionState = {
 	pendingApprovalRequests: EMPTY_APPROVAL_REQUESTS,
 	mode: "plan",
 	approvedPlanToolCallIds: EMPTY_APPROVED_PLAN_IDS,
+	answeredQuestionToolCallIds: EMPTY_ANSWERED_QUESTION_IDS,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -442,6 +450,7 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 								activeTurnId: null,
 								pendingApprovalRequests: new Map(),
 								approvedPlanToolCallIds: new Set(),
+								answeredQuestionToolCallIds: new Set(),
 							};
 						}
 						return {
@@ -451,6 +460,7 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 							activeTurnId: null,
 							pendingApprovalRequests: new Map(),
 							approvedPlanToolCallIds: new Set(),
+							answeredQuestionToolCallIds: new Set(),
 						};
 					});
 				} else {
@@ -460,6 +470,7 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 						activeTurnId: null,
 						pendingApprovalRequests: new Map(),
 						approvedPlanToolCallIds: new Set(),
+						answeredQuestionToolCallIds: new Set(),
 					}));
 				}
 
@@ -806,6 +817,15 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 					const newApprovedPlanIds = new Set(prev.approvedPlanToolCallIds);
 					newApprovedPlanIds.add(response.toolCallId);
 					return { ...prev, approvedPlanToolCallIds: newApprovedPlanIds };
+				});
+			}
+
+			// Track answered AskUserQuestion tool calls for inline badge display
+			if (isAskUserQuestionTool(response.toolName)) {
+				updateSession(sessionId, (prev) => {
+					const newAnsweredIds = new Set(prev.answeredQuestionToolCallIds);
+					newAnsweredIds.add(response.toolCallId);
+					return { ...prev, answeredQuestionToolCallIds: newAnsweredIds };
 				});
 			}
 

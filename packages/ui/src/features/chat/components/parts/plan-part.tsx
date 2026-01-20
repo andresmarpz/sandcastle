@@ -36,7 +36,7 @@ type PlanStatus =
 	| { status: "streaming" }
 	| { status: "pending" }
 	| { status: "approved" }
-	| { status: "rejected" }
+	| { status: "rejected"; feedback?: string }
 	| { status: "error"; errorText: string };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -49,9 +49,10 @@ type PlanStatus =
  * State machine priority:
  * 1. streaming - Still generating the plan
  * 2. error - Tool failed (timeout, etc.)
- * 3. approved - User approved the plan
- * 4. pending - Waiting for user approval
- * 5. rejected - User rejected or tool completed without approval
+ * 3. output-available with explicit approved field - Use persisted approval status
+ * 4. approved - User approved the plan (from store, during active session)
+ * 5. pending - Waiting for user approval
+ * 6. rejected - User rejected or tool completed without approval
  */
 function derivePlanStatus(
 	part: ToolCallPart,
@@ -71,18 +72,28 @@ function derivePlanStatus(
 		};
 	}
 
-	// 3. Check if approved (user clicked approve)
+	// 3. Output available - check the persisted approved field
+	// This is the source of truth after page reload
+	if (part.state === "output-available") {
+		if (part.approved === true) {
+			return { status: "approved" };
+		}
+		if (part.approved === false) {
+			return { status: "rejected", feedback: part.feedback };
+		}
+	}
+
+	// 4. Check if approved via store (during active session before output persists)
 	if (isApproved) {
 		return { status: "approved" };
 	}
 
-	// 4. Check if pending (waiting for user response)
+	// 5. Check if pending (waiting for user response)
 	if (isPendingApproval) {
 		return { status: "pending" };
 	}
 
-	// 5. Output available but not approved = rejected
-	// This handles explicit rejection and edge cases
+	// 6. Output available but no explicit approved field = rejected (legacy/edge case)
 	return { status: "rejected" };
 }
 
@@ -98,6 +109,9 @@ function getStatusDescription(planStatus: PlanStatus): string {
 		case "approved":
 			return "Plan has been approved and implementation has started.";
 		case "rejected":
+			if (planStatus.feedback) {
+				return `Plan was not approved: ${planStatus.feedback}`;
+			}
 			return "Plan was not approved. You can send a new message to request changes.";
 		case "error":
 			return `Plan approval failed: ${planStatus.errorText}`;

@@ -20,6 +20,48 @@ import type {
 } from "./types";
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Check if a tool name is ExitPlanMode (direct or MCP-prefixed)
+ */
+function isExitPlanModeTool(toolName: string): boolean {
+	return (
+		toolName === "ExitPlanMode" ||
+		toolName === "mcp__plan-mode-ui__ExitPlanMode"
+	);
+}
+
+/**
+ * Parse ExitPlanMode output to extract approval status and feedback.
+ * Returns undefined if the output doesn't match expected patterns.
+ */
+function parseExitPlanModeOutput(output: string):
+	| {
+			approved: boolean;
+			reason?: string;
+	  }
+	| undefined {
+	// Check for approval pattern
+	if (output.includes("Plan approved")) {
+		return { approved: true };
+	}
+
+	// Check for rejection pattern
+	if (output.includes("Plan rejected")) {
+		// Extract feedback if present (format: "Plan rejected. User feedback: ...")
+		const feedbackMatch = output.match(/User feedback:\s*(.+)$/);
+		return {
+			approved: false,
+			reason: feedbackMatch?.[1]?.trim() || undefined,
+		};
+	}
+
+	return undefined;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -295,12 +337,25 @@ function applyToolResult(
 			? result.content
 			: JSON.stringify(result.content);
 
+	// For ExitPlanMode, extract approval info from parsed output
+	const approvalInfo =
+		!result.is_error && isExitPlanModeTool(toolPart.toolName)
+			? parseExitPlanModeOutput(outputContent)
+			: undefined;
+
 	// Create updated part with new state
 	const updatedPart: ToolCallPart = {
 		...toolPart,
 		state: result.is_error ? "output-error" : "output-available",
 		output: result.is_error ? undefined : outputContent,
 		errorText: result.is_error ? outputContent : undefined,
+		...(approvalInfo && {
+			approval: {
+				id: result.tool_use_id,
+				approved: approvalInfo.approved,
+				reason: approvalInfo.reason,
+			},
+		}),
 	};
 
 	// Replace the part in the message

@@ -219,7 +219,7 @@ export function ChatInput({
 													size="sm"
 													onClick={handleRequestChanges}
 													disabled={!inputValue.trim()}
-													className="pointer-events-none cursor-default"
+													className="disabled:pointer-events-none cursor-default"
 												/>
 											}
 										>
