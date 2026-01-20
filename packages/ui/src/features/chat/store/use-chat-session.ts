@@ -3,7 +3,10 @@ import type { UIMessage } from "ai";
 import { useCallback, useEffect, useMemo } from "react";
 import { useStore } from "zustand";
 import { useShallow } from "zustand/react/shallow";
-import { isExitPlanModeTool } from "@/features/chat/components/group-messages";
+import {
+	isAskUserQuestionTool,
+	isExitPlanModeTool,
+} from "@/features/chat/components/group-messages";
 import {
 	type ChatSessionState,
 	chatStore,
@@ -401,5 +404,43 @@ export function useIsApprovedPlan(
 	return useStore(chatStore, (state) => {
 		const session = state.getSession(sessionId);
 		return session.approvedPlanToolCallIds.has(toolCallId);
+	});
+}
+
+/**
+ * Hook for reading the pending AskUserQuestion approval request for a specific tool call.
+ *
+ * Returns the matching AskUserQuestion approval request if one exists,
+ * otherwise returns null. This is used for inline questions UI.
+ */
+export function usePendingAskUserQuestionApproval(
+	sessionId: string,
+	toolCallId: string,
+): ToolApprovalRequest | null {
+	return useStore(
+		chatStore,
+		useShallow((state) => {
+			const session = state.getSession(sessionId);
+			const request = session.pendingApprovalRequests.get(toolCallId);
+			if (request && isAskUserQuestionTool(request.toolName)) {
+				return request;
+			}
+			return null;
+		}),
+	);
+}
+
+/**
+ * Hook for checking if a question (AskUserQuestion tool call) has been answered.
+ *
+ * Used to show "Answered" or "Skipped" badge on inline questions components after response.
+ */
+export function useIsAnsweredQuestion(
+	sessionId: string,
+	toolCallId: string,
+): boolean {
+	return useStore(chatStore, (state) => {
+		const session = state.getSession(sessionId);
+		return session.answeredQuestionToolCallIds.has(toolCallId);
 	});
 }

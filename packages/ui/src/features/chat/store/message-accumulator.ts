@@ -36,6 +36,9 @@ export type ToolInvocationPart = {
 	title?: string;
 	providerExecuted?: boolean;
 	dynamic?: boolean;
+	// Approval fields for tools like ExitPlanMode
+	approved?: boolean;
+	feedback?: string;
 };
 
 export type FilePart = {
@@ -264,6 +267,13 @@ export class MessageAccumulator {
 					const part = this.parts[state.index] as ToolInvocationPart;
 					part.state = "output-available";
 					part.output = event.output;
+					// Copy approval fields if present (for tools like ExitPlanMode)
+					if (event.approved !== undefined) {
+						part.approved = event.approved;
+					}
+					if (event.feedback !== undefined) {
+						part.feedback = event.feedback;
+					}
 				}
 				break;
 			}

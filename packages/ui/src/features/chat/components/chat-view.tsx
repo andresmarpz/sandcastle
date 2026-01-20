@@ -47,7 +47,7 @@ import {
 	useSessionStatusIndicator,
 } from "@/features/sidebar/sessions/session-status-indicator";
 import { ChatInput } from "./chat-input";
-import { isExitPlanModeTool } from "./group-messages";
+import { isAskUserQuestionTool, isExitPlanModeTool } from "./group-messages";
 import { GroupedMessageList } from "./grouped-message-list";
 import { OpenPathButton } from "./open-path-button";
 import { ToolApprovalDialog } from "./tool-approval";
@@ -160,9 +160,14 @@ function ChatViewContent({
 	const pendingPlanApproval = usePendingExitPlanApproval(sessionId);
 	const respondToApproval = useRespondToToolApproval(sessionId);
 
-	// Filter out ExitPlanMode from generic approvals (handled by ChatInput)
+	// Filter out ExitPlanMode and AskUserQuestion from generic approvals
+	// (ExitPlanMode is handled by ChatInput, AskUserQuestion is rendered inline)
 	const nonPlanApprovals = useMemo(
-		() => pendingApprovals.filter((r) => !isExitPlanModeTool(r.toolName)),
+		() =>
+			pendingApprovals.filter(
+				(r) =>
+					!isExitPlanModeTool(r.toolName) && !isAskUserQuestionTool(r.toolName),
+			),
 		[pendingApprovals],
 	);
 

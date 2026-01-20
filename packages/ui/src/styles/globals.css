@@ -127,7 +127,8 @@
 		-webkit-backface-visibility: hidden;
 	}
 	body {
-		@apply font-sans text-sm bg-background text-foreground;
+		@apply font-sans bg-background text-foreground;
+		font-size: 13px;
 	}
 	html {
 		@apply font-sans;

@@ -1,11 +1,12 @@
 import type { UIMessage } from "ai";
 import { memo } from "react";
-import { isExitPlanModeTool } from "../group-messages";
+import { isAskUserQuestionTool, isExitPlanModeTool } from "../group-messages";
 import { BashPart } from "./bash-part";
 import { EditPart } from "./edit-part";
 import { GlobPart } from "./glob-part";
 import { GrepPart } from "./grep-part";
 import { PlanPart } from "./plan-part";
+import { QuestionsPart } from "./questions-part";
 import { ReadPart } from "./read-part";
 import { ReasoningPart } from "./reasoning-part";
 import { TextPart } from "./text-part";
@@ -83,6 +84,22 @@ export const PartRenderer = memo(function PartRenderer({
 			// PlanPart requires sessionId for approval state hooks
 			if (sessionId) {
 				return <PlanPart part={toolPart} sessionId={sessionId} />;
+			}
+			// Fallback to generic tool part if no sessionId
+			return <ToolPart part={toolPart} />;
+		}
+
+		// Use dedicated component for AskUserQuestion (inline questions)
+		// Handles both direct name and MCP-prefixed name
+		if (
+			part.type === "tool-AskUserQuestion" ||
+			(part.type === "dynamic-tool" &&
+				toolPart.toolName &&
+				isAskUserQuestionTool(toolPart.toolName))
+		) {
+			// QuestionsPart requires sessionId for approval state hooks
+			if (sessionId) {
+				return <QuestionsPart part={toolPart} sessionId={sessionId} />;
 			}
 			// Fallback to generic tool part if no sessionId
 			return <ToolPart part={toolPart} />;
@@ -169,4 +186,8 @@ export interface ToolCallPart {
 	input?: Record<string, unknown>;
 	output?: unknown;
 	errorText?: string;
+	/** For tools requiring approval (e.g., ExitPlanMode): whether the user approved */
+	approved?: boolean;
+	/** For tools requiring approval: user feedback when rejecting */
+	feedback?: string;
 }

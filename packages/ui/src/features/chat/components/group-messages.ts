@@ -18,6 +18,22 @@ export function isExitPlanModeTool(toolName: string): boolean {
 }
 
 /**
+ * The base tool name for AskUserQuestion (without MCP prefix)
+ */
+export const ASK_USER_QUESTION_TOOL = "AskUserQuestion";
+
+/**
+ * Checks if a tool name is the AskUserQuestion tool.
+ * Handles both direct name ("AskUserQuestion") and MCP-prefixed name
+ */
+export function isAskUserQuestionTool(toolName: string): boolean {
+	return (
+		toolName === ASK_USER_QUESTION_TOOL ||
+		toolName.endsWith(`__${ASK_USER_QUESTION_TOOL}`)
+	);
+}
+
+/**
  * Represents a step in a work unit (a tool invocation)
  */
 export interface WorkStep {
@@ -33,7 +49,8 @@ export type GroupedItem =
 	| { type: "text"; messageId: string; text: string }
 	| { type: "reasoning"; messageId: string; text: string; isStreaming: boolean }
 	| { type: "work-unit"; steps: WorkStep[] }
-	| { type: "plan"; messageId: string; part: ToolCallPart };
+	| { type: "plan"; messageId: string; part: ToolCallPart }
+	| { type: "questions"; messageId: string; part: ToolCallPart };
 
 /**
  * Gets the tool name from a part for classification purposes
@@ -109,6 +126,14 @@ export function groupMessages(messages: UIMessage[]): GroupedItem[] {
 					flushWorkUnit();
 					result.push({
 						type: "plan",
+						messageId: message.id,
+						part: toolPart,
+					});
+				} else if (isAskUserQuestionTool(toolName)) {
+					// AskUserQuestion gets its own standalone "questions" item
+					flushWorkUnit();
+					result.push({
+						type: "questions",
 						messageId: message.id,
 						part: toolPart,
 					});

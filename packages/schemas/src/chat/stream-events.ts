@@ -151,6 +151,10 @@ export const StreamEventToolOutputAvailable = Schema.Struct({
 	providerExecuted: Schema.optional(Schema.Boolean),
 	dynamic: Schema.optional(Schema.Boolean),
 	preliminary: Schema.optional(Schema.Boolean),
+	/** For tools requiring approval (e.g., ExitPlanMode): whether the user approved */
+	approved: Schema.optional(Schema.Boolean),
+	/** For tools requiring approval: user feedback when rejecting */
+	feedback: Schema.optional(Schema.String),
 });
 export type StreamEventToolOutputAvailable =
 	typeof StreamEventToolOutputAvailable.Type;
