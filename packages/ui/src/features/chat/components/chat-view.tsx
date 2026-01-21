@@ -13,7 +13,7 @@ import { sessionGitStatsQuery } from "@/api/git-atoms";
 import {
 	SESSION_LIST_KEY,
 	sessionQuery,
-	updateSessionMutation,
+	touchSessionMutation,
 } from "@/api/session-atoms";
 import {
 	Conversation,
@@ -162,26 +162,26 @@ function ChatViewContent({
 	}, [initialMessages, historyLoaded, setHistory]);
 
 	// Set up session rename handler for atom cache refresh
-	const [, updateSession] = useAtom(updateSessionMutation, {
+	// We use touchSession to trigger reactivity key invalidation which refreshes
+	// all atoms subscribed to SESSION_LIST_KEY (including sessionListByRepositoryAtomFamily)
+	const [, touchSession] = useAtom(touchSessionMutation, {
 		mode: "promiseExit",
 	});
 	useEffect(() => {
-		chatStore
-			.getState()
-			.setOnSessionRenamed(async (renamedSessionId, title) => {
-				// Trigger cache invalidation by calling the mutation
-				// The server already updated the DB, so this updates the title in cache
-				// and invalidates related atoms via reactivity keys
-				await updateSession({
-					payload: { id: renamedSessionId, input: { title } },
-					reactivityKeys: [SESSION_LIST_KEY, `session:${renamedSessionId}`],
-				});
+		chatStore.getState().setOnSessionRenamed((renamedSessionId) => {
+			// Touch the session to trigger cache invalidation via reactivity keys
+			// The server already updated the title, but we need to invalidate
+			// all session list atoms so they refetch with the new title
+			touchSession({
+				payload: { id: renamedSessionId },
+				reactivityKeys: [SESSION_LIST_KEY, `session:${renamedSessionId}`],
 			});
+		});
 
 		return () => {
 			chatStore.getState().setOnSessionRenamed(null);
 		};
-	}, [updateSession]);
+	}, [touchSession]);
 
 	// Tool approval hooks
 	const pendingApprovals = usePendingToolApprovals(sessionId);
