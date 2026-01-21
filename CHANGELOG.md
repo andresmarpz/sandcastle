@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.1.15](https://github.com/andresmarpz/sandcastle/compare/v0.1.14...v0.1.15) (2026-01-21)
+
+
+### Features
+
+* animate session list when deleting one session ([6f34a52](https://github.com/andresmarpz/sandcastle/commit/6f34a529552b1fd07c9ca1a4adfda08bc04e0b7d))
+* improve context menu text hierarchy ([def30b3](https://github.com/andresmarpz/sandcastle/commit/def30b33b5e5fddf41cb880dae0ee4d1e1f4d233))
+* improve inter font rendering ([b126f35](https://github.com/andresmarpz/sandcastle/commit/b126f3540d90a2526e353686631f13766812ffe6))
+* improve sidebar styling ([ab0a65b](https://github.com/andresmarpz/sandcastle/commit/ab0a65b544ed4fd5bb3776f04848395da9a69bb7))
+* remove overlay blur from dialogs ([78d9aa3](https://github.com/andresmarpz/sandcastle/commit/78d9aa39891566b0d12f44fa947a8f3b5d0bc24a))
+* replace send button with arrow icon ([746e886](https://github.com/andresmarpz/sandcastle/commit/746e8864e4f51ad853b64242dc9cbc7ae3afd1a6))
+* set scrolldown animations to instant ([cd055f5](https://github.com/andresmarpz/sandcastle/commit/cd055f5b38c12b9e13bf0e3764a12e0417b594fc))
+
+
+### Bug Fixes
+
+* accurate context window percentage calculation ([#79](https://github.com/andresmarpz/sandcastle/issues/79)) ([21befba](https://github.com/andresmarpz/sandcastle/commit/21befba35e9b08723abb30fdabfdfe5374a72260))
+* attempt to improve session view transition ([74cdd19](https://github.com/andresmarpz/sandcastle/commit/74cdd1953ff1bc9f6f53e22565078b024354c6e2))
+* remove context menu animation on open ([fe51e55](https://github.com/andresmarpz/sandcastle/commit/fe51e5582a8c9436bb85d84c10d737fcc509c218))
+* **ui:** improve chat input footer mobile responsiveness ([#75](https://github.com/andresmarpz/sandcastle/issues/75)) ([e364461](https://github.com/andresmarpz/sandcastle/commit/e364461ce23add9c3c67bcf8acc4fba1c77d78b0))
+* **ui:** improve file picker mobile UX with bottom sheet ([#74](https://github.com/andresmarpz/sandcastle/issues/74)) ([704cec8](https://github.com/andresmarpz/sandcastle/commit/704cec8ea78f51e36f0a2072bd56a9be873da64b))
+* **web:** skip vercel builds for release-please branches ([#77](https://github.com/andresmarpz/sandcastle/issues/77)) ([00550c4](https://github.com/andresmarpz/sandcastle/commit/00550c4727e45f00e2ddd2d569b2f08d62ae54cb))
+
 ## [0.1.14](https://github.com/andresmarpz/sandcastle/compare/v0.1.13...v0.1.14) (2026-01-21)
 
 
