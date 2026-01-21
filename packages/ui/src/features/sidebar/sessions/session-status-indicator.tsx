@@ -41,28 +41,25 @@ export function useSessionStatusIndicator({ sessionId, status }: Props) {
 		);
 
 	const indicatorStatus = useMemo((): IndicatorStatus => {
-		// Backend error states take priority
 		if (status === "failed") {
 			return "failed";
 		}
 
 		// If connected to the chat store, use live state
 		if (subscribed) {
-			if (chatStatus === "streaming") {
-				return "streaming";
-			}
-			// Pending approvals take priority over unread content
 			if (hasPendingApprovals) {
 				return "waiting_input";
 			}
-			// Show needs_attention if there's unread content
+			if (chatStatus === "streaming") {
+				return "streaming";
+			}
 			if (hasUnreadContent) {
 				return "needs_attention";
 			}
+
 			return "ready";
 		}
 
-		// Not connected - use backend status
 		switch (status) {
 			case "active":
 				return "needs_attention";
