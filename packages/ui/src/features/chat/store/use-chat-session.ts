@@ -211,10 +211,7 @@ export function useChatSessionSelector<T>(
 	sessionId: string,
 	selector: (session: ChatSessionState) => T,
 ): T {
-	return useStore(
-		chatStore,
-		useShallow((state) => selector(state.getSession(sessionId))),
-	);
+	return useStore(chatStore, (state) => selector(state.getSession(sessionId)));
 }
 
 /**
