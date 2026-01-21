@@ -1,7 +1,7 @@
 "use client";
 
+import { FileCode } from "@phosphor-icons/react";
 import { type FileContents, MultiFileDiff } from "@pierre/diffs/react";
-import { IconFileCode } from "@tabler/icons-react";
 import { useMemo } from "react";
 import { Tool, ToolContent, ToolHeader } from "@/components/ai-elements/tool";
 import type { ToolCallPart } from "./index";
@@ -79,7 +79,7 @@ export function EditPart({ part }: EditPartProps) {
 				title="Edit"
 				type="tool-Edit"
 				state={mapState(part.state)}
-				icon={<IconFileCode className="size-4 text-muted-foreground" />}
+				icon={<FileCode className="size-4 text-muted-foreground" />}
 			/>
 			<ToolContent className="overflow-auto rounded-md border relative max-h-96 m-2 mt-0">
 				<MultiFileDiff

@@ -1,11 +1,6 @@
 "use client";
 
-import {
-	IconCheck,
-	IconChevronDown,
-	IconHammer,
-	IconListCheck,
-} from "@tabler/icons-react";
+import { CaretDown, Check, Hammer, ListChecks } from "@phosphor-icons/react";
 import { useState } from "react";
 import { Button } from "@/components/button";
 import {
@@ -20,13 +15,13 @@ const MODES = [
 	{
 		value: "plan",
 		label: "Plan",
-		icon: IconListCheck,
+		icon: ListChecks,
 		color: "text-green-500",
 	},
 	{
 		value: "build",
 		label: "Build",
-		icon: IconHammer,
+		icon: Hammer,
 		color: "text-indigo-500",
 	},
 ] as const;
@@ -58,7 +53,7 @@ export function PlanSelector({
 	};
 
 	const selectedModeData = MODES.find((m) => m.value === selectedMode);
-	const SelectedIcon = selectedModeData?.icon ?? IconListCheck;
+	const SelectedIcon = selectedModeData?.icon ?? ListChecks;
 	const selectedColor = selectedModeData?.color ?? "text-green-500";
 
 	// When disabled, show the current mode but prevent interaction
@@ -74,7 +69,7 @@ export function PlanSelector({
 				<span className="hidden text-[13px] sm:inline">
 					{selectedModeData?.label ?? "Plan"}
 				</span>
-				<IconChevronDown className="hidden size-3 text-muted-foreground sm:inline" />
+				<CaretDown className="hidden size-3 text-muted-foreground sm:inline" />
 			</Button>
 		);
 	}
@@ -89,7 +84,7 @@ export function PlanSelector({
 				<span className="hidden text-[13px] sm:inline">
 					{selectedModeData?.label ?? "Plan"}
 				</span>
-				<IconChevronDown className="hidden size-3 text-muted-foreground sm:inline" />
+				<CaretDown className="hidden size-3 text-muted-foreground sm:inline" />
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="start" className="w-48">
 				{MODES.map((mode) => (
@@ -103,7 +98,7 @@ export function PlanSelector({
 							<span>{mode.label}</span>
 						</span>
 
-						{selectedMode === mode.value && <IconCheck className="size-3" />}
+						{selectedMode === mode.value && <Check className="size-3" />}
 					</DropdownMenuItem>
 				))}
 			</DropdownMenuContent>

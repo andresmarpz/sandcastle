@@ -1,12 +1,6 @@
 "use client";
 
-import {
-	IconArrowUp,
-	IconCheck,
-	IconPencil,
-	IconSquare,
-	IconX,
-} from "@tabler/icons-react";
+import { ArrowUp, Check, Pencil, Square, X } from "@phosphor-icons/react";
 import type { ChatStatus, UIMessage } from "ai";
 import {
 	type ChangeEvent,
@@ -213,7 +207,7 @@ export function ChatInput({
 						{hasPendingPlan ? (
 							<>
 								<Button variant="ghost" size="sm" onClick={onCancelPlan}>
-									<IconX className="size-4 mr-1" />
+									<X className="size-4 mr-1" />
 									Cancel
 								</Button>
 								<TooltipProvider>
@@ -229,7 +223,7 @@ export function ChatInput({
 												/>
 											}
 										>
-											<IconPencil className="size-4 mr-1" />
+											<Pencil className="size-4 mr-1" />
 											Request Changes
 										</TooltipTrigger>
 										<TooltipContent>
@@ -240,7 +234,7 @@ export function ChatInput({
 									</Tooltip>
 								</TooltipProvider>
 								<Button size="sm" onClick={onApprovePlan}>
-									<IconCheck className="size-4 mr-1" />
+									<Check className="size-4 mr-1" />
 									Approve
 								</Button>
 							</>
@@ -252,7 +246,7 @@ export function ChatInput({
 										variant="destructive"
 										title="Stop generation"
 									>
-										<IconSquare className="size-4" />
+										<Square className="size-4" />
 									</PromptInputButton>
 								)}
 								<Button
@@ -261,7 +255,7 @@ export function ChatInput({
 									disabled={isSending || !inputValue.trim()}
 									className="bg-neutral-500 hover:bg-neutral-600 dark:bg-neutral-600 dark:hover:bg-neutral-500 text-white"
 								>
-									<IconArrowUp className="size-4" />
+									<ArrowUp className="size-4" />
 								</Button>
 							</>
 						)}

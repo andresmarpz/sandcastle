@@ -1,16 +1,16 @@
 "use client";
 
 import {
+	CaretDown,
+	File,
+	FileText,
 	type Icon,
-	IconChevronDown,
-	IconEdit,
-	IconFile,
-	IconFileText,
-	IconListCheck,
-	IconSearch,
-	IconTerminal,
-	IconTool,
-} from "@tabler/icons-react";
+	ListChecks,
+	MagnifyingGlass,
+	Pencil,
+	Terminal,
+	Wrench,
+} from "@phosphor-icons/react";
 import type { ComponentProps, ReactNode } from "react";
 import { memo } from "react";
 import {
@@ -23,17 +23,17 @@ import { cn } from "@/lib/utils";
 
 // Map tool names to icons
 const toolIconMap: Record<string, Icon> = {
-	Bash: IconTerminal,
-	Read: IconFileText,
-	Write: IconFile,
-	Edit: IconEdit,
-	Glob: IconSearch,
-	Grep: IconSearch,
-	TodoWrite: IconListCheck,
+	Bash: Terminal,
+	Read: FileText,
+	Write: File,
+	Edit: Pencil,
+	Glob: MagnifyingGlass,
+	Grep: MagnifyingGlass,
+	TodoWrite: ListChecks,
 };
 
 export function getToolIcon(toolName: string): Icon {
-	return toolIconMap[toolName] ?? IconTool;
+	return toolIconMap[toolName] ?? Wrench;
 }
 
 export type WorkStepProps = ComponentProps<"div"> & {
@@ -60,7 +60,7 @@ function areWorkStepPropsEqual(
 
 export const WorkStep = memo(function WorkStep({
 	className,
-	icon: IconComponent = IconTool,
+	icon: IconComponent = Wrench,
 	title,
 	defaultOpen = false,
 	children,
@@ -98,7 +98,7 @@ export const WorkStep = memo(function WorkStep({
 				<div className="min-w-0 flex-1">
 					<CollapsibleTrigger className="flex w-full items-center justify-between gap-2 py-0.5">
 						<span className="text-left text-foreground">{title}</span>
-						<IconChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+						<CaretDown className="size-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
 					</CollapsibleTrigger>
 					<WorkStepContent>{children}</WorkStepContent>
 				</div>

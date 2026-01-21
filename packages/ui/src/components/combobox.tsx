@@ -1,5 +1,5 @@
 import { Combobox as ComboboxPrimitive } from "@base-ui/react";
-import { IconCheck, IconChevronDown, IconX } from "@tabler/icons-react";
+import { CaretDown, Check, X } from "@phosphor-icons/react";
 import * as React from "react";
 import { Button } from "@/components/button";
 import {
@@ -28,7 +28,7 @@ function ComboboxTrigger({
 			{...props}
 		>
 			{children}
-			<IconChevronDown className="text-muted-foreground size-4 pointer-events-none" />
+			<CaretDown className="text-muted-foreground size-4 pointer-events-none" />
 		</ComboboxPrimitive.Trigger>
 	);
 }
@@ -41,7 +41,7 @@ function ComboboxClear({ className, ...props }: ComboboxPrimitive.Clear.Props) {
 			className={cn(className)}
 			{...props}
 		>
-			<IconX className="pointer-events-none" />
+			<X className="pointer-events-none" />
 		</ComboboxPrimitive.Clear>
 	);
 }
@@ -151,7 +151,7 @@ function ComboboxItem({
 					<span className="pointer-events-none absolute right-2 flex size-4 items-center justify-center" />
 				}
 			>
-				<IconCheck className="pointer-events-none" />
+				<Check className="pointer-events-none" />
 			</ComboboxPrimitive.ItemIndicator>
 		</ComboboxPrimitive.Item>
 	);
@@ -253,7 +253,7 @@ function ComboboxChip({
 					className="-ml-1 opacity-50 hover:opacity-100"
 					data-slot="combobox-chip-remove"
 				>
-					<IconX className="pointer-events-none" />
+					<X className="pointer-events-none" />
 				</ComboboxPrimitive.ChipRemove>
 			)}
 		</ComboboxPrimitive.Chip>

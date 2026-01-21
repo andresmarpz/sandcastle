@@ -1,12 +1,7 @@
 "use client";
 
+import { Brain, CaretDown, DotOutline, type Icon } from "@phosphor-icons/react";
 import { useControllableState } from "@radix-ui/react-use-controllable-state";
-import {
-	type Icon,
-	IconBrain,
-	IconChevronDown,
-	IconPoint,
-} from "@tabler/icons-react";
 import type { ComponentProps, ReactNode } from "react";
 import { createContext, memo, useContext, useMemo } from "react";
 import { Badge } from "@/components/badge";
@@ -92,11 +87,11 @@ export const ChainOfThoughtHeader = memo(
 					)}
 					{...props}
 				>
-					<IconBrain className="size-4" />
+					<Brain className="size-4" />
 					<span className="flex-1 text-left">
 						{children ?? "Chain of Thought"}
 					</span>
-					<IconChevronDown
+					<CaretDown
 						className={cn(
 							"size-4 transition-transform",
 							isOpen ? "rotate-180" : "rotate-0",
@@ -118,7 +113,7 @@ export type ChainOfThoughtStepProps = ComponentProps<"div"> & {
 export const ChainOfThoughtStep = memo(
 	({
 		className,
-		icon: IconComponent = IconPoint,
+		icon: IconComponent = DotOutline,
 		label,
 		description,
 		status = "complete",

@@ -1,4 +1,4 @@
-import { IconBrandGithub, IconFolderOpen, IconPlus } from "@tabler/icons-react";
+import { FolderOpen, GithubLogo, Plus } from "@phosphor-icons/react";
 import { useState } from "react";
 import {
 	DropdownMenu,
@@ -21,7 +21,7 @@ export default function SidebarNewRepository() {
 		<SidebarMenuItem>
 			<DropdownMenu>
 				<DropdownMenuTrigger render={<SidebarMenuButton size="lg" />}>
-					<IconPlus className="size-5" />
+					<Plus className="size-5" />
 					<span className="sr-only">Add project</span>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent
@@ -30,11 +30,11 @@ export default function SidebarNewRepository() {
 					className="min-w-[200px]"
 				>
 					<DropdownMenuItem onClick={handleOpenProject}>
-						<IconFolderOpen className="size-3" />
+						<FolderOpen className="size-3" />
 						Open project
 					</DropdownMenuItem>
 					<DropdownMenuItem onClick={handleCloneFromGit}>
-						<IconBrandGithub className="size-3" />
+						<GithubLogo className="size-3" />
 						Clone from Git
 					</DropdownMenuItem>
 				</DropdownMenuContent>

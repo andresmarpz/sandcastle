@@ -1,6 +1,6 @@
 "use client";
 
-import { IconChevronDown, IconCopy } from "@tabler/icons-react";
+import { CaretDown, Copy } from "@phosphor-icons/react";
 import { Button } from "@/components/button";
 import {
 	DropdownMenu,
@@ -77,7 +77,7 @@ export function OpenPathButton({ path }: OpenPathButtonProps) {
 				render={
 					<Button variant="outline" size="xs" className="gap-1 w-fit">
 						Open
-						<IconChevronDown className="size-3" />
+						<CaretDown className="size-3" />
 					</Button>
 				}
 			/>
@@ -104,7 +104,7 @@ export function OpenPathButton({ path }: OpenPathButtonProps) {
 					<span className="text-muted-foreground text-xs w-3">
 						{++itemIndex}
 					</span>
-					<IconCopy className="size-4" />
+					<Copy className="size-4" />
 					Copy path
 				</DropdownMenuItem>
 			</DropdownMenuContent>

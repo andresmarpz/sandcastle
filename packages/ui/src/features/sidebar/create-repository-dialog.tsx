@@ -1,5 +1,5 @@
 import { useAtom } from "@effect-atom/atom-react";
-import { IconFolderOpen } from "@tabler/icons-react";
+import { FolderOpen } from "@phosphor-icons/react";
 import { useState } from "react";
 import {
 	createRepositoryMutation,
@@ -114,7 +114,7 @@ export function CreateRepositoryDialog({
 								size="icon"
 								onClick={handleSelectDirectory}
 							>
-								<IconFolderOpen className="size-4" />
+								<FolderOpen className="size-4" />
 								<span className="sr-only">Browse</span>
 							</Button>
 						</div>

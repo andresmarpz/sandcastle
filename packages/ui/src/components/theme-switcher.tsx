@@ -1,6 +1,6 @@
 "use client";
 
-import { IconDeviceDesktop, IconMoon, IconSun } from "@tabler/icons-react";
+import { Desktop, Moon, Sun } from "@phosphor-icons/react";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -18,22 +18,22 @@ export function ThemeSwitcher() {
 		<SidebarMenuItem>
 			<DropdownMenu>
 				<DropdownMenuTrigger render={<SidebarMenuButton />}>
-					<IconSun className="size-4 dark:hidden" />
-					<IconMoon className="hidden size-4 dark:block" />
+					<Sun className="size-4 dark:hidden" />
+					<Moon className="hidden size-4 dark:block" />
 					<span className="sr-only">Toggle theme</span>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" side="top" sideOffset={4}>
 					<DropdownMenuRadioGroup value={theme} onValueChange={setTheme}>
 						<DropdownMenuRadioItem value="light">
-							<IconSun className="size-4" />
+							<Sun className="size-4" />
 							Light
 						</DropdownMenuRadioItem>
 						<DropdownMenuRadioItem value="dark">
-							<IconMoon className="size-4" />
+							<Moon className="size-4" />
 							Dark
 						</DropdownMenuRadioItem>
 						<DropdownMenuRadioItem value="system">
-							<IconDeviceDesktop className="size-4" />
+							<Desktop className="size-4" />
 							System
 						</DropdownMenuRadioItem>
 					</DropdownMenuRadioGroup>

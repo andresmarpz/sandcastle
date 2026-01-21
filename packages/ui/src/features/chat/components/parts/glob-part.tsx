@@ -1,6 +1,6 @@
 "use client";
 
-import { IconFile, IconFolderSearch } from "@tabler/icons-react";
+import { File, FileMagnifyingGlass } from "@phosphor-icons/react";
 import { Tool, ToolContent, ToolHeader } from "@/components/ai-elements/tool";
 import type { ToolCallPart } from "./index";
 
@@ -110,7 +110,7 @@ export function GlobPart({ part }: GlobPartProps) {
 				title="Glob"
 				type="tool-Glob"
 				state={mapState(part.state)}
-				icon={<IconFolderSearch className="size-4 text-muted-foreground" />}
+				icon={<FileMagnifyingGlass className="size-4 text-muted-foreground" />}
 			/>
 			<ToolContent>
 				<div className="p-2">
@@ -135,7 +135,7 @@ export function GlobPart({ part }: GlobPartProps) {
 										key={`${part.toolCallId}_${file.slice(Math.min(10, file.length - 10), file.length)}`}
 										className="flex items-center gap-2 px-3 py-1.5 hover:bg-muted/30"
 									>
-										<IconFile className="size-3.5 text-muted-foreground shrink-0" />
+										<File className="size-3.5 text-muted-foreground shrink-0" />
 										{highlightMatch(file, pattern)}
 									</li>
 								))}

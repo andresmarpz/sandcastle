@@ -1,7 +1,7 @@
 "use client";
 
+import { CaretUp } from "@phosphor-icons/react";
 import { useControllableState } from "@radix-ui/react-use-controllable-state";
-import { IconChevronUp } from "@tabler/icons-react";
 import type { ComponentProps } from "react";
 import { Children, createContext, memo, useContext, useMemo } from "react";
 import { cn } from "@/lib/utils";
@@ -86,7 +86,7 @@ export const WorkUnitHeader = memo(function WorkUnitHeader({
 			)}
 			{...props}
 		>
-			<IconChevronUp
+			<CaretUp
 				className={cn(
 					"size-4 transition-transform",
 					isOpen ? "rotate-0" : "rotate-180",

@@ -1,8 +1,4 @@
-import {
-	IconCircle,
-	IconCircleCheck,
-	IconCircleHalf2,
-} from "@tabler/icons-react";
+import { CheckCircle, Circle, CircleHalf } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import type { ToolCallPart } from "./index";
 
@@ -24,13 +20,13 @@ function TodoItem({ todo }: { todo: Todo }) {
 	return (
 		<div className="flex items-start gap-2 py-1">
 			{todo.status === "completed" && (
-				<IconCircleCheck className="mt-0.5 size-4 shrink-0 text-green-600" />
+				<CheckCircle className="mt-0.5 size-4 shrink-0 text-green-600" />
 			)}
 			{todo.status === "in_progress" && (
-				<IconCircleHalf2 className="mt-0.5 size-4 shrink-0 text-yellow-400 rotate-180" />
+				<CircleHalf className="mt-0.5 size-4 shrink-0 text-yellow-400 rotate-180" />
 			)}
 			{todo.status === "pending" && (
-				<IconCircle className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+				<Circle className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
 			)}
 			<span
 				className={cn(

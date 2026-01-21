@@ -1,7 +1,7 @@
 "use client";
 
+import { FileText } from "@phosphor-icons/react";
 import { File, type FileContents } from "@pierre/diffs/react";
-import { IconFileText } from "@tabler/icons-react";
 import { useMemo } from "react";
 import { Tool, ToolContent, ToolHeader } from "@/components/ai-elements/tool";
 import type { ToolCallPart } from "./index";
@@ -80,7 +80,7 @@ export function ReadPart({ part }: ReadPartProps) {
 				title="Read"
 				type="tool-Read"
 				state={mapState(part.state)}
-				icon={<IconFileText className="size-4 text-muted-foreground" />}
+				icon={<FileText className="size-4 text-muted-foreground" />}
 			/>
 			<ToolContent className="overflow-auto rounded-md border relative max-h-96 m-2 mt-0">
 				<File

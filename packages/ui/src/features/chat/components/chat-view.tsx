@@ -1,9 +1,9 @@
 "use client";
 
 import { Result, useAtom, useAtomValue } from "@effect-atom/atom-react";
+import { X } from "@phosphor-icons/react";
 import type { GetHistoryResult } from "@sandcastle/rpc";
 import type { ChatMessage, QueuedMessage, Session } from "@sandcastle/schemas";
-import { IconX } from "@tabler/icons-react";
 import type { ChatStatus, UIMessage } from "ai";
 import { formatDistanceToNow } from "date-fns";
 import * as Option from "effect/Option";
@@ -568,7 +568,7 @@ function QueuePanel({
 													onClick={() => onDequeue(message.id)}
 													className="flex items-center justify-center opacity-100"
 												>
-													<IconX className="size-3" />
+													<X className="size-3" />
 												</QueueItemAction>
 											</QueueItemActions>
 										</div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { type Icon, IconX } from "@tabler/icons-react";
+import { type Icon, X } from "@phosphor-icons/react";
 import type { ComponentProps, HTMLAttributes } from "react";
 import { Button } from "@/components/button";
 import {
@@ -56,7 +56,7 @@ export const ArtifactClose = ({
 		variant={variant}
 		{...props}
 	>
-		{children ?? <IconX className="size-4" />}
+		{children ?? <X className="size-4" />}
 		<span className="sr-only">Close</span>
 	</Button>
 );

@@ -1,6 +1,6 @@
 "use client";
 
-import { IconSelector } from "@tabler/icons-react";
+import { CaretUpDown } from "@phosphor-icons/react";
 import type { ComponentProps } from "react";
 import { createContext, useContext } from "react";
 import { Button } from "@/components/button";
@@ -157,7 +157,7 @@ export const QuestionsTrigger = ({
 				{...props}
 				className="size-8"
 			>
-				<IconSelector className="size-4" />
+				<CaretUpDown className="size-4" />
 				<span className="sr-only">Toggle questions</span>
 			</Button>
 		)}

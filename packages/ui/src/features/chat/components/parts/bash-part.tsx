@@ -1,6 +1,6 @@
 "use client";
 
-import { IconTerminal } from "@tabler/icons-react";
+import { Terminal } from "@phosphor-icons/react";
 import { Tool, ToolContent, ToolHeader } from "@/components/ai-elements/tool";
 import { cn } from "@/lib/utils";
 import type { ToolCallPart } from "./index";
@@ -44,7 +44,7 @@ export function BashPart({ part }: BashPartProps) {
 				title="Bash"
 				type="tool-Bash"
 				state={mapState(part.state)}
-				icon={<IconTerminal className="size-4 text-muted-foreground" />}
+				icon={<Terminal className="size-4 text-muted-foreground" />}
 			/>
 			<ToolContent>
 				<div className="space-y-3 p-2">
@@ -60,7 +60,7 @@ export function BashPart({ part }: BashPartProps) {
 						</h4>
 						<div className="rounded-md border bg-muted/50 overflow-hidden">
 							<div className="flex items-start gap-2 p-3">
-								<IconTerminal className="size-4 text-muted-foreground mt-0.5 shrink-0" />
+								<Terminal className="size-4 text-muted-foreground mt-0.5 shrink-0" />
 								<code className="font-mono text-sm break-all whitespace-pre-wrap">
 									{command}
 								</code>

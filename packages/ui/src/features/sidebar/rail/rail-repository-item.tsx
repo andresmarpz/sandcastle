@@ -1,8 +1,8 @@
 "use client";
 
 import { useAtom } from "@effect-atom/atom-react";
+import { PushPin, PushPinSlash, Trash } from "@phosphor-icons/react";
 import type { Repository } from "@sandcastle/schemas";
-import { IconPinned, IconPinnedOff, IconTrash } from "@tabler/icons-react";
 import * as React from "react";
 import { useLocation, useNavigate } from "react-router";
 import {
@@ -87,9 +87,9 @@ export function RailRepositoryItem({ repository }: RailRepositoryItemProps) {
 				<ContextMenuContent className="min-w-[160px]">
 					<ContextMenuItem onClick={handleRepositoryPin}>
 						{repository.pinned ? (
-							<IconPinnedOff className="size-4" />
+							<PushPinSlash className="size-4" />
 						) : (
-							<IconPinned className="size-4" />
+							<PushPin className="size-4" />
 						)}
 						{repository.pinned ? "Unpin" : "Pin"}
 					</ContextMenuItem>
@@ -97,7 +97,7 @@ export function RailRepositoryItem({ repository }: RailRepositoryItemProps) {
 						variant="destructive"
 						onClick={() => setIsDeleteDialogOpen(true)}
 					>
-						<IconTrash className="size-4" />
+						<Trash className="size-4" />
 						Remove from list
 					</ContextMenuItem>
 				</ContextMenuContent>

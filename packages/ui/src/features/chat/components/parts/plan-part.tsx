@@ -1,11 +1,6 @@
 "use client";
 
-import {
-	IconAlertTriangle,
-	IconCheck,
-	IconClock,
-	IconX,
-} from "@tabler/icons-react";
+import { Check, Clock, Warning, X } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { Streamdown } from "streamdown";
 import {
@@ -191,21 +186,21 @@ function StatusBadge({ status }: { status: PlanStatus }) {
 		case "approved":
 			return (
 				<Badge className="flex shrink-0 items-center gap-1 bg-green-500/10 text-green-600 dark:bg-green-500/20 dark:text-green-400">
-					<IconCheck className="size-3" />
+					<Check className="size-3" />
 					Approved
 				</Badge>
 			);
 		case "rejected":
 			return (
 				<Badge className="flex shrink-0 items-center gap-1 bg-muted text-muted-foreground">
-					<IconX className="size-3" />
+					<X className="size-3" />
 					Not approved
 				</Badge>
 			);
 		case "error":
 			return (
 				<Badge className="flex shrink-0 items-center gap-1 bg-red-500/10 text-red-600 dark:bg-red-500/20 dark:text-red-400">
-					<IconAlertTriangle className="size-3" />
+					<Warning className="size-3" />
 					Failed
 				</Badge>
 			);
@@ -213,7 +208,7 @@ function StatusBadge({ status }: { status: PlanStatus }) {
 		case "pending":
 			return (
 				<Badge className="flex shrink-0 items-center gap-1 bg-muted text-muted-foreground">
-					<IconClock className="size-3" />
+					<Clock className="size-3" />
 					Pending
 				</Badge>
 			);

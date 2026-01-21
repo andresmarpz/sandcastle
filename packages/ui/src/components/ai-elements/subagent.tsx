@@ -1,7 +1,7 @@
 "use client";
 
+import { CaretUp, Robot } from "@phosphor-icons/react";
 import { useControllableState } from "@radix-ui/react-use-controllable-state";
-import { IconChevronUp, IconRobot } from "@tabler/icons-react";
 import type { ComponentProps, ReactNode } from "react";
 import { createContext, memo, useContext, useMemo } from "react";
 import { Badge } from "@/components/badge";
@@ -93,7 +93,7 @@ export const SubagentHeader = memo(function SubagentHeader({
 			{...props}
 		>
 			<div className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary/10">
-				<IconRobot className="size-3.5 text-primary" />
+				<Robot className="size-3.5 text-primary" />
 			</div>
 			<div className="flex min-w-0 flex-1 items-center gap-2">
 				<span className="truncate font-medium text-foreground">{title}</span>
@@ -108,7 +108,7 @@ export const SubagentHeader = memo(function SubagentHeader({
 			</div>
 			<div className="flex shrink-0 items-center gap-2">
 				<SubagentStatusBadge status={status} />
-				<IconChevronUp
+				<CaretUp
 					className={cn(
 						"size-4 text-muted-foreground transition-transform",
 						isOpen ? "rotate-0" : "rotate-180",

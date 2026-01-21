@@ -1,8 +1,8 @@
 "use client";
 
 import { Result, useAtom, useAtomValue } from "@effect-atom/atom-react";
+import { Archive, Pencil, Trash } from "@phosphor-icons/react";
 import type { Session } from "@sandcastle/schemas";
-import { IconArchive, IconPencil, IconTrash } from "@tabler/icons-react";
 import { formatDistanceToNow } from "date-fns";
 import * as Option from "effect/Option";
 import { motion } from "motion/react";
@@ -142,11 +142,11 @@ export function SessionItem({ session, repositoryId }: SessionItemProps) {
 
 						<ContextMenuContent className="min-w-[160px]">
 							<ContextMenuItem onClick={handleRename}>
-								<IconPencil className="size-4" />
+								<Pencil className="size-4" />
 								Rename
 							</ContextMenuItem>
 							<ContextMenuItem onClick={handleArchive}>
-								<IconArchive className="size-4" />
+								<Archive className="size-4" />
 								Archive
 							</ContextMenuItem>
 							<ContextMenuSeparator />
@@ -154,7 +154,7 @@ export function SessionItem({ session, repositoryId }: SessionItemProps) {
 								variant="destructive"
 								onClick={() => setIsDeleteDialogOpen(true)}
 							>
-								<IconTrash className="size-4" />
+								<Trash className="size-4" />
 								Delete
 							</ContextMenuItem>
 						</ContextMenuContent>
