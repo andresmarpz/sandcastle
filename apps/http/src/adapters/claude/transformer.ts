@@ -139,10 +139,16 @@ export function processMessage(
 			break;
 
 		case "assistant": {
+			const assistantMsg = message as SDKAssistantMessage;
+			const parentToolUseId =
+				"parent_tool_use_id" in message
+					? (message.parent_tool_use_id as string | null | undefined)
+					: undefined;
 			const result = processAssistantMessage(
-				message as SDKAssistantMessage,
+				assistantMsg,
 				newState,
 				config,
+				parentToolUseId,
 			);
 			events.push(...result.events);
 			newState = result.newState;
@@ -150,10 +156,16 @@ export function processMessage(
 		}
 
 		case "user": {
+			const userMsg = message as SDKUserMessage;
+			const parentToolUseId =
+				"parent_tool_use_id" in message
+					? (message.parent_tool_use_id as string | null | undefined)
+					: undefined;
 			const result = processUserMessage(
-				message as SDKUserMessage,
+				userMsg,
 				newState,
 				config,
+				parentToolUseId,
 			);
 			events.push(...result.events);
 			newState = result.newState;
@@ -200,6 +212,7 @@ function processAssistantMessage(
 	message: SDKAssistantMessage,
 	state: StreamState,
 	config: AdapterConfig,
+	parentToolUseId?: string | null,
 ): ProcessResult {
 	const events: ChatStreamEvent[] = [];
 	let newState = state;
@@ -240,17 +253,19 @@ function processAssistantMessage(
 		) {
 			const toolInput = block.input as Record<string, unknown>;
 
-			// Emit tool input events
+			// Emit tool input events with parentToolCallId
 			events.push({
 				type: "tool-input-start",
 				toolCallId: block.id,
 				toolName: block.name,
+				parentToolCallId: parentToolUseId ?? null,
 			} satisfies StreamEventToolInputStart);
 			events.push({
 				type: "tool-input-available",
 				toolCallId: block.id,
 				toolName: block.name,
 				input: toolInput,
+				parentToolCallId: parentToolUseId ?? null,
 			} satisfies StreamEventToolInputAvailable);
 
 			// Track the tool call in state
@@ -284,6 +299,7 @@ function processUserMessage(
 	message: SDKUserMessage,
 	state: StreamState,
 	_config: AdapterConfig,
+	parentToolUseId?: string | null,
 ): ProcessResult {
 	const events: ChatStreamEvent[] = [];
 	let newState = state;
@@ -314,6 +330,7 @@ function processUserMessage(
 					type: "tool-output-error",
 					toolCallId: block.tool_use_id,
 					errorText,
+					parentToolCallId: parentToolUseId ?? null,
 				} satisfies StreamEventToolOutputError);
 			} else {
 				// Emit success event for completed tool execution
@@ -328,6 +345,7 @@ function processUserMessage(
 					type: "tool-output-available",
 					toolCallId: block.tool_use_id,
 					output: block.content,
+					parentToolCallId: parentToolUseId ?? null,
 					...(approvalInfo && {
 						approved: approvalInfo.approved,
 						...(approvalInfo.feedback && { feedback: approvalInfo.feedback }),

@@ -16,6 +16,7 @@ import {
 import { PlanPart } from "./parts/plan-part";
 import { QuestionsPart } from "./parts/questions-part";
 import { ReasoningPart } from "./parts/reasoning-part";
+import { SubagentPart } from "./parts/subagent-part";
 import { getToolIcon, WorkStep } from "./work-step";
 import { WorkUnit, WorkUnitContent, WorkUnitHeader } from "./work-unit";
 
@@ -110,6 +111,20 @@ function areGroupedItemsEqual(
 				prevItem.part.state === nextItem.part.state
 			);
 
+		case "subagent":
+			// Compare subagent items by tool call ID, state, and nested step count
+			if (nextItem.type !== "subagent") return false;
+			if (prevItem.taskPart.toolCallId !== nextItem.taskPart.toolCallId)
+				return false;
+			if (prevItem.taskPart.state !== nextItem.taskPart.state) return false;
+			if (prevItem.nestedSteps.length !== nextItem.nestedSteps.length)
+				return false;
+			return prevItem.nestedSteps.every(
+				(step, i) =>
+					step.part.toolCallId === nextItem.nestedSteps[i]?.part.toolCallId &&
+					step.part.state === nextItem.nestedSteps[i]?.part.state,
+			);
+
 		default:
 			return false;
 	}
@@ -199,6 +214,18 @@ const GroupedItemRenderer = memo(function GroupedItemRenderer({
 				<Message from="assistant">
 					<MessageContent>
 						<QuestionsPart part={item.part} sessionId={sessionId} />
+					</MessageContent>
+				</Message>
+			);
+
+		case "subagent":
+			return (
+				<Message from="assistant">
+					<MessageContent>
+						<SubagentPart
+							taskPart={item.taskPart}
+							nestedSteps={item.nestedSteps}
+						/>
 					</MessageContent>
 				</Message>
 			);
