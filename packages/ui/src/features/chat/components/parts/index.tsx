@@ -190,4 +190,6 @@ export interface ToolCallPart {
 	approved?: boolean;
 	/** For tools requiring approval: user feedback when rejecting */
 	feedback?: string;
+	/** Parent tool call ID - links this tool to its parent subagent (Task tool) */
+	parentToolCallId?: string | null;
 }

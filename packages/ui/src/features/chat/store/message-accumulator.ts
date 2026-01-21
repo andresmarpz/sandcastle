@@ -41,6 +41,8 @@ export type ToolInvocationPart = {
 	feedback?: string;
 	// Error text for output-error state
 	errorText?: string;
+	// Parent tool call ID - links this tool to its parent subagent (Task tool)
+	parentToolCallId?: string | null;
 };
 
 export type FilePart = {
@@ -95,6 +97,7 @@ interface ToolPartState {
 	title?: string;
 	providerExecuted?: boolean;
 	dynamic?: boolean;
+	parentToolCallId?: string | null;
 }
 
 /**
@@ -181,6 +184,7 @@ export class MessageAccumulator {
 					title: event.title,
 					providerExecuted: event.providerExecuted,
 					dynamic: event.dynamic,
+					parentToolCallId: event.parentToolCallId,
 				});
 				this.parts.push({
 					type: "dynamic-tool",
@@ -192,6 +196,7 @@ export class MessageAccumulator {
 					title: event.title,
 					providerExecuted: event.providerExecuted,
 					dynamic: event.dynamic,
+					parentToolCallId: event.parentToolCallId,
 				});
 				break;
 			}
@@ -216,6 +221,10 @@ export class MessageAccumulator {
 				const state = this.toolParts.get(event.toolCallId);
 				if (state) {
 					state.state = "input-available";
+					// Update parentToolCallId if provided in event (may override)
+					if (event.parentToolCallId !== undefined) {
+						state.parentToolCallId = event.parentToolCallId;
+					}
 					const part = this.parts[state.index] as ToolInvocationPart;
 					part.state = "input-available";
 					part.input = event.input;
@@ -224,6 +233,8 @@ export class MessageAccumulator {
 					if (event.providerExecuted !== undefined)
 						part.providerExecuted = event.providerExecuted;
 					if (event.dynamic !== undefined) part.dynamic = event.dynamic;
+					if (event.parentToolCallId !== undefined)
+						part.parentToolCallId = event.parentToolCallId;
 				} else {
 					// Tool input available without prior start (edge case)
 					const index = this.parts.length;
@@ -235,6 +246,7 @@ export class MessageAccumulator {
 						title: event.title,
 						providerExecuted: event.providerExecuted,
 						dynamic: event.dynamic,
+						parentToolCallId: event.parentToolCallId,
 					});
 					this.parts.push({
 						type: "dynamic-tool",
@@ -246,6 +258,7 @@ export class MessageAccumulator {
 						title: event.title,
 						providerExecuted: event.providerExecuted,
 						dynamic: event.dynamic,
+						parentToolCallId: event.parentToolCallId,
 					});
 				}
 				break;

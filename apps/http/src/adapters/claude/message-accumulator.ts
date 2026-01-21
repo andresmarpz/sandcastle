@@ -169,13 +169,19 @@ export function createMessageAccumulator(
 					// compact_boundary and other system messages don't produce ChatMessages
 					break;
 
-				case "assistant":
+				case "assistant": {
+					const parentToolUseId =
+						"parent_tool_use_id" in message
+							? (message.parent_tool_use_id as string | null | undefined)
+							: undefined;
 					processAssistantMessage(
 						message as SDKAssistantMessage,
 						state,
 						config,
+						parentToolUseId,
 					);
 					break;
+				}
 
 				case "user":
 					processUserMessage(message as SDKUserMessage, state, config);
@@ -211,6 +217,7 @@ function processAssistantMessage(
 	message: SDKAssistantMessage,
 	state: AccumulatorState,
 	config: AccumulatorConfig,
+	parentToolUseId?: string | null,
 ): void {
 	const parts: MessagePart[] = [];
 	const messageIndex = state.messages.length;
@@ -247,6 +254,7 @@ function processAssistantMessage(
 				toolName: toolBlock.name,
 				input: toolBlock.input,
 				state: "input-available",
+				parentToolCallId: parentToolUseId ?? null,
 			};
 			parts.push(part);
 
