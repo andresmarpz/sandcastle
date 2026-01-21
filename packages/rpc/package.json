@@ -9,6 +9,7 @@
 		".": "./index.ts",
 		"./common": "./src/common/index.ts",
 		"./files": "./src/files/index.ts",
+		"./git": "./src/git/index.ts",
 		"./repositories": "./src/repositories/index.ts",
 		"./worktrees": "./src/worktrees/index.ts",
 		"./sessions": "./src/sessions/index.ts",
