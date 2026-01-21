@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.1.14](https://github.com/andresmarpz/sandcastle/compare/v0.1.13...v0.1.14) (2026-01-21)
+
+
+### Features
+
+* **session:** auto-rename sessions on first message ([#72](https://github.com/andresmarpz/sandcastle/issues/72)) ([834d86f](https://github.com/andresmarpz/sandcastle/commit/834d86ffe5b895407ac8255c86456976f9f3e634))
+* **ui:** add streaming loading indicator with pixel spinner ([#73](https://github.com/andresmarpz/sandcastle/issues/73)) ([8bd04d0](https://github.com/andresmarpz/sandcastle/commit/8bd04d02c1bf3e2cd7809ad9054054a291cd1827))
+
+
+### Bug Fixes
+
+* use default mode build for sessions ([2cba7ed](https://github.com/andresmarpz/sandcastle/commit/2cba7ed78822c5cfd9d5a783efc179214f8e8179))
+
 ## [0.1.13](https://github.com/andresmarpz/sandcastle/compare/v0.1.12...v0.1.13) (2026-01-21)
 
 
