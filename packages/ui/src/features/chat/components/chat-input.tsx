@@ -1,6 +1,12 @@
 "use client";
 
-import { IconArrowUp, IconCheck, IconPencil, IconSquare, IconX } from "@tabler/icons-react";
+import {
+	IconArrowUp,
+	IconCheck,
+	IconPencil,
+	IconSquare,
+	IconX,
+} from "@tabler/icons-react";
 import type { ChatStatus, UIMessage } from "ai";
 import {
 	type ChangeEvent,
