@@ -142,13 +142,31 @@ export function groupMessages(messages: UIMessage[]): GroupedItem[] {
 	};
 
 	/**
-	 * Adds a tool step to either the current open Task's nested steps,
-	 * or to the pending work unit if no Task is open.
+	 * Adds a tool step to its parent Task (using parentToolCallId) or to the pending work unit.
+	 *
+	 * The parentToolCallId provides reliable association between nested tools and their
+	 * parent subagent (Task tool), replacing the previous implicit ordering-based approach.
+	 * This correctly handles parallel subagents where tools from different agents can
+	 * be interleaved in the message stream.
 	 */
 	const addToolStep = (step: WorkStep) => {
+		const parentId = step.part.parentToolCallId;
+
+		if (parentId) {
+			// Find the parent Task by toolCallId
+			const parentTask = openTasks.find((t) => t.toolCallId === parentId);
+			if (parentTask) {
+				parentTask.nestedSteps.push(step);
+				return;
+			}
+		}
+
+		// No parent (null/undefined) or parent not found - add to pending work-unit
+		// Fall back to stack-based approach for backwards compatibility
 		const currentTask = openTasks[openTasks.length - 1];
-		if (currentTask) {
-			// Add to the innermost open Task
+		if (currentTask && !parentId) {
+			// Only use stack-based fallback if parentToolCallId is not set at all
+			// (for backwards compatibility with data that doesn't have parentToolCallId)
 			currentTask.nestedSteps.push(step);
 		} else {
 			pendingSteps.push(step);
@@ -173,64 +191,71 @@ export function groupMessages(messages: UIMessage[]): GroupedItem[] {
 	};
 
 	/**
-	 * Handles Task tool state transitions for subagent grouping
+	 * Handles Task tool state transitions for subagent grouping.
+	 *
+	 * Key insight: The MessageAccumulator updates tool parts in place, so in the
+	 * final state we only see each tool once with its final state. For a completed
+	 * Task, we see it directly with output-available (not input-available then
+	 * output-available).
+	 *
+	 * The order in message.parts reflects insertion order:
+	 * [Task, Write, Read] where Task was inserted first, then nested tools.
+	 *
+	 * Strategy:
+	 * - When we see a Task (any state), push it to openTasks to collect subsequent tools
+	 * - When we see output-available/error, we still push but mark it for immediate closing
+	 * - Completed Tasks are emitted when we see text, user message, or end of parts
 	 */
 	const handleTaskTool = (toolPart: ToolCallPart, messageId: string) => {
-		const { toolCallId, state } = toolPart;
+		const { toolCallId } = toolPart;
 
-		switch (state) {
-			case "input-streaming":
-				// Task is still receiving input - do nothing yet
-				break;
-
-			case "input-available": {
-				// Task input is complete - mark Task as "open"
-				// All subsequent tools belong to this Task until we see output
-				flushWorkUnit(); // Flush any pending tools before opening Task
-
-				openTasks.push({
-					toolCallId,
-					messageId,
-					taskPart: toolPart,
-					nestedSteps: [],
-				});
-				break;
+		// Check if we already have this Task open (shouldn't happen in normal flow)
+		const existingIndex = openTasks.findIndex(
+			(t) => t.toolCallId === toolCallId,
+		);
+		if (existingIndex !== -1) {
+			// Update existing task's part (state may have changed)
+			const existing = openTasks[existingIndex];
+			if (existing) {
+				existing.taskPart = toolPart;
 			}
+			return;
+		}
 
-			case "output-available":
-			case "output-error": {
-				// Task is complete - find and close it
-				const taskIndex = openTasks.findIndex(
-					(t) => t.toolCallId === toolCallId,
-				);
-				const task = openTasks[taskIndex];
+		// Flush any pending work-unit before opening a new Task
+		flushWorkUnit();
 
-				if (taskIndex !== -1 && task) {
-					// Found the Task - update its part with final state and emit
-					task.taskPart = toolPart; // Update with output/error state
+		// Push the Task to collect subsequent tools
+		openTasks.push({
+			toolCallId,
+			messageId,
+			taskPart: toolPart,
+			nestedSteps: [],
+		});
+	};
 
-					// Remove from stack
-					openTasks.splice(taskIndex, 1);
-
-					// Emit the completed subagent
-					emitSubagent(task);
-				} else {
-					// Edge case: output arrived without input-available (race condition)
-					// Emit as a standalone subagent with no nested tools
-					emitSubagent({
-						toolCallId,
-						messageId,
-						taskPart: toolPart,
-						nestedSteps: [],
-					});
-				}
-				break;
+	/**
+	 * Emits all completed Tasks (those with output-available or output-error state)
+	 */
+	const flushCompletedTasks = () => {
+		// Emit Tasks that have completed (output-available or output-error)
+		// Process from the end to handle nested Tasks correctly
+		for (let i = openTasks.length - 1; i >= 0; i--) {
+			const task = openTasks[i];
+			if (
+				task &&
+				(task.taskPart.state === "output-available" ||
+					task.taskPart.state === "output-error")
+			) {
+				openTasks.splice(i, 1);
+				emitSubagent(task);
 			}
 		}
 	};
 
 	for (const message of messages) {
 		if (message.role === "user") {
+			flushCompletedTasks();
 			flushWorkUnit();
 			result.push({ type: "user-message", message });
 			continue;
@@ -239,6 +264,7 @@ export function groupMessages(messages: UIMessage[]): GroupedItem[] {
 		// Assistant message - process parts
 		for (const part of message.parts) {
 			if (part.type === "text") {
+				flushCompletedTasks();
 				flushWorkUnit();
 				result.push({
 					type: "text",
@@ -246,6 +272,7 @@ export function groupMessages(messages: UIMessage[]): GroupedItem[] {
 					text: part.text,
 				});
 			} else if (part.type === "reasoning") {
+				flushCompletedTasks();
 				flushWorkUnit();
 				result.push({
 					type: "reasoning",
@@ -265,6 +292,7 @@ export function groupMessages(messages: UIMessage[]): GroupedItem[] {
 					handleTaskTool(toolPart, message.id);
 				} else if (isExitPlanModeTool(toolName)) {
 					// ExitPlanMode gets its own standalone "plan" item
+					flushCompletedTasks();
 					flushWorkUnit();
 					result.push({
 						type: "plan",
@@ -273,6 +301,7 @@ export function groupMessages(messages: UIMessage[]): GroupedItem[] {
 					});
 				} else if (isAskUserQuestionTool(toolName)) {
 					// AskUserQuestion gets its own standalone "questions" item
+					flushCompletedTasks();
 					flushWorkUnit();
 					result.push({
 						type: "questions",
@@ -293,10 +322,13 @@ export function groupMessages(messages: UIMessage[]): GroupedItem[] {
 		}
 	}
 
+	// Flush completed Tasks first (they should emit before any remaining work-unit)
+	flushCompletedTasks();
+
 	// Flush any remaining pending steps
 	flushWorkUnit();
 
-	// Handle any unclosed Tasks (still streaming)
+	// Handle any unclosed Tasks (still streaming - input-available but not output yet)
 	// Emit them as subagents in their current state
 	for (const openTask of openTasks) {
 		result.push({

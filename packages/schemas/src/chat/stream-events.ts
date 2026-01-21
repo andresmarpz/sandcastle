@@ -53,6 +53,7 @@ export const StreamEventToolInputStart = Schema.Struct({
 	providerExecuted: Schema.optional(Schema.Boolean),
 	dynamic: Schema.optional(Schema.Boolean),
 	title: Schema.optional(Schema.String),
+	parentToolCallId: Schema.optional(Schema.NullOr(Schema.String)),
 });
 export type StreamEventToolInputStart = typeof StreamEventToolInputStart.Type;
 
@@ -60,6 +61,7 @@ export const StreamEventToolInputDelta = Schema.Struct({
 	type: Schema.Literal("tool-input-delta"),
 	toolCallId: Schema.String,
 	inputTextDelta: Schema.String,
+	parentToolCallId: Schema.optional(Schema.NullOr(Schema.String)),
 });
 export type StreamEventToolInputDelta = typeof StreamEventToolInputDelta.Type;
 
@@ -72,6 +74,7 @@ export const StreamEventToolInputAvailable = Schema.Struct({
 	providerMetadata: Schema.optional(ProviderMetadata),
 	dynamic: Schema.optional(Schema.Boolean),
 	title: Schema.optional(Schema.String),
+	parentToolCallId: Schema.optional(Schema.NullOr(Schema.String)),
 });
 export type StreamEventToolInputAvailable =
 	typeof StreamEventToolInputAvailable.Type;
@@ -86,6 +89,7 @@ export const StreamEventToolInputError = Schema.Struct({
 	dynamic: Schema.optional(Schema.Boolean),
 	errorText: Schema.String,
 	title: Schema.optional(Schema.String),
+	parentToolCallId: Schema.optional(Schema.NullOr(Schema.String)),
 });
 export type StreamEventToolInputError = typeof StreamEventToolInputError.Type;
 
@@ -155,6 +159,7 @@ export const StreamEventToolOutputAvailable = Schema.Struct({
 	approved: Schema.optional(Schema.Boolean),
 	/** For tools requiring approval: user feedback when rejecting */
 	feedback: Schema.optional(Schema.String),
+	parentToolCallId: Schema.optional(Schema.NullOr(Schema.String)),
 });
 export type StreamEventToolOutputAvailable =
 	typeof StreamEventToolOutputAvailable.Type;
@@ -165,12 +170,14 @@ export const StreamEventToolOutputError = Schema.Struct({
 	errorText: Schema.String,
 	providerExecuted: Schema.optional(Schema.Boolean),
 	dynamic: Schema.optional(Schema.Boolean),
+	parentToolCallId: Schema.optional(Schema.NullOr(Schema.String)),
 });
 export type StreamEventToolOutputError = typeof StreamEventToolOutputError.Type;
 
 export const StreamEventToolOutputDenied = Schema.Struct({
 	type: Schema.Literal("tool-output-denied"),
 	toolCallId: Schema.String,
+	parentToolCallId: Schema.optional(Schema.NullOr(Schema.String)),
 });
 export type StreamEventToolOutputDenied =
 	typeof StreamEventToolOutputDenied.Type;

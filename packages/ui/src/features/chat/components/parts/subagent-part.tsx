@@ -43,6 +43,7 @@ function deriveSubagentStatus(part: ToolCallPart): SubagentStatus {
 /**
  * Extract the text output from the Task tool result.
  * The output is typically an array with text parts.
+ * Filters out the agentId metadata text (e.g., "agentId: a9cc02b (for resuming...)")
  */
 function extractSubagentOutput(output: unknown): string | null {
 	if (!output) return null;
@@ -59,7 +60,9 @@ function extractSubagentOutput(output: unknown): string | null {
 					"text" in item &&
 					typeof item.text === "string",
 			)
-			.map((item) => item.text);
+			.map((item) => item.text)
+			// Filter out the agentId metadata line
+			.filter((text) => !text.startsWith("agentId:"));
 
 		if (textParts.length > 0) {
 			return textParts.join("\n\n");
@@ -68,6 +71,10 @@ function extractSubagentOutput(output: unknown): string | null {
 
 	// Handle string output
 	if (typeof output === "string") {
+		// Filter out agentId line if it's the entire string
+		if (output.startsWith("agentId:")) {
+			return null;
+		}
 		return output;
 	}
 

@@ -52,6 +52,8 @@ export const ToolCallPart = Schema.Struct({
 	errorText: Schema.optional(Schema.String),
 	approval: Schema.optional(ToolApproval),
 	callProviderMetadata: Schema.optional(ProviderMetadata),
+	/** Parent tool call ID - links this tool to its parent subagent (Task tool) */
+	parentToolCallId: Schema.optional(Schema.NullOr(Schema.String)),
 });
 export type ToolCallPart = typeof ToolCallPart.Type;
 
