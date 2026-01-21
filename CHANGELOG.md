@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.1.13](https://github.com/andresmarpz/sandcastle/compare/v0.1.12...v0.1.13) (2026-01-21)
+
+
+### Features
+
+* add git diff stats to session metadata ([#70](https://github.com/andresmarpz/sandcastle/issues/70)) ([5b8fdfe](https://github.com/andresmarpz/sandcastle/commit/5b8fdfe66d953abc68ae8b0078a972494a5714ec))
+
+
+### Bug Fixes
+
+* pipe error text to ask user question part ([f915d90](https://github.com/andresmarpz/sandcastle/commit/f915d90c177d30942514828d29d8494db1ede351))
+* remove debug console.logs from frontend ([#66](https://github.com/andresmarpz/sandcastle/issues/66)) ([73c7eda](https://github.com/andresmarpz/sandcastle/commit/73c7edab1c11b449162feef2ebdcb4ceaf5b3510))
+* set proper session status ([#69](https://github.com/andresmarpz/sandcastle/issues/69)) ([20ccd1a](https://github.com/andresmarpz/sandcastle/commit/20ccd1addaacbe3b11aebe696b24abfb80aa1a73))
+* status indicator waiting_input not showing ([24cd119](https://github.com/andresmarpz/sandcastle/commit/24cd1196adb5c0a4db0b4248bcc0ae9440f42d35))
+
 ## [0.1.12](https://github.com/andresmarpz/sandcastle/compare/v0.1.11...v0.1.12) (2026-01-20)
 
 
