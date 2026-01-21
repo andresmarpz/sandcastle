@@ -11,7 +11,9 @@
 		"tauri": "tauri",
 		"typecheck": "tsc --noEmit",
 		"biome": "biome check --write .",
-		"biome:check": "biome check ."
+		"biome:check": "biome check .",
+		"bundle:server": "bun scripts/bundle-server.ts",
+		"setup:sidecar": "bun scripts/setup-dev-sidecar.ts"
 	},
 	"dependencies": {
 		"@base-ui/react": "^1.0.0",

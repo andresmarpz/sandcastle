@@ -77,15 +77,23 @@ jobs:
           - platform: macos-latest
             args: '--target aarch64-apple-darwin'
             rust_target: aarch64-apple-darwin
+            bun_target: bun-darwin-aarch64
+            bun_binary: bun-aarch64-apple-darwin
           - platform: macos-latest
             args: '--target x86_64-apple-darwin'
             rust_target: x86_64-apple-darwin
+            bun_target: bun-darwin-x64
+            bun_binary: bun-x86_64-apple-darwin
           - platform: ubuntu-22.04
             args: ''
             rust_target: ''
+            bun_target: bun-linux-x64
+            bun_binary: bun-x86_64-unknown-linux-gnu
           - platform: windows-latest
             args: ''
             rust_target: ''
+            bun_target: bun-windows-x64
+            bun_binary: bun-x86_64-pc-windows-msvc.exe
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -117,6 +125,31 @@ jobs:
         with:
           workspaces: apps/desktop/src-tauri -> target
           cache-on-failure: true
+
+      - name: Download Bun binary for sidecar
+        shell: bash
+        run: |
+          BUN_VERSION=$(bun --version)
+          BINARIES_DIR="apps/desktop/src-tauri/binaries"
+          mkdir -p "$BINARIES_DIR"
+
+          echo "Downloading Bun v${BUN_VERSION} (${{ matrix.bun_target }})..."
+
+          if [[ "${{ matrix.platform }}" == "windows-latest" ]]; then
+            curl -fsSL "https://github.com/oven-sh/bun/releases/download/bun-v${BUN_VERSION}/${{ matrix.bun_target }}.zip" -o bun.zip
+            unzip -j bun.zip "*/bun.exe" -d "$BINARIES_DIR"
+            mv "$BINARIES_DIR/bun.exe" "$BINARIES_DIR/${{ matrix.bun_binary }}"
+          else
+            curl -fsSL "https://github.com/oven-sh/bun/releases/download/bun-v${BUN_VERSION}/${{ matrix.bun_target }}.zip" -o bun.zip
+            unzip -j bun.zip "*/bun" -d "$BINARIES_DIR"
+            mv "$BINARIES_DIR/bun" "$BINARIES_DIR/${{ matrix.bun_binary }}"
+            chmod +x "$BINARIES_DIR/${{ matrix.bun_binary }}"
+          fi
+
+          ls -la "$BINARIES_DIR"
+
+      - name: Bundle server
+        run: bun run --cwd apps/desktop bundle:server
 
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
