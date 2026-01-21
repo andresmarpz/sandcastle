@@ -411,22 +411,24 @@ function SessionMetadataPanel({
 	}, [session?.totalCostUsd]);
 
 	const contextPercentage = useMemo(() => {
-		// Context % = (input_tokens + cache_tokens from last response) / max_tokens
+		// Context % = (input_tokens + all cache tokens from last response) / max_tokens
 		// This represents what Claude "sees" in its context window
 		const inputTokens = session?.inputTokens ?? 0;
 		const cacheReadInputTokens = session?.cacheReadInputTokens ?? 0;
+		const cacheCreationInputTokens = session?.cacheCreationInputTokens ?? 0;
 		const contextWindow = session?.contextWindow ?? 0;
 
 		if (contextWindow === 0) return null;
 
-		// Input tokens includes fresh tokens, cache tokens represent cached content
-		// Together they represent the full context Claude processes
-		const totalContextUsed = inputTokens + cacheReadInputTokens;
+		// Input tokens + cache tokens (both read and creation) = full context Claude processes
+		const totalContextUsed =
+			inputTokens + cacheReadInputTokens + cacheCreationInputTokens;
 		const percentage = (totalContextUsed / contextWindow) * 100;
 		return Math.min(percentage, 100).toFixed(1);
 	}, [
 		session?.inputTokens,
 		session?.cacheReadInputTokens,
+		session?.cacheCreationInputTokens,
 		session?.contextWindow,
 	]);
 
