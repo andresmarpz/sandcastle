@@ -1,8 +1,18 @@
-use tauri::{TitleBarStyle, WebviewUrl, WebviewWindowBuilder};
+use tauri::{Manager, TitleBarStyle, WebviewUrl, WebviewWindowBuilder};
+
+mod sidecar;
+use sidecar::SidecarState;
 
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
+}
+
+/// Get the port the embedded server is running on.
+/// Returns None if the server hasn't started yet or failed to start.
+#[tauri::command]
+async fn get_server_port(state: tauri::State<'_, SidecarState>) -> Result<Option<u16>, String> {
+    Ok(state.get_port().await)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -12,7 +22,17 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
+        .manage(SidecarState::new())
         .setup(|app| {
+            // Start sidecar on app launch
+            let app_handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                let state = app_handle.state::<SidecarState>();
+                if let Err(e) = state.start(&app_handle).await {
+                    eprintln!("[sidecar] Failed to start: {}", e);
+                }
+            });
+
             let win_builder = WebviewWindowBuilder::new(app, "main", WebviewUrl::default())
                 .title("Sandcastle")
                 .inner_size(1440.0, 900.0)
@@ -48,7 +68,19 @@ pub fn run() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![greet])
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::Destroyed = event {
+                // Stop sidecar when window is destroyed
+                let app_handle = window.app_handle().clone();
+                tauri::async_runtime::spawn(async move {
+                    let state = app_handle.state::<SidecarState>();
+                    if let Err(e) = state.stop().await {
+                        eprintln!("[sidecar] Failed to stop: {}", e);
+                    }
+                });
+            }
+        })
+        .invoke_handler(tauri::generate_handler![greet, get_server_port])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

@@ -124,7 +124,10 @@ const CustomRoutes = HttpRouter.Default.use((router) =>
 	}),
 );
 
-const port = Number(process.env.PORT) || 3000;
+// Default port for the embedded server sidecar (high port to avoid conflicts)
+// Can be overridden via PORT env var for development (e.g., PORT=3000)
+const DEFAULT_PORT = 31822;
+const port = Number(process.env.PORT) || DEFAULT_PORT;
 
 export const makeServerLayer = (options?: { port?: number }) =>
 	HttpRouter.Default.serve((httpApp) =>
@@ -140,5 +143,7 @@ export const makeServerLayer = (options?: { port?: number }) =>
 
 export const ServerLive = Layer.mergeAll(makeServerLayer(), StartupTasksLive);
 
-console.log(`Server starting on port ${port}...`);
+// Log the port that will be used (for Tauri sidecar to parse)
+console.log(`SANDCASTLE_SERVER_PORT=${port}`);
+console.log("Server starting...");
 BunRuntime.runMain(Layer.launch(ServerLive));
