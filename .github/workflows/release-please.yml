@@ -35,7 +35,7 @@ jobs:
           manifest-file: .release-please-manifest.json
 
       - name: Update lockfile on release PR
-        if: ${{ steps.release.outputs.pr }}
+        if: ${{ steps.release.outputs.prs_created == 'true' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_BRANCH: ${{ fromJSON(steps.release.outputs.pr).headBranchName }}
