@@ -111,8 +111,6 @@ export const ArtifactAction = ({
 				className,
 			)}
 			size={size}
-			// @ts-expect-error - type prop conflicts with Button's type
-			type="button"
 			variant={variant}
 			{...props}
 		>
