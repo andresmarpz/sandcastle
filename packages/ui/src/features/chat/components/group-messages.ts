@@ -34,6 +34,22 @@ export function isAskUserQuestionTool(toolName: string): boolean {
 }
 
 /**
+ * The base tool name for RenameSession (without MCP prefix)
+ */
+export const RENAME_SESSION_TOOL = "RenameSession";
+
+/**
+ * Checks if a tool name is the RenameSession tool.
+ * Handles both direct name ("RenameSession") and MCP-prefixed name
+ */
+export function isRenameSessionTool(toolName: string): boolean {
+	return (
+		toolName === RENAME_SESSION_TOOL ||
+		toolName.endsWith(`__${RENAME_SESSION_TOOL}`)
+	);
+}
+
+/**
  * Represents a step in a work unit (a tool invocation)
  */
 export interface WorkStep {
@@ -136,6 +152,9 @@ export function groupMessages(messages: UIMessage[]): GroupedItem[] {
 						messageId: message.id,
 						part: toolPart,
 					});
+				} else if (isRenameSessionTool(toolName)) {
+					// RenameSession is a silent background tool - don't render it
+					// Skip this tool call entirely
 				} else {
 					// Accumulate other tool parts into pending work unit
 					pendingSteps.push({

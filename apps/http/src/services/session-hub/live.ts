@@ -609,13 +609,37 @@ export const makeSessionHub = Effect.gen(function* () {
 					}),
 				);
 			};
+
+			// 5b. Check if this is the first message (for RenameSession tool)
+			const historyCursor = yield* Ref.get(session.historyCursorRef);
+			const isFirstMessage = historyCursor.lastMessageId === null;
+
+			// Create session title update callback (only for first message)
+			const updateSessionTitle = isFirstMessage
+				? async (title: string) => {
+						await Effect.runPromise(
+							storage.sessions.update(sessionId, { title }),
+						);
+					}
+				: undefined;
+
 			const planModeMcpServer = createPlanModeMcpServer({
 				pendingRequests,
 				emitEvent,
+				...(isFirstMessage && {
+					sessionId,
+					updateSessionTitle,
+				}),
 			});
 
 			// 6. Start Claude stream
 			const claudeSessionId = yield* Ref.get(session.claudeSessionIdRef);
+
+			// Build system prompt with optional append for first message renaming
+			const systemPromptAppend = isFirstMessage
+				? "\n\nIMPORTANT: Before responding to the user, silently call the mcp__plan-mode-ui__RenameSession tool with a concise title (5-7 words max) that captures the intent of the user's message. Do not mention this to the user."
+				: undefined;
+
 			const queryHandle = yield* claudeSDK
 				.query(content, {
 					cwd: dbSession.workingPath,
@@ -626,6 +650,7 @@ export const makeSessionHub = Effect.gen(function* () {
 					systemPrompt: {
 						preset: "claude_code",
 						type: "preset",
+						...(systemPromptAppend && { append: systemPromptAppend }),
 					},
 					settingSources: ["project", "user", "local"],
 					mcpServers: {
@@ -638,6 +663,7 @@ export const makeSessionHub = Effect.gen(function* () {
 					allowedTools: [
 						"mcp__plan-mode-ui__ExitPlanMode",
 						"mcp__plan-mode-ui__AskUserQuestion",
+						...(isFirstMessage ? ["mcp__plan-mode-ui__RenameSession"] : []),
 					],
 				})
 				.pipe(
