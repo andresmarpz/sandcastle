@@ -323,6 +323,7 @@ export const makeSessionHub = Effect.gen(function* () {
 							totalCostUsd: metadata.totalCostUsd,
 							inputTokens: metadata.inputTokens,
 							outputTokens: metadata.outputTokens,
+							contextWindow: metadata.contextWindow,
 						})
 						.pipe(Effect.catchAll(() => Effect.void));
 				}

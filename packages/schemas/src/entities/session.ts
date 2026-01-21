@@ -22,6 +22,7 @@ export class Session extends Schema.Class<Session>("Session")({
 	totalCostUsd: Schema.Number,
 	inputTokens: Schema.Number,
 	outputTokens: Schema.Number,
+	contextWindow: Schema.Number,
 	createdAt: Schema.String,
 	lastActivityAt: Schema.String,
 }) {}
@@ -48,5 +49,6 @@ export class UpdateSessionInput extends Schema.Class<UpdateSessionInput>(
 	totalCostUsd: Schema.optional(Schema.Number),
 	inputTokens: Schema.optional(Schema.Number),
 	outputTokens: Schema.optional(Schema.Number),
+	contextWindow: Schema.optional(Schema.Number),
 	lastActivityAt: Schema.optional(Schema.String),
 }) {}

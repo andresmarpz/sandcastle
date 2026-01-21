@@ -73,6 +73,7 @@ export interface SessionMetadata {
 	totalCostUsd: number;
 	inputTokens: number;
 	outputTokens: number;
+	contextWindow: number;
 	numTurns: number;
 	success: boolean;
 	result?: string;
@@ -372,6 +373,9 @@ function processResultMessage(
 ): void {
 	const isSuccess = message.subtype === "success";
 
+	// Extract context window from modelUsage (max across all models)
+	const contextWindow = extractContextWindow(message.modelUsage);
+
 	state.sessionMetadata = {
 		claudeSessionId: message.session_id,
 		durationMs: message.duration_ms,
@@ -379,6 +383,7 @@ function processResultMessage(
 		totalCostUsd: message.total_cost_usd,
 		inputTokens: message.usage.input_tokens,
 		outputTokens: message.usage.output_tokens,
+		contextWindow: contextWindow ?? 0,
 		numTurns: message.num_turns,
 		success: isSuccess,
 		result: isSuccess
@@ -393,4 +398,18 @@ function processResultMessage(
 	if (!state.claudeSessionId) {
 		state.claudeSessionId = message.session_id;
 	}
+}
+
+/**
+ * Extract the context window size from modelUsage.
+ * Returns the maximum context window across all models used.
+ */
+function extractContextWindow(
+	modelUsage: Record<string, { contextWindow?: number }> | undefined,
+): number | undefined {
+	if (!modelUsage) return undefined;
+	const contextWindows = Object.values(modelUsage)
+		.map((usage) => usage.contextWindow)
+		.filter((cw): cw is number => typeof cw === "number");
+	return contextWindows.length > 0 ? Math.max(...contextWindows) : undefined;
 }

@@ -54,6 +54,7 @@ const toSession = (session: {
 	totalCostUsd: number;
 	inputTokens: number;
 	outputTokens: number;
+	contextWindow: number;
 	lastActivityAt: string;
 	createdAt: string;
 }): Session =>
@@ -70,6 +71,7 @@ const toSession = (session: {
 		totalCostUsd: session.totalCostUsd,
 		inputTokens: session.inputTokens,
 		outputTokens: session.outputTokens,
+		contextWindow: session.contextWindow,
 		lastActivityAt: session.lastActivityAt,
 		createdAt: session.createdAt,
 	});

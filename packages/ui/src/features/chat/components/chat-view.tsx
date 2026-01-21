@@ -410,20 +410,16 @@ function SessionMetadataPanel({
 		return `$${cost.toFixed(2)}`;
 	}, [session?.totalCostUsd]);
 
-	const formattedTokens = useMemo(() => {
-		const formatCount = (count: number) => {
-			if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`;
-			if (count >= 1_000) return `${(count / 1_000).toFixed(1)}K`;
-			return count.toString();
-		};
+	const contextPercentage = useMemo(() => {
 		const inputTokens = session?.inputTokens ?? 0;
 		const outputTokens = session?.outputTokens ?? 0;
-		return {
-			input: formatCount(inputTokens),
-			output: formatCount(outputTokens),
-			total: formatCount(inputTokens + outputTokens),
-		};
-	}, [session?.inputTokens, session?.outputTokens]);
+		const contextWindow = session?.contextWindow ?? 0;
+
+		if (contextWindow === 0) return null;
+
+		const percentage = ((inputTokens + outputTokens) / contextWindow) * 100;
+		return Math.min(percentage, 100).toFixed(1);
+	}, [session?.inputTokens, session?.outputTokens, session?.contextWindow]);
 
 	return (
 		<div className="flex flex-col gap-4 text-sm min-w-[240px]">
@@ -458,18 +454,11 @@ function SessionMetadataPanel({
 
 			<div className="flex flex-col gap-1">
 				<span className="text-muted-foreground text-xs font-medium uppercase">
-					Tokens
+					Context
 				</span>
-				<div className="flex flex-col gap-0.5 text-foreground">
-					<span>
-						<span className="text-muted-foreground">In:</span>{" "}
-						{formattedTokens.input}
-					</span>
-					<span>
-						<span className="text-muted-foreground">Out:</span>{" "}
-						{formattedTokens.output}
-					</span>
-				</div>
+				<span className="text-foreground">
+					{contextPercentage !== null ? `${contextPercentage}%` : "--"}
+				</span>
 			</div>
 
 			<div className="flex flex-col gap-1">
