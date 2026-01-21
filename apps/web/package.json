@@ -15,7 +15,6 @@
 		"@effect-atom/atom": "^0.4.11",
 		"@effect-atom/atom-react": "^0.4.4",
 		"@sandcastle/ui": "workspace:*",
-		"@tabler/icons-react": "^3.36.1",
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",
 		"effect": "^3.19.14",
