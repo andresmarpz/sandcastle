@@ -1,11 +1,11 @@
 import {
 	CheckCircle,
-	CircleNotch,
 	Info,
 	Warning,
 	WarningOctagon,
 } from "@phosphor-icons/react";
 import { Toaster as Sonner, type ToasterProps } from "sonner";
+import { Spinner } from "@/components/spinner";
 import { useTheme } from "@/context/theme-context";
 
 const Toaster = ({ ...props }: ToasterProps) => {
@@ -21,7 +21,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
 				info: <Info className="size-4 text-blue-400" />,
 				warning: <Warning className="size-4 text-amber-400" />,
 				error: <WarningOctagon className="size-4 text-red-400" />,
-				loading: <CircleNotch className="size-4 animate-spin" />,
+				loading: <Spinner className="size-4 animate-spin" />,
 			}}
 			style={
 				{
