@@ -50,6 +50,19 @@ export function isRenameSessionTool(toolName: string): boolean {
 }
 
 /**
+ * The base tool name for Task (subagent invocation)
+ */
+export const TASK_TOOL = "Task";
+
+/**
+ * Checks if a tool name is the Task tool (subagent).
+ * Handles both direct name ("Task") and MCP-prefixed name
+ */
+export function isTaskTool(toolName: string): boolean {
+	return toolName === TASK_TOOL || toolName.endsWith(`__${TASK_TOOL}`);
+}
+
+/**
  * Represents a step in a work unit (a tool invocation)
  */
 export interface WorkStep {
@@ -66,7 +79,23 @@ export type GroupedItem =
 	| { type: "reasoning"; messageId: string; text: string; isStreaming: boolean }
 	| { type: "work-unit"; steps: WorkStep[] }
 	| { type: "plan"; messageId: string; part: ToolCallPart }
-	| { type: "questions"; messageId: string; part: ToolCallPart };
+	| { type: "questions"; messageId: string; part: ToolCallPart }
+	| {
+			type: "subagent";
+			messageId: string;
+			taskPart: ToolCallPart;
+			nestedSteps: WorkStep[];
+	  };
+
+/**
+ * Represents an open Task tool call that is collecting nested tool calls
+ */
+interface OpenTask {
+	toolCallId: string;
+	messageId: string;
+	taskPart: ToolCallPart;
+	nestedSteps: WorkStep[];
+}
 
 /**
  * Gets the tool name from a part for classification purposes
@@ -81,27 +110,122 @@ function getPartToolName(part: ToolCallPart): string {
 
 /**
  * Groups consecutive tool calls into work units while keeping text parts separate.
+ * Task tool calls (subagents) are handled specially - their nested tool calls are
+ * collected and grouped together.
  *
  * The algorithm:
  * 1. User messages are emitted as-is
  * 2. Assistant text/reasoning parts are emitted individually
  * 3. ExitPlanMode tool calls are emitted as standalone "plan" items
- * 4. Other consecutive tool parts (within or across assistant messages) are grouped into WorkUnits
+ * 4. AskUserQuestion tool calls are emitted as standalone "questions" items
+ * 5. Task tool calls are tracked in a stack; nested tools are collected until Task completes
+ * 6. Other consecutive tool parts (within or across assistant messages) are grouped into WorkUnits
  *
  * Example input:
- *   [user, assistant(text), assistant(tool, tool), assistant(text), assistant(ExitPlanMode)]
+ *   [user, assistant(text), assistant(Task, Write, Read), assistant(text)]
  *
  * Example output:
- *   [user-message, text, work-unit(2 steps), text, plan]
+ *   [user-message, text, subagent(Task with nested Write, Read), text]
  */
 export function groupMessages(messages: UIMessage[]): GroupedItem[] {
 	const result: GroupedItem[] = [];
 	let pendingSteps: WorkStep[] = [];
 
+	// Stack for tracking open Task tool calls (supports nested subagents)
+	const openTasks: OpenTask[] = [];
+
 	const flushWorkUnit = () => {
 		if (pendingSteps.length > 0) {
 			result.push({ type: "work-unit", steps: pendingSteps });
 			pendingSteps = [];
+		}
+	};
+
+	/**
+	 * Adds a tool step to either the current open Task's nested steps,
+	 * or to the pending work unit if no Task is open.
+	 */
+	const addToolStep = (step: WorkStep) => {
+		const currentTask = openTasks[openTasks.length - 1];
+		if (currentTask) {
+			// Add to the innermost open Task
+			currentTask.nestedSteps.push(step);
+		} else {
+			pendingSteps.push(step);
+		}
+	};
+
+	/**
+	 * Emits a subagent GroupedItem for a completed Task
+	 */
+	const emitSubagent = (task: OpenTask) => {
+		// If no parent Task is open, flush pending regular work-unit first
+		if (openTasks.length === 0) {
+			flushWorkUnit();
+		}
+
+		result.push({
+			type: "subagent",
+			messageId: task.messageId,
+			taskPart: task.taskPart,
+			nestedSteps: task.nestedSteps,
+		});
+	};
+
+	/**
+	 * Handles Task tool state transitions for subagent grouping
+	 */
+	const handleTaskTool = (toolPart: ToolCallPart, messageId: string) => {
+		const { toolCallId, state } = toolPart;
+
+		switch (state) {
+			case "input-streaming":
+				// Task is still receiving input - do nothing yet
+				break;
+
+			case "input-available": {
+				// Task input is complete - mark Task as "open"
+				// All subsequent tools belong to this Task until we see output
+				flushWorkUnit(); // Flush any pending tools before opening Task
+
+				openTasks.push({
+					toolCallId,
+					messageId,
+					taskPart: toolPart,
+					nestedSteps: [],
+				});
+				break;
+			}
+
+			case "output-available":
+			case "output-error": {
+				// Task is complete - find and close it
+				const taskIndex = openTasks.findIndex(
+					(t) => t.toolCallId === toolCallId,
+				);
+				const task = openTasks[taskIndex];
+
+				if (taskIndex !== -1 && task) {
+					// Found the Task - update its part with final state and emit
+					task.taskPart = toolPart; // Update with output/error state
+
+					// Remove from stack
+					openTasks.splice(taskIndex, 1);
+
+					// Emit the completed subagent
+					emitSubagent(task);
+				} else {
+					// Edge case: output arrived without input-available (race condition)
+					// Emit as a standalone subagent with no nested tools
+					emitSubagent({
+						toolCallId,
+						messageId,
+						taskPart: toolPart,
+						nestedSteps: [],
+					});
+				}
+				break;
+			}
 		}
 	};
 
@@ -136,8 +260,11 @@ export function groupMessages(messages: UIMessage[]): GroupedItem[] {
 				const toolPart = part as ToolCallPart;
 				const toolName = getPartToolName(toolPart);
 
-				// ExitPlanMode gets its own standalone "plan" item
-				if (isExitPlanModeTool(toolName)) {
+				// Handle Task tool (subagent) specially
+				if (isTaskTool(toolName)) {
+					handleTaskTool(toolPart, message.id);
+				} else if (isExitPlanModeTool(toolName)) {
+					// ExitPlanMode gets its own standalone "plan" item
 					flushWorkUnit();
 					result.push({
 						type: "plan",
@@ -156,8 +283,8 @@ export function groupMessages(messages: UIMessage[]): GroupedItem[] {
 					// RenameSession is a silent background tool - don't render it
 					// Skip this tool call entirely
 				} else {
-					// Accumulate other tool parts into pending work unit
-					pendingSteps.push({
+					// Regular tool - add to current context (open Task or pending)
+					addToolStep({
 						messageId: message.id,
 						part: toolPart,
 					});
@@ -166,8 +293,19 @@ export function groupMessages(messages: UIMessage[]): GroupedItem[] {
 		}
 	}
 
-	// Flush any remaining tool parts
+	// Flush any remaining pending steps
 	flushWorkUnit();
+
+	// Handle any unclosed Tasks (still streaming)
+	// Emit them as subagents in their current state
+	for (const openTask of openTasks) {
+		result.push({
+			type: "subagent",
+			messageId: openTask.messageId,
+			taskPart: openTask.taskPart,
+			nestedSteps: openTask.nestedSteps,
+		});
+	}
 
 	return result;
 }
@@ -217,6 +355,13 @@ export function getToolTitle(part: ToolCallPart): string {
 		}
 		case "TodoWrite":
 			return "Update task list";
+		case "Task": {
+			const description = input?.description as string | undefined;
+			const subagentType = input?.subagent_type as string | undefined;
+			if (description) return description;
+			if (subagentType) return `${subagentType} subagent`;
+			return "Running subagent";
+		}
 		default:
 			return part.title ?? toolName;
 	}
