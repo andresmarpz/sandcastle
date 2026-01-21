@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.17](https://github.com/andresmarpz/sandcastle/compare/v0.1.16...v0.1.17) (2026-01-21)
+
+
+### Bug Fixes
+
+* format tauri.conf file ([390f8d9](https://github.com/andresmarpz/sandcastle/commit/390f8d9982d17e92ef28334da8d3f317aa8edbee))
+
 ## [0.1.16](https://github.com/andresmarpz/sandcastle/compare/v0.1.15...v0.1.16) (2026-01-21)
 
 
