@@ -172,6 +172,9 @@ export function processMessage(
 							costUsd: resultMsg.total_cost_usd,
 							inputTokens: resultMsg.usage?.input_tokens,
 							outputTokens: resultMsg.usage?.output_tokens,
+							cacheReadInputTokens: resultMsg.usage?.cache_read_input_tokens,
+							cacheCreationInputTokens:
+								resultMsg.usage?.cache_creation_input_tokens,
 							contextWindow: extractContextWindow(resultMsg.modelUsage),
 						}
 					: undefined;

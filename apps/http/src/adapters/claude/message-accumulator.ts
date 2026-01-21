@@ -73,6 +73,8 @@ export interface SessionMetadata {
 	totalCostUsd: number;
 	inputTokens: number;
 	outputTokens: number;
+	cacheReadInputTokens: number;
+	cacheCreationInputTokens: number;
 	contextWindow: number;
 	numTurns: number;
 	success: boolean;
@@ -383,6 +385,8 @@ function processResultMessage(
 		totalCostUsd: message.total_cost_usd,
 		inputTokens: message.usage.input_tokens,
 		outputTokens: message.usage.output_tokens,
+		cacheReadInputTokens: message.usage.cache_read_input_tokens ?? 0,
+		cacheCreationInputTokens: message.usage.cache_creation_input_tokens ?? 0,
 		contextWindow: contextWindow ?? 0,
 		numTurns: message.num_turns,
 		success: isSuccess,

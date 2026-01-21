@@ -240,6 +240,8 @@ export const StreamEventFinish = Schema.Struct({
 			costUsd: Schema.optional(Schema.Number),
 			inputTokens: Schema.optional(Schema.Number),
 			outputTokens: Schema.optional(Schema.Number),
+			cacheReadInputTokens: Schema.optional(Schema.Number),
+			cacheCreationInputTokens: Schema.optional(Schema.Number),
 			contextWindow: Schema.optional(Schema.Number),
 		}),
 	),

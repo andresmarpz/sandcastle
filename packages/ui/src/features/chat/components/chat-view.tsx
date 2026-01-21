@@ -411,15 +411,24 @@ function SessionMetadataPanel({
 	}, [session?.totalCostUsd]);
 
 	const contextPercentage = useMemo(() => {
+		// Context % = (input_tokens + cache_tokens from last response) / max_tokens
+		// This represents what Claude "sees" in its context window
 		const inputTokens = session?.inputTokens ?? 0;
-		const outputTokens = session?.outputTokens ?? 0;
+		const cacheReadInputTokens = session?.cacheReadInputTokens ?? 0;
 		const contextWindow = session?.contextWindow ?? 0;
 
 		if (contextWindow === 0) return null;
 
-		const percentage = ((inputTokens + outputTokens) / contextWindow) * 100;
+		// Input tokens includes fresh tokens, cache tokens represent cached content
+		// Together they represent the full context Claude processes
+		const totalContextUsed = inputTokens + cacheReadInputTokens;
+		const percentage = (totalContextUsed / contextWindow) * 100;
 		return Math.min(percentage, 100).toFixed(1);
-	}, [session?.inputTokens, session?.outputTokens, session?.contextWindow]);
+	}, [
+		session?.inputTokens,
+		session?.cacheReadInputTokens,
+		session?.contextWindow,
+	]);
 
 	return (
 		<div className="flex flex-col gap-4 text-sm min-w-[240px]">
