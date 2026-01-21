@@ -357,6 +357,8 @@ export class MessageAccumulator {
 			case "abort":
 			case "error":
 			case "mode-change":
+			case "session-renamed":
+				// session-renamed is handled at the store level, not message level
 				break;
 
 			default: {

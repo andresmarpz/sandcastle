@@ -1,6 +1,6 @@
 "use client";
 
-import { Result, useAtomValue } from "@effect-atom/atom-react";
+import { Result, useAtom, useAtomValue } from "@effect-atom/atom-react";
 import type { GetHistoryResult } from "@sandcastle/rpc";
 import type { ChatMessage, QueuedMessage, Session } from "@sandcastle/schemas";
 import { IconX } from "@tabler/icons-react";
@@ -10,7 +10,11 @@ import * as Option from "effect/Option";
 import { useCallback, useEffect, useMemo } from "react";
 import { chatHistoryQuery } from "@/api/chat-atoms";
 import { sessionGitStatsQuery } from "@/api/git-atoms";
-import { sessionQuery } from "@/api/session-atoms";
+import {
+	SESSION_LIST_KEY,
+	sessionQuery,
+	updateSessionMutation,
+} from "@/api/session-atoms";
 import {
 	Conversation,
 	ConversationContent,
@@ -35,6 +39,7 @@ import {
 } from "@/components/ai-elements/queue";
 import { Spinner } from "@/components/spinner";
 import {
+	chatStore,
 	useChatSession,
 	usePendingExitPlanApproval,
 	usePendingToolApprovals,
@@ -155,6 +160,28 @@ function ChatViewContent({
 			setHistory(initialMessages);
 		}
 	}, [initialMessages, historyLoaded, setHistory]);
+
+	// Set up session rename handler for atom cache refresh
+	const [, updateSession] = useAtom(updateSessionMutation, {
+		mode: "promiseExit",
+	});
+	useEffect(() => {
+		chatStore
+			.getState()
+			.setOnSessionRenamed(async (renamedSessionId, title) => {
+				// Trigger cache invalidation by calling the mutation
+				// The server already updated the DB, so this updates the title in cache
+				// and invalidates related atoms via reactivity keys
+				await updateSession({
+					payload: { id: renamedSessionId, input: { title } },
+					reactivityKeys: [SESSION_LIST_KEY, `session:${renamedSessionId}`],
+				});
+			});
+
+		return () => {
+			chatStore.getState().setOnSessionRenamed(null);
+		};
+	}, [updateSession]);
 
 	// Tool approval hooks
 	const pendingApprovals = usePendingToolApprovals(sessionId);
