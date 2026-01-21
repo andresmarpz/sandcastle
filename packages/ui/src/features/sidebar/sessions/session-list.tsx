@@ -4,6 +4,7 @@ import { Result, useAtom, useAtomValue } from "@effect-atom/atom-react";
 import type { Session, Worktree } from "@sandcastle/schemas";
 import { IconFolder, IconGitBranch, IconPlus } from "@tabler/icons-react";
 import * as Option from "effect/Option";
+import { AnimatePresence } from "motion/react";
 import { useMemo } from "react";
 import { useNavigate } from "react-router";
 import { repositoryAtomFamily } from "@/api/repository-atoms";
@@ -202,13 +203,15 @@ function SessionListContent({
 
 	return (
 		<>
-			{sessions.map((session) => (
-				<SessionItem
-					key={session.id}
-					session={session}
-					repositoryId={repositoryId}
-				/>
-			))}
+			<AnimatePresence initial={false}>
+				{sessions.map((session) => (
+					<SessionItem
+						key={session.id}
+						session={session}
+						repositoryId={repositoryId}
+					/>
+				))}
+			</AnimatePresence>
 			<SidebarMenuItem>
 				<DropdownMenu>
 					<DropdownMenuTrigger
