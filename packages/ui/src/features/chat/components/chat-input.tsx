@@ -1,6 +1,6 @@
 "use client";
 
-import { IconCheck, IconPencil, IconSquare, IconX } from "@tabler/icons-react";
+import { IconArrowUp, IconCheck, IconPencil, IconSquare, IconX } from "@tabler/icons-react";
 import type { ChatStatus, UIMessage } from "ai";
 import {
 	type ChangeEvent,
@@ -251,10 +251,11 @@ export function ChatInput({
 								)}
 								<Button
 									type="submit"
-									size="sm"
+									size="icon-sm"
 									disabled={isSending || !inputValue.trim()}
+									className="bg-neutral-500 hover:bg-neutral-600 dark:bg-neutral-600 dark:hover:bg-neutral-500 text-white"
 								>
-									Send
+									<IconArrowUp className="size-4" />
 								</Button>
 							</>
 						)}
