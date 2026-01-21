@@ -1,19 +1,26 @@
 "use client";
 
-import { Result, useAtom, useAtomValue } from "@effect-atom/atom-react";
+import { RegistryContext, Result, useAtomValue } from "@effect-atom/atom-react";
 import type { GetHistoryResult } from "@sandcastle/rpc";
 import type { ChatMessage, QueuedMessage, Session } from "@sandcastle/schemas";
 import { IconX } from "@tabler/icons-react";
 import type { ChatStatus, UIMessage } from "ai";
 import { formatDistanceToNow } from "date-fns";
 import * as Option from "effect/Option";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+	useCallback,
+	useContext,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import { chatHistoryQuery } from "@/api/chat-atoms";
 import { sessionGitStatsQuery } from "@/api/git-atoms";
 import {
-	SESSION_LIST_KEY,
+	sessionAtomFamily,
+	sessionListAtom,
 	sessionQuery,
-	touchSessionMutation,
 } from "@/api/session-atoms";
 import {
 	Conversation,
@@ -40,8 +47,8 @@ import {
 } from "@/components/ai-elements/queue";
 import { Spinner } from "@/components/spinner";
 import {
-	chatStore,
 	useChatSession,
+	useLastSessionRenamed,
 	usePendingExitPlanApproval,
 	usePendingToolApprovals,
 	useRespondToToolApproval,
@@ -166,27 +173,26 @@ function ChatViewContent({
 		}
 	}, [initialMessages, historyLoaded, setHistory]);
 
-	// Set up session rename handler for atom cache refresh
-	// We use touchSession to trigger reactivity key invalidation which refreshes
-	// all atoms subscribed to SESSION_LIST_KEY (including sessionListByRepositoryAtomFamily)
-	const [, touchSession] = useAtom(touchSessionMutation, {
-		mode: "promiseExit",
-	});
-	useEffect(() => {
-		chatStore.getState().setOnSessionRenamed((renamedSessionId) => {
-			// Touch the session to trigger cache invalidation via reactivity keys
-			// The server already updated the title, but we need to invalidate
-			// all session list atoms so they refetch with the new title
-			touchSession({
-				payload: { id: renamedSessionId },
-				reactivityKeys: [SESSION_LIST_KEY, `session:${renamedSessionId}`],
-			});
-		});
+	// Handle session rename events by refreshing atom cache
+	// This triggers a refetch which will get the updated title from the server
+	const registry = useContext(RegistryContext);
+	const lastSessionRenamed = useLastSessionRenamed();
+	const lastProcessedTimestampRef = useRef<number>(0);
 
-		return () => {
-			chatStore.getState().setOnSessionRenamed(null);
-		};
-	}, [touchSession]);
+	useEffect(() => {
+		if (!lastSessionRenamed) return;
+		// Dedupe: only process each rename event once
+		if (lastSessionRenamed.timestamp <= lastProcessedTimestampRef.current) {
+			return;
+		}
+		lastProcessedTimestampRef.current = lastSessionRenamed.timestamp;
+
+		const { sessionId: renamedSessionId } = lastSessionRenamed;
+
+		// Refresh to revalidate from server
+		registry.refresh(sessionAtomFamily(renamedSessionId));
+		registry.refresh(sessionListAtom);
+	}, [lastSessionRenamed, registry]);
 
 	// Tool approval hooks
 	const pendingApprovals = usePendingToolApprovals(sessionId);

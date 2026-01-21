@@ -441,3 +441,13 @@ export function useIsAnsweredQuestion(
 		return session.answeredQuestionToolCallIds.has(toolCallId);
 	});
 }
+
+/**
+ * Hook to subscribe to the last session renamed event.
+ *
+ * Returns the last session renamed event or null if none has occurred.
+ * Used by components that need to react to session rename events (e.g., to update atom cache).
+ */
+export function useLastSessionRenamed() {
+	return useStore(chatStore, (state) => state.lastSessionRenamed);
+}
