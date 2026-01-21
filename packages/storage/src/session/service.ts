@@ -32,6 +32,9 @@ const rowToSession = (row: Record<string, unknown>): Session =>
 		totalCostUsd: (row.totalCostUsd as number) ?? 0,
 		inputTokens: (row.inputTokens as number) ?? 0,
 		outputTokens: (row.outputTokens as number) ?? 0,
+		cacheReadInputTokens: (row.cacheReadInputTokens as number) ?? 0,
+		cacheCreationInputTokens: (row.cacheCreationInputTokens as number) ?? 0,
+		contextWindow: (row.contextWindow as number) ?? 0,
 		createdAt: row.createdAt as string,
 		lastActivityAt: row.lastActivityAt as string,
 	});
@@ -143,8 +146,8 @@ export const createSessionsService = (db: DbInstance) => ({
 
 			yield* tryDb("sessions.create", () =>
 				db.run(
-					`INSERT INTO sessions (id, repositoryId, worktreeId, workingPath, title, description, status, claudeSessionId, model, totalCostUsd, inputTokens, outputTokens, createdAt, lastActivityAt)
-					 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+					`INSERT INTO sessions (id, repositoryId, worktreeId, workingPath, title, description, status, claudeSessionId, model, totalCostUsd, inputTokens, outputTokens, cacheReadInputTokens, cacheCreationInputTokens, contextWindow, createdAt, lastActivityAt)
+					 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 					[
 						id,
 						input.repositoryId,
@@ -155,6 +158,9 @@ export const createSessionsService = (db: DbInstance) => ({
 						status,
 						null,
 						null,
+						0,
+						0,
+						0,
 						0,
 						0,
 						0,
@@ -177,6 +183,9 @@ export const createSessionsService = (db: DbInstance) => ({
 				totalCostUsd: 0,
 				inputTokens: 0,
 				outputTokens: 0,
+				cacheReadInputTokens: 0,
+				cacheCreationInputTokens: 0,
+				contextWindow: 0,
 				createdAt: now,
 				lastActivityAt: now,
 			});
@@ -193,6 +202,9 @@ export const createSessionsService = (db: DbInstance) => ({
 			totalCostUsd?: number;
 			inputTokens?: number;
 			outputTokens?: number;
+			cacheReadInputTokens?: number;
+			cacheCreationInputTokens?: number;
+			contextWindow?: number;
 			lastActivityAt?: string;
 		},
 		getSession: (
@@ -237,6 +249,18 @@ export const createSessionsService = (db: DbInstance) => ({
 				updates.push("outputTokens = ?");
 				values.push(input.outputTokens);
 			}
+			if (input.cacheReadInputTokens !== undefined) {
+				updates.push("cacheReadInputTokens = ?");
+				values.push(input.cacheReadInputTokens);
+			}
+			if (input.cacheCreationInputTokens !== undefined) {
+				updates.push("cacheCreationInputTokens = ?");
+				values.push(input.cacheCreationInputTokens);
+			}
+			if (input.contextWindow !== undefined) {
+				updates.push("contextWindow = ?");
+				values.push(input.contextWindow);
+			}
 			if (input.lastActivityAt !== undefined) {
 				updates.push("lastActivityAt = ?");
 				values.push(input.lastActivityAt);
@@ -269,6 +293,11 @@ export const createSessionsService = (db: DbInstance) => ({
 				totalCostUsd: input.totalCostUsd ?? existing.totalCostUsd,
 				inputTokens: input.inputTokens ?? existing.inputTokens,
 				outputTokens: input.outputTokens ?? existing.outputTokens,
+				cacheReadInputTokens:
+					input.cacheReadInputTokens ?? existing.cacheReadInputTokens,
+				cacheCreationInputTokens:
+					input.cacheCreationInputTokens ?? existing.cacheCreationInputTokens,
+				contextWindow: input.contextWindow ?? existing.contextWindow,
 				lastActivityAt: input.lastActivityAt ?? existing.lastActivityAt,
 			});
 		}),

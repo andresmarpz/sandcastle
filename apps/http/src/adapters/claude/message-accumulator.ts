@@ -73,6 +73,9 @@ export interface SessionMetadata {
 	totalCostUsd: number;
 	inputTokens: number;
 	outputTokens: number;
+	cacheReadInputTokens: number;
+	cacheCreationInputTokens: number;
+	contextWindow: number;
 	numTurns: number;
 	success: boolean;
 	result?: string;
@@ -93,12 +96,22 @@ interface ToolCallLocation {
 	partIndex: number;
 }
 
+/** Token usage from a single API call */
+interface MessageUsage {
+	inputTokens: number;
+	outputTokens: number;
+	cacheReadInputTokens: number;
+	cacheCreationInputTokens: number;
+}
+
 /** Internal accumulator state */
 interface AccumulatorState {
 	messages: ChatMessage[];
 	claudeSessionId: string | null;
 	sessionMetadata: SessionMetadata | null;
 	pendingToolCalls: Map<string, ToolCallLocation>;
+	/** Token usage from the most recent assistant message (for context window calculation) */
+	lastAssistantUsage: MessageUsage | null;
 }
 
 /** Message accumulator interface */
@@ -143,6 +156,7 @@ export function createMessageAccumulator(
 		claudeSessionId: null,
 		sessionMetadata: null,
 		pendingToolCalls: new Map(),
+		lastAssistantUsage: null,
 	};
 
 	return {
@@ -260,6 +274,17 @@ function processAssistantMessage(
 		};
 		state.messages.push(chatMessage);
 	}
+
+	// Capture token usage from this message for context window calculation
+	const usage = message.message.usage;
+	if (usage) {
+		state.lastAssistantUsage = {
+			inputTokens: usage.input_tokens ?? 0,
+			outputTokens: usage.output_tokens ?? 0,
+			cacheReadInputTokens: usage.cache_read_input_tokens ?? 0,
+			cacheCreationInputTokens: usage.cache_creation_input_tokens ?? 0,
+		};
+	}
 }
 
 function processUserMessage(
@@ -372,13 +397,30 @@ function processResultMessage(
 ): void {
 	const isSuccess = message.subtype === "success";
 
+	// Extract context window from modelUsage (max across all models)
+	const contextWindow = extractContextWindow(message.modelUsage);
+
+	// Use last assistant message's usage for context-related tokens (for accurate context window %)
+	// Fall back to cumulative result message usage if no assistant message was processed
+	const lastUsage = state.lastAssistantUsage;
+
 	state.sessionMetadata = {
 		claudeSessionId: message.session_id,
 		durationMs: message.duration_ms,
 		durationApiMs: message.duration_api_ms,
 		totalCostUsd: message.total_cost_usd,
-		inputTokens: message.usage.input_tokens,
-		outputTokens: message.usage.output_tokens,
+		// Use last message's tokens for context window calculation
+		inputTokens: lastUsage?.inputTokens ?? message.usage.input_tokens,
+		outputTokens: lastUsage?.outputTokens ?? message.usage.output_tokens,
+		cacheReadInputTokens:
+			lastUsage?.cacheReadInputTokens ??
+			message.usage.cache_read_input_tokens ??
+			0,
+		cacheCreationInputTokens:
+			lastUsage?.cacheCreationInputTokens ??
+			message.usage.cache_creation_input_tokens ??
+			0,
+		contextWindow: contextWindow ?? 0,
 		numTurns: message.num_turns,
 		success: isSuccess,
 		result: isSuccess
@@ -393,4 +435,18 @@ function processResultMessage(
 	if (!state.claudeSessionId) {
 		state.claudeSessionId = message.session_id;
 	}
+}
+
+/**
+ * Extract the context window size from modelUsage.
+ * Returns the maximum context window across all models used.
+ */
+function extractContextWindow(
+	modelUsage: Record<string, { contextWindow?: number }> | undefined,
+): number | undefined {
+	if (!modelUsage) return undefined;
+	const contextWindows = Object.values(modelUsage)
+		.map((usage) => usage.contextWindow)
+		.filter((cw): cw is number => typeof cw === "number");
+	return contextWindows.length > 0 ? Math.max(...contextWindows) : undefined;
 }
