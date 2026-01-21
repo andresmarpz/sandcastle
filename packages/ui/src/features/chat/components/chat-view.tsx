@@ -7,7 +7,7 @@ import { IconX } from "@tabler/icons-react";
 import type { ChatStatus, UIMessage } from "ai";
 import { formatDistanceToNow } from "date-fns";
 import * as Option from "effect/Option";
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { chatHistoryQuery } from "@/api/chat-atoms";
 import { sessionGitStatsQuery } from "@/api/git-atoms";
 import { sessionQuery } from "@/api/session-atoms";
@@ -17,6 +17,7 @@ import {
 	ConversationEmptyState,
 	ConversationScrollButton,
 } from "@/components/ai-elements/conversation";
+import { Message, MessageContent } from "@/components/ai-elements/message";
 import {
 	Queue,
 	QueueItem,
@@ -51,6 +52,10 @@ import { ChatInput } from "./chat-input";
 import { isAskUserQuestionTool, isExitPlanModeTool } from "./group-messages";
 import { GroupedMessageList } from "./grouped-message-list";
 import { OpenPathButton } from "./open-path-button";
+import {
+	getRandomStreamingWord,
+	StreamingIndicator,
+} from "./streaming-indicator";
 import { ToolApprovalDialog } from "./tool-approval";
 
 interface ChatViewProps {
@@ -214,6 +219,23 @@ function ChatViewContent({
 	const chatStatus: ChatStatus =
 		sessionStatus === "streaming" ? "streaming" : "ready";
 
+	// Track streaming state for the loading indicator
+	const [streamingState, setStreamingState] = useState<{
+		startTime: number;
+		word: string;
+	} | null>(null);
+
+	useEffect(() => {
+		if (sessionStatus === "streaming" && streamingState === null) {
+			setStreamingState({
+				startTime: Date.now(),
+				word: getRandomStreamingWord(),
+			});
+		} else if (sessionStatus !== "streaming" && streamingState !== null) {
+			setStreamingState(null);
+		}
+	}, [sessionStatus, streamingState]);
+
 	const showHistoryLoading =
 		historyStatus === "loading" && messages.length === 0;
 
@@ -246,7 +268,19 @@ function ChatViewContent({
 								Loading chat history...
 							</div>
 						) : messages.length > 0 ? (
-							<GroupedMessageList messages={messages} sessionId={sessionId} />
+							<>
+								<GroupedMessageList messages={messages} sessionId={sessionId} />
+								{streamingState && (
+									<Message from="assistant">
+										<MessageContent>
+											<StreamingIndicator
+												startTime={streamingState.startTime}
+												word={streamingState.word}
+											/>
+										</MessageContent>
+									</Message>
+								)}
+							</>
 						) : (
 							<ConversationEmptyState
 								title="No messages yet"
