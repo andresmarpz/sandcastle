@@ -1,6 +1,6 @@
 import { Result, useAtomValue } from "@effect-atom/atom-react";
+import { Gear } from "@phosphor-icons/react";
 import type { Repository } from "@sandcastle/schemas";
-import { IconSettings } from "@tabler/icons-react";
 import * as Option from "effect/Option";
 import { useMemo, useState } from "react";
 import { repositoryListAtom } from "@/api/repository-atoms";
@@ -69,11 +69,11 @@ export default function Rail() {
 				</SidebarGroup>
 			</SidebarContent>
 
-			<SidebarFooter className="px-4">
+			<SidebarFooter className="p-4">
 				<SidebarMenu>
 					<SidebarMenuItem>
 						<SidebarMenuButton onClick={() => setSettingsOpen(true)}>
-							<IconSettings className="size-4" />
+							<Gear className="size-4" />
 						</SidebarMenuButton>
 					</SidebarMenuItem>
 					<ThemeSwitcher />

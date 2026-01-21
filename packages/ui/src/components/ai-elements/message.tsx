@@ -1,11 +1,6 @@
 "use client";
 
-import {
-	IconChevronLeft,
-	IconChevronRight,
-	IconPaperclip,
-	IconX,
-} from "@tabler/icons-react";
+import { CaretLeft, CaretRight, Paperclip, X } from "@phosphor-icons/react";
 import type { FileUIPart, UIMessage } from "ai";
 import type { ComponentProps, HTMLAttributes, ReactElement } from "react";
 import {
@@ -270,7 +265,7 @@ export const MessageBranchPrevious = ({
 			variant="ghost"
 			{...props}
 		>
-			{children ?? <IconChevronLeft size={14} />}
+			{children ?? <CaretLeft size={14} />}
 		</Button>
 	);
 };
@@ -293,7 +288,7 @@ export const MessageBranchNext = ({
 			variant="ghost"
 			{...props}
 		>
-			{children ?? <IconChevronRight size={14} />}
+			{children ?? <CaretRight size={14} />}
 		</Button>
 	);
 };
@@ -384,7 +379,7 @@ export function MessageAttachment({
 							type="button"
 							variant="ghost"
 						>
-							<IconX />
+							<X />
 							<span className="sr-only">Remove</span>
 						</Button>
 					)}
@@ -399,7 +394,7 @@ export function MessageAttachment({
 							// @ts-expect-error - type prop conflicts with Button's type
 							nativeButton={false}
 						>
-							<IconPaperclip className="size-4" />
+							<Paperclip className="size-4" />
 						</TooltipTrigger>
 						<TooltipContent>
 							<p>{attachmentLabel}</p>
@@ -416,7 +411,7 @@ export function MessageAttachment({
 							type="button"
 							variant="ghost"
 						>
-							<IconX />
+							<X />
 							<span className="sr-only">Remove</span>
 						</Button>
 					)}

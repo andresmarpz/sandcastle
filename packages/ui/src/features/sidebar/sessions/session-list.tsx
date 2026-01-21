@@ -1,8 +1,8 @@
 "use client";
 
 import { Result, useAtom, useAtomValue } from "@effect-atom/atom-react";
+import { Folder, GitBranch, Plus } from "@phosphor-icons/react";
 import type { Session, Worktree } from "@sandcastle/schemas";
-import { IconFolder, IconGitBranch, IconPlus } from "@tabler/icons-react";
 import * as Option from "effect/Option";
 import { AnimatePresence } from "motion/react";
 import { useMemo } from "react";
@@ -225,7 +225,7 @@ function SessionListContent({
 									</>
 								) : (
 									<>
-										<IconPlus className="size-3" />
+										<Plus className="size-3" />
 										New session
 									</>
 								)}
@@ -238,18 +238,18 @@ function SessionListContent({
 						className="min-w-[200px]"
 					>
 						<DropdownMenuItem onClick={onCreateOnMain}>
-							<IconFolder className="size-4" />
+							<Folder className="size-4" />
 							Main directory
 						</DropdownMenuItem>
 
 						<DropdownMenuSub>
 							<DropdownMenuSubTrigger>
-								<IconGitBranch className="size-4" />
+								<GitBranch className="size-4" />
 								Worktree
 							</DropdownMenuSubTrigger>
 							<DropdownMenuSubContent className="min-w-[180px]">
 								<DropdownMenuItem onClick={onCreateWorktree}>
-									<IconPlus className="size-4" />
+									<Plus className="size-4" />
 									Create new worktree
 								</DropdownMenuItem>
 

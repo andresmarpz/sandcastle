@@ -1,7 +1,7 @@
 "use client";
 
+import { DotsThree, GitBranch, Trash } from "@phosphor-icons/react";
 import type { Worktree } from "@sandcastle/schemas";
-import { IconDots, IconGitBranch, IconTrash } from "@tabler/icons-react";
 import { formatDistanceToNow } from "date-fns";
 import * as React from "react";
 import { useLocation, useNavigate } from "react-router";
@@ -70,7 +70,7 @@ export function SidebarWorktreeItem({ worktree }: SidebarWorktreeItemProps) {
 				>
 					<div className="flex w-full flex-col gap-1">
 						<div className="flex items-center gap-2">
-							<IconGitBranch className="text-muted-foreground size-4 shrink-0" />
+							<GitBranch className="text-muted-foreground size-4 shrink-0" />
 							<span className="truncate text-sm font-medium">
 								{worktree.branch}
 							</span>
@@ -93,7 +93,7 @@ export function SidebarWorktreeItem({ worktree }: SidebarWorktreeItemProps) {
 								onClick={(event) => event.stopPropagation()}
 								aria-label="Worktree actions"
 							>
-								<IconDots className="size-3.5" />
+								<DotsThree className="size-3.5" />
 							</Button>
 						}
 					/>
@@ -105,7 +105,7 @@ export function SidebarWorktreeItem({ worktree }: SidebarWorktreeItemProps) {
 								setIsDialogOpen(true);
 							}}
 						>
-							<IconTrash className="size-4" />
+							<Trash className="size-4" />
 							Delete worktree
 						</DropdownMenuItem>
 					</DropdownMenuContent>

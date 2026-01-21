@@ -1,6 +1,6 @@
 "use client";
 
-import { IconChevronDown, IconPaperclip } from "@tabler/icons-react";
+import { CaretDown, Paperclip } from "@phosphor-icons/react";
 import type { ComponentProps } from "react";
 import { Button } from "@/components/button";
 import {
@@ -174,7 +174,7 @@ export const QueueItemFile = ({
 		)}
 		{...props}
 	>
-		<IconPaperclip size={12} />
+		<Paperclip size={12} />
 		<span className="max-w-[100px] truncate">{children}</span>
 	</span>
 );
@@ -243,7 +243,7 @@ export const QueueSectionLabel = ({
 	...props
 }: QueueSectionLabelProps) => (
 	<span className={cn("flex items-center gap-2", className)} {...props}>
-		<IconChevronDown className="group-data-[state=closed]:-rotate-90 size-4 transition-transform" />
+		<CaretDown className="group-data-[state=closed]:-rotate-90 size-4 transition-transform" />
 		{icon}
 		<span>
 			{count} {label}

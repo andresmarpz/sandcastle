@@ -1,8 +1,8 @@
 "use client";
 
 import { Result, useAtomValue } from "@effect-atom/atom-react";
+import { CaretDown, GitBranch } from "@phosphor-icons/react";
 import type { Worktree } from "@sandcastle/schemas";
-import { IconChevronDown, IconGitBranch } from "@tabler/icons-react";
 import { formatDistanceToNow } from "date-fns";
 import * as Option from "effect/Option";
 import { useMemo, useState } from "react";
@@ -57,7 +57,7 @@ export function WorktreeSection({ repositoryId }: WorktreeSectionProps) {
 							render={
 								<SidebarMenuButton className="justify-between">
 									<span className="flex items-center gap-2">
-										<IconGitBranch className="size-4" />
+										<GitBranch className="size-4" />
 										<span>Worktrees</span>
 									</span>
 									<span className="flex items-center gap-1.5">
@@ -69,7 +69,7 @@ export function WorktreeSection({ repositoryId }: WorktreeSectionProps) {
 												{worktreeCount}
 											</Badge>
 										)}
-										<IconChevronDown
+										<CaretDown
 											className={cn(
 												"size-4 transition-transform duration-200",
 												!isOpen && "-rotate-90",
@@ -136,7 +136,7 @@ function WorktreeSubItem({ worktree }: WorktreeSubItemProps) {
 				className="h-auto flex-col items-start gap-0.5 py-1.5"
 			>
 				<span className="flex items-center gap-1.5 text-sm font-medium">
-					<IconGitBranch className="size-3 shrink-0" />
+					<GitBranch className="size-3 shrink-0" />
 					<span className="truncate">{worktree.branch}</span>
 				</span>
 				<span className="text-muted-foreground text-xs">

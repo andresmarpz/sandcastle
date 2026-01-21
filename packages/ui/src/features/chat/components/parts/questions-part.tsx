@@ -1,13 +1,7 @@
 "use client";
 
+import { Check, Clock, Question, Warning, X } from "@phosphor-icons/react";
 import type { AskUserQuestionPayload } from "@sandcastle/schemas";
-import {
-	IconAlertTriangle,
-	IconCheck,
-	IconClock,
-	IconMessageQuestion,
-	IconX,
-} from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
 import {
 	Questions,
@@ -434,7 +428,7 @@ export function QuestionsPart({ part, sessionId }: QuestionsPartProps) {
 			>
 				<QuestionsHeader className="flex-row items-start justify-between gap-4">
 					<div className="flex items-start gap-2">
-						<IconMessageQuestion className="size-5 text-blue-500 mt-0.5" />
+						<Question className="size-5 text-blue-500 mt-0.5" />
 						<div>
 							<QuestionsTitle>Questions from Claude</QuestionsTitle>
 							<QuestionsDescription>
@@ -592,28 +586,28 @@ function StatusBadge({ status }: { status: QuestionsStatus }) {
 		case "answered":
 			return (
 				<Badge className="flex shrink-0 items-center gap-1 bg-green-500/10 text-green-600 dark:bg-green-500/20 dark:text-green-400">
-					<IconCheck className="size-3" />
+					<Check className="size-3" />
 					Answered
 				</Badge>
 			);
 		case "skipped":
 			return (
 				<Badge className="flex shrink-0 items-center gap-1 bg-muted text-muted-foreground">
-					<IconX className="size-3" />
+					<X className="size-3" />
 					Skipped
 				</Badge>
 			);
 		case "error":
 			return (
 				<Badge className="flex shrink-0 items-center gap-1 bg-red-500/10 text-red-600 dark:bg-red-500/20 dark:text-red-400">
-					<IconAlertTriangle className="size-3" />
+					<Warning className="size-3" />
 					Failed
 				</Badge>
 			);
 		case "pending":
 			return (
 				<Badge className="flex shrink-0 items-center gap-1 bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400">
-					<IconClock className="size-3" />
+					<Clock className="size-3" />
 					Pending
 				</Badge>
 			);

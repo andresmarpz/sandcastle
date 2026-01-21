@@ -1,13 +1,13 @@
 "use client";
 
 import {
-	IconCornerDownLeft,
-	IconLoader2,
-	IconMicrophone,
-	IconPlus,
-	IconSquare,
-	IconX,
-} from "@tabler/icons-react";
+	ArrowElbowDownLeft,
+	CircleNotch,
+	Microphone,
+	Plus,
+	Square,
+	X,
+} from "@phosphor-icons/react";
 import type { ChatStatus, FileUIPart } from "ai";
 import { nanoid } from "nanoid";
 import {
@@ -993,7 +993,7 @@ export const PromptInputActionMenuTrigger = ({
 	<DropdownMenuTrigger
 		render={<PromptInputButton className={className} {...props} />}
 	>
-		{children ?? <IconPlus className="size-4" />}
+		{children ?? <Plus className="size-4" />}
 	</DropdownMenuTrigger>
 );
 
@@ -1032,14 +1032,14 @@ export const PromptInputSubmit = ({
 	children,
 	...props
 }: PromptInputSubmitProps) => {
-	let Icon = <IconCornerDownLeft className="size-4" />;
+	let Icon = <ArrowElbowDownLeft className="size-4" />;
 
 	if (status === "submitted") {
-		Icon = <IconLoader2 className="size-4 animate-spin" />;
+		Icon = <CircleNotch className="size-4 animate-spin" />;
 	} else if (status === "streaming") {
-		Icon = <IconSquare className="size-4" />;
+		Icon = <Square className="size-4" />;
 	} else if (status === "error") {
-		Icon = <IconX className="size-4" />;
+		Icon = <X className="size-4" />;
 	}
 
 	return (
@@ -1211,7 +1211,7 @@ export const PromptInputSpeechButton = ({
 			onClick={toggleListening}
 			{...props}
 		>
-			<IconMicrophone className="size-4" />
+			<Microphone className="size-4" />
 		</PromptInputButton>
 	);
 };

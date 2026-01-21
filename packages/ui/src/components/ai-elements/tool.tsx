@@ -1,13 +1,13 @@
 "use client";
 
 import {
-	IconChevronDown,
-	IconCircle,
-	IconCircleCheck,
-	IconCircleX,
-	IconClock,
-	IconTool,
-} from "@tabler/icons-react";
+	CaretDown,
+	CheckCircle,
+	Circle,
+	Clock,
+	Wrench,
+	XCircle,
+} from "@phosphor-icons/react";
 import type { ToolUIPart } from "ai";
 import type { ComponentProps, ReactNode } from "react";
 import { isValidElement } from "react";
@@ -51,14 +51,14 @@ const getStatusBadge = (status: ToolUIPart["state"]) => {
 	};
 
 	const icons: Record<ToolUIPart["state"], ReactNode> = {
-		"input-streaming": <IconCircle className="size-4" />,
-		"input-available": <IconClock className="size-4 animate-pulse" />,
+		"input-streaming": <Circle className="size-4" />,
+		"input-available": <Clock className="size-4 animate-pulse" />,
 		// state only available in AI SDK v6
-		"approval-requested": <IconClock className="size-4 text-yellow-600" />,
-		"approval-responded": <IconCircleCheck className="size-4 text-blue-600" />,
-		"output-available": <IconCircleCheck className="size-4 text-green-600" />,
-		"output-error": <IconCircleX className="size-4 text-red-600" />,
-		"output-denied": <IconCircleX className="size-4 text-orange-600" />,
+		"approval-requested": <Clock className="size-4 text-yellow-600" />,
+		"approval-responded": <CheckCircle className="size-4 text-blue-600" />,
+		"output-available": <CheckCircle className="size-4 text-green-600" />,
+		"output-error": <XCircle className="size-4 text-red-600" />,
+		"output-denied": <XCircle className="size-4 text-orange-600" />,
 	};
 
 	return (
@@ -85,13 +85,13 @@ export const ToolHeader = ({
 		{...props}
 	>
 		<div className="flex items-center gap-2">
-			{icon ?? <IconTool className="size-4 text-muted-foreground" />}
+			{icon ?? <Wrench className="size-4 text-muted-foreground" />}
 			<span className="font-medium text-sm">
 				{title ?? type.split("-").slice(1).join("-")}
 			</span>
 			{getStatusBadge(state)}
 		</div>
-		<IconChevronDown className="size-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+		<CaretDown className="size-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
 	</CollapsibleTrigger>
 );
 
