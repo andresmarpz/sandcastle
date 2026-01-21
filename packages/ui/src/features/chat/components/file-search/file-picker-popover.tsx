@@ -7,6 +7,8 @@ import {
 	useState,
 } from "react";
 import { Command, CommandInput, CommandList } from "@/components/command";
+import { Sheet, SheetContent } from "@/components/sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { FileSearchResults } from "./file-search-results";
 import { useDebouncedValue } from "./utils";
@@ -29,6 +31,7 @@ export function FilePickerPopover({
 	const [search, setSearch] = useState("");
 	const debouncedSearch = useDebouncedValue(search, 300);
 	const inputRef = useRef<HTMLInputElement>(null);
+	const isMobile = useIsMobile();
 
 	// Reset search when popover closes
 	useEffect(() => {
@@ -69,6 +72,40 @@ export function FilePickerPopover({
 		[onSelect, onOpenChange],
 	);
 
+	const commandContent = (
+		<Command shouldFilter={false} className="rounded-lg">
+			<CommandInput
+				ref={inputRef}
+				value={search}
+				onValueChange={setSearch}
+				onKeyDown={handleKeyDown}
+				placeholder="Search files..."
+				// 16px font prevents iOS Safari zoom on focus
+				className={isMobile ? "text-base" : undefined}
+			/>
+			<CommandList className="max-h-60">
+				<FileSearchResults
+					workingPath={workingPath}
+					pattern={debouncedSearch}
+					onSelect={handleSelect}
+				/>
+			</CommandList>
+		</Command>
+	);
+
+	// On mobile, use a bottom Sheet to avoid popover positioning issues
+	// and prevent accidental dismissal when scrolling results
+	if (isMobile) {
+		return (
+			<Sheet open={open} onOpenChange={onOpenChange}>
+				<SheetContent side="bottom" showCloseButton={false} className="p-0">
+					{commandContent}
+				</SheetContent>
+			</Sheet>
+		);
+	}
+
+	// Desktop: use popover positioned above the input
 	return (
 		<PopoverPrimitive.Root open={open} onOpenChange={onOpenChange}>
 			{/* Hidden trigger - we control open state manually */}
@@ -95,22 +132,7 @@ export function FilePickerPopover({
 							"origin-(--transform-origin)",
 						)}
 					>
-						<Command shouldFilter={false} className="rounded-lg">
-							<CommandInput
-								ref={inputRef}
-								value={search}
-								onValueChange={setSearch}
-								onKeyDown={handleKeyDown}
-								placeholder="Search files..."
-							/>
-							<CommandList className="max-h-60">
-								<FileSearchResults
-									workingPath={workingPath}
-									pattern={debouncedSearch}
-									onSelect={handleSelect}
-								/>
-							</CommandList>
-						</Command>
+						{commandContent}
 					</PopoverPrimitive.Popup>
 				</PopoverPrimitive.Positioner>
 			</PopoverPrimitive.Portal>
