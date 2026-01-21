@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.1.16](https://github.com/andresmarpz/sandcastle/compare/v0.1.15...v0.1.16) (2026-01-21)
+
+
+### Features
+
+* add parentToolCallId support for subagent tracking ([#81](https://github.com/andresmarpz/sandcastle/issues/81)) ([36d6243](https://github.com/andresmarpz/sandcastle/commit/36d624320d6abaaa128cc16502549ab154753e9b))
+* **desktop:** bundle Bun server as Tauri sidecar ([#85](https://github.com/andresmarpz/sandcastle/issues/85)) ([213351c](https://github.com/andresmarpz/sandcastle/commit/213351c6dd02def878b77f988526c27fda4f08f1))
+
+
+### Bug Fixes
+
+* **ci:** get PR branch name from release-please output ([#84](https://github.com/andresmarpz/sandcastle/issues/84)) ([ead6900](https://github.com/andresmarpz/sandcastle/commit/ead6900067af3e7f6eab3780b11869e18d75eb4d))
+* **ci:** update bun.lock after release-please version bumps ([#83](https://github.com/andresmarpz/sandcastle/issues/83)) ([1b7ad5e](https://github.com/andresmarpz/sandcastle/commit/1b7ad5e3f2060b7c9c7c07d62b57ae20bc1556eb))
+* recreate bun.lock ([c4f77ba](https://github.com/andresmarpz/sandcastle/commit/c4f77baf29f9226979e6f7bea67dc6761b57a480))
+* update toke usage after turn finish ([c86ab96](https://github.com/andresmarpz/sandcastle/commit/c86ab96055d5282d1996654ec05ecfa031899d10))
+
 ## [0.1.15](https://github.com/andresmarpz/sandcastle/compare/v0.1.14...v0.1.15) (2026-01-21)
 
 
