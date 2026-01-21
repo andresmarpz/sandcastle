@@ -82,6 +82,18 @@ export interface ChatSessionState {
 	answeredQuestionToolCallIds: Set<string>;
 	/** Whether session has unread content (set on SessionStopped, cleared on visit) */
 	hasUnreadContent: boolean;
+	/** Real-time metadata from finish events (token usage, cost) */
+	streamingMetadata: StreamingMetadata | null;
+}
+
+/** Metadata from StreamEventFinish for real-time UI updates */
+export interface StreamingMetadata {
+	costUsd?: number;
+	inputTokens?: number;
+	outputTokens?: number;
+	cacheReadInputTokens?: number;
+	cacheCreationInputTokens?: number;
+	contextWindow?: number;
 }
 
 interface SubscriptionState {
@@ -169,6 +181,7 @@ const DEFAULT_SESSION_STATE: ChatSessionState = {
 	approvedPlanToolCallIds: new Set(),
 	answeredQuestionToolCallIds: new Set(),
 	hasUnreadContent: false,
+	streamingMetadata: null,
 };
 
 // Frozen singleton to return for sessions that don't exist yet
@@ -189,6 +202,7 @@ const EMPTY_SESSION_STATE: ChatSessionState = {
 	approvedPlanToolCallIds: EMPTY_APPROVED_PLAN_IDS,
 	answeredQuestionToolCallIds: EMPTY_ANSWERED_QUESTION_IDS,
 	hasUnreadContent: false,
+	streamingMetadata: null,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -539,6 +553,30 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 					}
 					// Don't pass to accumulator - session renames are handled separately
 					return;
+				}
+
+				// Handle finish event - store metadata for real-time UI updates
+				if (streamEvent.type === "finish") {
+					const finishEvent = event.event as {
+						type: "finish";
+						metadata?: {
+							costUsd?: number;
+							inputTokens?: number;
+							outputTokens?: number;
+							cacheReadInputTokens?: number;
+							cacheCreationInputTokens?: number;
+							contextWindow?: number;
+						};
+					};
+					// Store metadata in chat store for immediate UI updates
+					const metadata = finishEvent.metadata;
+					if (metadata) {
+						updateSession(sessionId, (prev) => ({
+							...prev,
+							streamingMetadata: metadata,
+						}));
+					}
+					// Continue to pass to accumulator for message finalization
 				}
 
 				// Process stream event through accumulator

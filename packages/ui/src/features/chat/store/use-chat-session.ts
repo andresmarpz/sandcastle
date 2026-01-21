@@ -11,6 +11,7 @@ import {
 	type ChatSessionState,
 	chatStore,
 	type SendResult,
+	type StreamingMetadata,
 	type ToolApprovalRequest,
 } from "./chat-store";
 
@@ -440,4 +441,32 @@ export function useIsAnsweredQuestion(
 		const session = state.getSession(sessionId);
 		return session.answeredQuestionToolCallIds.has(toolCallId);
 	});
+}
+
+/**
+ * Hook for reading real-time streaming metadata (token usage, cost).
+ *
+ * This data comes from the `finish` event during streaming and provides
+ * immediate updates without waiting for the session atom to refetch.
+ *
+ * @example
+ * ```tsx
+ * function TokenUsage({ sessionId }: { sessionId: string }) {
+ *   const metadata = useStreamingMetadata(sessionId)
+ *
+ *   if (!metadata) return null
+ *
+ *   return (
+ *     <div>
+ *       Input: {metadata.inputTokens}
+ *       Output: {metadata.outputTokens}
+ *     </div>
+ *   )
+ * }
+ * ```
+ */
+export function useStreamingMetadata(
+	sessionId: string,
+): StreamingMetadata | null {
+	return useChatSessionSelector(sessionId, (s) => s.streamingMetadata);
 }
