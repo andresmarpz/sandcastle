@@ -11,6 +11,7 @@
 		"./chat": "./src/chat/index.ts",
 		"./coordination": "./src/coordination/index.ts",
 		"./errors": "./src/errors/index.ts",
+		"./git": "./src/git/index.ts",
 		"./primitives": "./src/primitives.ts"
 	},
 	"scripts": {
