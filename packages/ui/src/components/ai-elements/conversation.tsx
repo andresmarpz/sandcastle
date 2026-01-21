@@ -86,8 +86,6 @@ export const ConversationScrollButton = ({
 				)}
 				onClick={handleScrollToBottom}
 				size="icon"
-				// @ts-expect-error - type prop conflicts with Button's type
-				type="button"
 				variant="outline"
 				{...props}
 			>

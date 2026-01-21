@@ -7,9 +7,14 @@
 		"core:default",
 		"dialog:default",
 		"shell:allow-open",
+		"shell:allow-spawn",
+		"shell:allow-kill",
 		{
 			"identifier": "shell:allow-execute",
-			"allow": [{ "name": "open", "cmd": "open", "args": true }]
+			"allow": [
+				{ "name": "open", "cmd": "open", "args": true },
+				{ "name": "bun", "sidecar": true, "args": true }
+			]
 		},
 		"core:window:allow-start-dragging",
 		"updater:default",
