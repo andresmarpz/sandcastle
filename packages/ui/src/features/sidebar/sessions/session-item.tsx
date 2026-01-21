@@ -5,6 +5,7 @@ import type { Session } from "@sandcastle/schemas";
 import { IconArchive, IconPencil, IconTrash } from "@tabler/icons-react";
 import { formatDistanceToNow } from "date-fns";
 import * as Option from "effect/Option";
+import { motion } from "motion/react";
 import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { deleteSessionMutation, SESSION_LIST_KEY } from "@/api/session-atoms";
@@ -27,6 +28,7 @@ import {
 	ContextMenuTrigger,
 } from "@/components/context-menu";
 import { SidebarMenuButton, SidebarMenuItem } from "@/components/sidebar";
+import { Spinner } from "@/components/spinner";
 import {
 	SessionStatusDot,
 	useSessionStatusIndicator,
@@ -51,9 +53,9 @@ export function SessionItem({ session, repositoryId }: SessionItemProps) {
 	const location = useLocation();
 	const navigate = useNavigate();
 	const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+	const [isDeleting, setIsDeleting] = useState(false);
 
-	const [deleteResult, deleteSession] = useAtom(deleteSessionMutation);
-	const isDeleting = deleteResult.waiting;
+	const [, deleteSession] = useAtom(deleteSessionMutation);
 
 	const sessionPath = `/repository/${repositoryId}/sessions/${session.id}`;
 	const isActive = location.pathname === sessionPath;
@@ -81,6 +83,8 @@ export function SessionItem({ session, repositoryId }: SessionItemProps) {
 	}
 
 	function handleDelete() {
+		setIsDeleteDialogOpen(false);
+		setIsDeleting(true);
 		deleteSession({
 			payload: { id: session.id },
 			reactivityKeys: [
@@ -91,62 +95,71 @@ export function SessionItem({ session, repositoryId }: SessionItemProps) {
 					: undefined,
 			].filter(Boolean) as string[],
 		});
-		setIsDeleteDialogOpen(false);
 	}
 
 	return (
 		<>
-			<SidebarMenuItem>
-				<ContextMenu>
-					<ContextMenuTrigger
-						render={
-							<SidebarMenuButton
-								onClick={handleSelect}
-								isActive={isActive}
-								className="h-auto py-2 items-start text-left"
-							>
-								<SessionStatusDot
-									className="mt-1.5"
-									status={sessionStatusIndicator}
-								/>
-								<div className="flex-1 min-w-0">
-									<div className="flex items-center justify-between gap-2">
-										<span
-											className="truncate text-sm font-medium max-w-52"
-											title={session.title}
-										>
-											{session.title}
-										</span>
-										<SessionOriginBadge worktreeId={session.worktreeId} />
+			<motion.div
+				exit={{ opacity: 0, scale: 0.95, height: 0 }}
+				transition={{ duration: 0.15, ease: "easeOut" }}
+				style={{ overflow: "hidden" }}
+			>
+				<SidebarMenuItem>
+					<ContextMenu>
+						<ContextMenuTrigger
+							render={
+								<SidebarMenuButton
+									onClick={handleSelect}
+									isActive={isActive}
+									className="h-auto py-2 items-start text-left"
+								>
+									<SessionStatusDot
+										className="mt-1.5"
+										status={sessionStatusIndicator}
+									/>
+									<div className="flex-1 min-w-0">
+										<div className="flex items-center justify-between gap-2">
+											<span
+												className="truncate text-sm font-medium max-w-52"
+												title={session.title}
+											>
+												{session.title}
+											</span>
+											{isDeleting ? (
+												<Spinner className="size-3 text-muted-foreground" />
+											) : (
+												<SessionOriginBadge worktreeId={session.worktreeId} />
+											)}
+										</div>
+										<div className="text-muted-foreground text-xs mt-0.5">
+											{lastActivityLabel}
+										</div>
 									</div>
-									<div className="text-muted-foreground text-xs mt-0.5">
-										{lastActivityLabel}
-									</div>
-								</div>
-							</SidebarMenuButton>
-						}
-					/>
+								</SidebarMenuButton>
+							}
+						/>
 
-					<ContextMenuContent className="min-w-[160px]">
-						<ContextMenuItem onClick={handleRename}>
-							<IconPencil className="size-4" />
-							Rename
-						</ContextMenuItem>
-						<ContextMenuItem onClick={handleArchive}>
-							<IconArchive className="size-4" />
-							Archive
-						</ContextMenuItem>
-						<ContextMenuSeparator />
-						<ContextMenuItem
-							variant="destructive"
-							onClick={() => setIsDeleteDialogOpen(true)}
-						>
-							<IconTrash className="size-4" />
-							Delete
-						</ContextMenuItem>
-					</ContextMenuContent>
-				</ContextMenu>
-			</SidebarMenuItem>
+						<ContextMenuContent className="min-w-[160px]">
+							<ContextMenuItem onClick={handleRename}>
+								<IconPencil className="size-4" />
+								Rename
+							</ContextMenuItem>
+							<ContextMenuItem onClick={handleArchive}>
+								<IconArchive className="size-4" />
+								Archive
+							</ContextMenuItem>
+							<ContextMenuSeparator />
+							<ContextMenuItem
+								variant="destructive"
+								onClick={() => setIsDeleteDialogOpen(true)}
+							>
+								<IconTrash className="size-4" />
+								Delete
+							</ContextMenuItem>
+						</ContextMenuContent>
+					</ContextMenu>
+				</SidebarMenuItem>
+			</motion.div>
 
 			<AlertDialog
 				open={isDeleteDialogOpen}
@@ -161,13 +174,9 @@ export function SessionItem({ session, repositoryId }: SessionItemProps) {
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
-						<AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-						<AlertDialogAction
-							variant="destructive"
-							onClick={handleDelete}
-							disabled={isDeleting}
-						>
-							{isDeleting ? "Deleting..." : "Delete"}
+						<AlertDialogCancel>Cancel</AlertDialogCancel>
+						<AlertDialogAction variant="destructive" onClick={handleDelete}>
+							Delete
 						</AlertDialogAction>
 					</AlertDialogFooter>
 				</AlertDialogContent>
