@@ -120,6 +120,11 @@
 	--radius-4xl: calc(var(--radius) + 16px);
 }
 
+@utility text-xsm {
+	font-size: 0.8125rem;
+	line-height: 1.25rem;
+}
+
 @layer base {
 	* {
 		@apply border-border outline-ring/50;
@@ -129,9 +134,26 @@
 	body {
 		@apply font-sans bg-background text-foreground;
 		font-size: 13px;
+		letter-spacing: -0.011em;
+		font-feature-settings:
+			"ss01" on,
+			"ss02" on,
+			"cv01" on,
+			"cv02" on;
+		text-rendering: optimizeLegibility;
+		-webkit-font-smoothing: antialiased;
+		-moz-osx-font-smoothing: grayscale;
 	}
 	html {
 		@apply font-sans;
+	}
+	h1,
+	h2,
+	h3,
+	h4,
+	h5,
+	h6 {
+		letter-spacing: -0.02em;
 	}
 
 	/* Custom scrollbar styles */
