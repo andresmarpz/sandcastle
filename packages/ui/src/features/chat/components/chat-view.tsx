@@ -41,12 +41,14 @@ import {
 import { Spinner } from "@/components/spinner";
 import {
 	chatStore,
+	type StreamingMetadata,
 	useChatSession,
 	usePendingExitPlanApproval,
 	usePendingToolApprovals,
 	useRespondToToolApproval,
 	useSetChatHistory,
 	useSetChatMode,
+	useStreamingMetadata,
 } from "@/features/chat/store";
 import {
 	SessionStatusDot,
@@ -393,6 +395,9 @@ function SessionMetadataPanel({
 		status: session?.status,
 	});
 
+	// Real-time streaming metadata (updates immediately on finish events)
+	const streamingMetadata = useStreamingMetadata(session.id);
+
 	// Git stats for the session
 	const gitStatsResult = useAtomValue(sessionGitStatsQuery(session.id));
 
@@ -403,34 +408,52 @@ function SessionMetadataPanel({
 		return formatDistanceToNow(timestamp, { addSuffix: true });
 	}, [session?.createdAt]);
 
+	// Merge session data with streaming metadata (streaming takes precedence)
+	const mergedMetadata = useMemo(
+		(): StreamingMetadata => ({
+			costUsd: streamingMetadata?.costUsd ?? session?.totalCostUsd ?? 0,
+			inputTokens: streamingMetadata?.inputTokens ?? session?.inputTokens ?? 0,
+			cacheReadInputTokens:
+				streamingMetadata?.cacheReadInputTokens ??
+				session?.cacheReadInputTokens ??
+				0,
+			cacheCreationInputTokens:
+				streamingMetadata?.cacheCreationInputTokens ??
+				session?.cacheCreationInputTokens ??
+				0,
+			contextWindow:
+				streamingMetadata?.contextWindow ?? session?.contextWindow ?? 0,
+		}),
+		[streamingMetadata, session],
+	);
+
 	const formattedCost = useMemo(() => {
-		const cost = session?.totalCostUsd ?? 0;
+		const cost = mergedMetadata.costUsd ?? 0;
 		if (cost === 0) return "$0.00";
 		if (cost < 0.01) return `$${cost.toFixed(4)}`;
 		return `$${cost.toFixed(2)}`;
-	}, [session?.totalCostUsd]);
+	}, [mergedMetadata.costUsd]);
 
 	const contextPercentage = useMemo(() => {
 		// Context % = (input_tokens + all cache tokens from last response) / max_tokens
 		// This represents what Claude "sees" in its context window
-		const inputTokens = session?.inputTokens ?? 0;
-		const cacheReadInputTokens = session?.cacheReadInputTokens ?? 0;
-		const cacheCreationInputTokens = session?.cacheCreationInputTokens ?? 0;
-		const contextWindow = session?.contextWindow ?? 0;
+		const {
+			inputTokens,
+			cacheReadInputTokens,
+			cacheCreationInputTokens,
+			contextWindow,
+		} = mergedMetadata;
 
-		if (contextWindow === 0) return null;
+		if (!contextWindow || contextWindow === 0) return null;
 
 		// Input tokens + cache tokens (both read and creation) = full context Claude processes
 		const totalContextUsed =
-			inputTokens + cacheReadInputTokens + cacheCreationInputTokens;
+			(inputTokens ?? 0) +
+			(cacheReadInputTokens ?? 0) +
+			(cacheCreationInputTokens ?? 0);
 		const percentage = (totalContextUsed / contextWindow) * 100;
 		return Math.min(percentage, 100).toFixed(1);
-	}, [
-		session?.inputTokens,
-		session?.cacheReadInputTokens,
-		session?.cacheCreationInputTokens,
-		session?.contextWindow,
-	]);
+	}, [mergedMetadata]);
 
 	return (
 		<div className="flex flex-col gap-4 text-sm min-w-[240px]">
