@@ -7,7 +7,7 @@ import { formatDistanceToNow } from "date-fns";
 import * as Option from "effect/Option";
 import { motion } from "motion/react";
 import { useMemo, useState } from "react";
-import { useLocation, useNavigate } from "react-router";
+import { useLocation } from "react-router";
 import { deleteSessionMutation, SESSION_LIST_KEY } from "@/api/session-atoms";
 import { worktreeAtomFamily } from "@/api/worktree-atoms";
 import {
@@ -33,6 +33,7 @@ import {
 	SessionStatusDot,
 	useSessionStatusIndicator,
 } from "@/features/sidebar/sessions/session-status-indicator";
+import { useSessionNavigation } from "@/hooks/use-session-navigation";
 
 interface SessionItemProps {
 	session: Session;
@@ -51,7 +52,7 @@ function formatRelativeTime(iso: string) {
 
 export function SessionItem({ session, repositoryId }: SessionItemProps) {
 	const location = useLocation();
-	const navigate = useNavigate();
+	const { navigateToSession } = useSessionNavigation();
 	const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 	const [isDeleting, setIsDeleting] = useState(false);
 
@@ -71,7 +72,7 @@ export function SessionItem({ session, repositoryId }: SessionItemProps) {
 	);
 
 	function handleSelect() {
-		navigate(sessionPath);
+		navigateToSession(repositoryId, session.id);
 	}
 
 	function handleRename() {
