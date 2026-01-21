@@ -43,8 +43,10 @@ export function HarnessSelector() {
 				className="w-auto gap-1.5 px-2"
 			>
 				<selectedHarness.icon className="size-3.5" />
-				<span className="text-[13px]">{selectedHarness.label}</span>
-				<IconChevronDown className="size-3 text-muted-foreground" />
+				<span className="hidden text-[13px] sm:inline">
+					{selectedHarness.label}
+				</span>
+				<IconChevronDown className="hidden size-3 text-muted-foreground sm:inline" />
 			</DropdownMenuTrigger>
 			<DropdownMenuContent className="w-48" align="start">
 				<DropdownMenuRadioGroup value={selectedHarness.value}>
