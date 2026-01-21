@@ -9,6 +9,7 @@ import { formatDistanceToNow } from "date-fns";
 import * as Option from "effect/Option";
 import { useCallback, useEffect, useMemo } from "react";
 import { chatHistoryQuery } from "@/api/chat-atoms";
+import { sessionGitStatsQuery } from "@/api/git-atoms";
 import { sessionQuery } from "@/api/session-atoms";
 import {
 	Conversation,
@@ -331,6 +332,9 @@ function SessionMetadataPanel({
 		status: session?.status,
 	});
 
+	// Git stats for the session
+	const gitStatsResult = useAtomValue(sessionGitStatsQuery(session.id));
+
 	const createdAtLabel = useMemo(() => {
 		if (!session?.createdAt) return null;
 		const timestamp = Date.parse(session.createdAt);
@@ -405,6 +409,32 @@ function SessionMetadataPanel({
 						{formattedTokens.output}
 					</span>
 				</div>
+			</div>
+
+			<div className="flex flex-col gap-1">
+				<span className="text-muted-foreground text-xs font-medium uppercase">
+					Changes
+				</span>
+				{Result.matchWithWaiting(gitStatsResult, {
+					onWaiting: () => (
+						<span className="text-muted-foreground">Loading...</span>
+					),
+					onError: () => <span className="text-muted-foreground">--</span>,
+					onDefect: () => <span className="text-muted-foreground">--</span>,
+					onSuccess: (result) => {
+						const stats = result.value;
+						if (stats.filesChanged === 0) {
+							return <span className="text-foreground">No changes</span>;
+						}
+						return (
+							<span className="text-foreground">
+								{stats.filesChanged} file{stats.filesChanged !== 1 ? "s" : ""}{" "}
+								<span className="text-green-600">+{stats.insertions}</span>{" "}
+								<span className="text-red-600">-{stats.deletions}</span>
+							</span>
+						);
+					},
+				})}
 			</div>
 
 			{workingPath && (

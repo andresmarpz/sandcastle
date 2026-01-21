@@ -6,7 +6,8 @@ export * from "./chat";
 export * from "./coordination";
 // Entity schemas
 export * from "./entities";
-
 // RPC errors
 export * from "./errors";
+// Git schemas
+export * from "./git";
 export * from "./primitives";

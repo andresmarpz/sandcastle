@@ -9,6 +9,7 @@ import { RpcSerialization, RpcServer } from "@effect/rpc";
 import {
 	ChatRpc,
 	FilesRpc,
+	GitRpc,
 	RepositoryRpc,
 	SessionRpc,
 	WorktreeRpc,
@@ -18,6 +19,7 @@ import { Effect, Layer } from "effect";
 import {
 	ChatRpcHandlersLive,
 	FilesRpcHandlersLive,
+	GitRpcHandlersLive,
 	RepositoryRpcHandlersLive,
 	SessionRpcHandlersLive,
 	WorktreeRpcHandlersLive,
@@ -65,7 +67,8 @@ const LoggingMiddleware = HttpMiddleware.make((app) =>
 const SandcastleRpc = RepositoryRpc.merge(WorktreeRpc)
 	.merge(SessionRpc)
 	.merge(ChatRpc)
-	.merge(FilesRpc);
+	.merge(FilesRpc)
+	.merge(GitRpc);
 
 const RpcHandlersLive = Layer.mergeAll(
 	RepositoryRpcHandlersLive,
@@ -73,6 +76,7 @@ const RpcHandlersLive = Layer.mergeAll(
 	SessionRpcHandlersLive,
 	ChatRpcHandlersLive,
 	FilesRpcHandlersLive,
+	GitRpcHandlersLive,
 );
 
 // HTTP RPC Server at /api/rpc
