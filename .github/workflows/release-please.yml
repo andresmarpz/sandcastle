@@ -38,9 +38,9 @@ jobs:
         if: ${{ steps.release.outputs.pr }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_BRANCH: ${{ fromJSON(steps.release.outputs.pr).headBranchName }}
         run: |
-          PR_NUMBER="${{ fromJSON(steps.release.outputs.pr).number }}"
-          PR_BRANCH="release-please--branches--main"
+          echo "PR branch: $PR_BRANCH"
 
           git fetch origin "$PR_BRANCH"
           git checkout "$PR_BRANCH"
