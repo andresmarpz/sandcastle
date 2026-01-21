@@ -16,6 +16,7 @@ import {
 } from "@/components/collapsible";
 import {
 	SidebarMenu,
+	SidebarMenuButton,
 	SidebarMenuItem,
 	SidebarMenuSub,
 	SidebarMenuSubButton,
@@ -53,30 +54,31 @@ export function WorktreeSection({ repositoryId }: WorktreeSectionProps) {
 				>
 					<SidebarMenuItem className="flex min-h-0 flex-col">
 						<CollapsibleTrigger
-							className={cn(
-								"flex w-full shrink-0 items-center justify-between gap-2 rounded-md p-2 text-sm",
-								"text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-								"transition-colors",
-							)}
-						>
-							<span className="flex items-center gap-2">
-								<IconGitBranch className="size-4" />
-								<span>Worktrees</span>
-							</span>
-							<span className="flex items-center gap-1.5">
-								{worktreeCount > 0 && (
-									<Badge variant="secondary" className="px-1.5 py-0 text-xs">
-										{worktreeCount}
-									</Badge>
-								)}
-								<IconChevronDown
-									className={cn(
-										"size-4 transition-transform duration-200",
-										!isOpen && "-rotate-90",
-									)}
-								/>
-							</span>
-						</CollapsibleTrigger>
+							render={
+								<SidebarMenuButton className="justify-between">
+									<span className="flex items-center gap-2">
+										<IconGitBranch className="size-4" />
+										<span>Worktrees</span>
+									</span>
+									<span className="flex items-center gap-1.5">
+										{worktreeCount > 0 && (
+											<Badge
+												variant="secondary"
+												className="px-1.5 py-0 text-xs"
+											>
+												{worktreeCount}
+											</Badge>
+										)}
+										<IconChevronDown
+											className={cn(
+												"size-4 transition-transform duration-200",
+												!isOpen && "-rotate-90",
+											)}
+										/>
+									</span>
+								</SidebarMenuButton>
+							}
+						/>
 						<CollapsiblePanel className="min-h-0 flex-1 overflow-hidden">
 							<SidebarMenuSub className="mx-0 ml-3.5 h-full overflow-y-auto">
 								{isLoading ? (
