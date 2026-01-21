@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.18](https://github.com/andresmarpz/sandcastle/compare/v0.1.17...v0.1.18) (2026-01-21)
+
+
+### Bug Fixes
+
+* **ci:** use prs_created condition in release-please workflow ([#87](https://github.com/andresmarpz/sandcastle/issues/87)) ([caf5001](https://github.com/andresmarpz/sandcastle/commit/caf5001fe1b2e7f73be5473d67d90f795def1e44))
+
 ## [0.1.17](https://github.com/andresmarpz/sandcastle/compare/v0.1.16...v0.1.17) (2026-01-21)
 
 
