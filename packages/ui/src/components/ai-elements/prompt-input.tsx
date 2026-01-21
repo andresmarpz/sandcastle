@@ -926,7 +926,7 @@ export const PromptInputFooter = ({
 }: PromptInputFooterProps) => (
 	<InputGroupAddon
 		align="block-end"
-		className={cn("gap-1", className)}
+		className={cn("gap-1 overflow-x-auto", className)}
 		{...props}
 	/>
 );

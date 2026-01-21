@@ -71,8 +71,10 @@ export function PlanSelector({
 				className="w-auto gap-1.5 px-2 opacity-60"
 			>
 				<SelectedIcon className={cn("size-3.5", selectedColor)} />
-				<span className="text-[13px]">{selectedModeData?.label ?? "Plan"}</span>
-				<IconChevronDown className="size-3 text-muted-foreground" />
+				<span className="hidden text-[13px] sm:inline">
+					{selectedModeData?.label ?? "Plan"}
+				</span>
+				<IconChevronDown className="hidden size-3 text-muted-foreground sm:inline" />
 			</Button>
 		);
 	}
@@ -84,8 +86,10 @@ export function PlanSelector({
 				className="w-auto gap-1.5 px-2"
 			>
 				<SelectedIcon className={cn("size-3.5", selectedColor)} />
-				<span className="text-[13px]">{selectedModeData?.label ?? "Plan"}</span>
-				<IconChevronDown className="size-3 text-muted-foreground" />
+				<span className="hidden text-[13px] sm:inline">
+					{selectedModeData?.label ?? "Plan"}
+				</span>
+				<IconChevronDown className="hidden size-3 text-muted-foreground sm:inline" />
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="start" className="w-48">
 				{MODES.map((mode) => (
