@@ -6,6 +6,12 @@
 # Exit 0 = Cancel build
 # Exit 1 = Proceed with build
 
+# Skip release-please branches (they trigger both preview AND production builds)
+if [[ "$VERCEL_GIT_COMMIT_REF" == release-please--* ]]; then
+  echo "⏭ Release-please branch, skipping build"
+  exit 0
+fi
+
 # Always build preview deployments (PRs)
 if [ "$VERCEL_ENV" != "production" ]; then
   exit 1
