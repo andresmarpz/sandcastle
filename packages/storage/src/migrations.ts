@@ -107,6 +107,21 @@ const migrations: Migration[] = [
 			);
 		`,
 	},
+	{
+		version: 3,
+		name: "add_context_window",
+		up: `
+			ALTER TABLE sessions ADD COLUMN contextWindow INTEGER NOT NULL DEFAULT 0;
+		`,
+	},
+	{
+		version: 4,
+		name: "add_cache_tokens",
+		up: `
+			ALTER TABLE sessions ADD COLUMN cacheReadInputTokens INTEGER NOT NULL DEFAULT 0;
+			ALTER TABLE sessions ADD COLUMN cacheCreationInputTokens INTEGER NOT NULL DEFAULT 0;
+		`,
+	},
 ];
 
 const ensureMigrationsTable = (db: Database): void => {

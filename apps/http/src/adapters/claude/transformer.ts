@@ -36,6 +36,20 @@ interface ProcessResult {
 }
 
 /**
+ * Extract the context window size from modelUsage.
+ * Returns the maximum context window across all models used.
+ */
+function extractContextWindow(
+	modelUsage: Record<string, { contextWindow?: number }> | undefined,
+): number | undefined {
+	if (!modelUsage) return undefined;
+	const contextWindows = Object.values(modelUsage)
+		.map((usage) => usage.contextWindow)
+		.filter((cw): cw is number => typeof cw === "number");
+	return contextWindows.length > 0 ? Math.max(...contextWindows) : undefined;
+}
+
+/**
  * Check if a tool name is ExitPlanMode (direct or MCP-prefixed)
  */
 function isExitPlanModeTool(toolName: string): boolean {
@@ -158,6 +172,10 @@ export function processMessage(
 							costUsd: resultMsg.total_cost_usd,
 							inputTokens: resultMsg.usage?.input_tokens,
 							outputTokens: resultMsg.usage?.output_tokens,
+							cacheReadInputTokens: resultMsg.usage?.cache_read_input_tokens,
+							cacheCreationInputTokens:
+								resultMsg.usage?.cache_creation_input_tokens,
+							contextWindow: extractContextWindow(resultMsg.modelUsage),
 						}
 					: undefined;
 
