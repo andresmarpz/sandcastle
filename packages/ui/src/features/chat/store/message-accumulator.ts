@@ -39,6 +39,8 @@ export type ToolInvocationPart = {
 	// Approval fields for tools like ExitPlanMode
 	approved?: boolean;
 	feedback?: string;
+	// Error text for output-error state
+	errorText?: string;
 };
 
 export type FilePart = {
@@ -285,6 +287,7 @@ export class MessageAccumulator {
 					const part = this.parts[state.index] as ToolInvocationPart;
 					part.state = "output-error";
 					part.output = { error: event.errorText };
+					part.errorText = event.errorText;
 				}
 				break;
 			}
