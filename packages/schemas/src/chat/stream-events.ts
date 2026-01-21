@@ -271,6 +271,14 @@ export const StreamEventModeChange = Schema.Struct({
 });
 export type StreamEventModeChange = typeof StreamEventModeChange.Type;
 
+/** Session renamed event - emitted when session title is updated */
+export const StreamEventSessionRenamed = Schema.Struct({
+	type: Schema.Literal("session-renamed"),
+	sessionId: Schema.String,
+	title: Schema.String,
+});
+export type StreamEventSessionRenamed = typeof StreamEventSessionRenamed.Type;
+
 /** Union of all stream events (AI SDK v6: UIMessageChunk) */
 export const ChatStreamEvent = Schema.Union(
 	// Text events
@@ -306,5 +314,7 @@ export const ChatStreamEvent = Schema.Union(
 	StreamEventError,
 	// Mode change event
 	StreamEventModeChange,
+	// Session renamed event
+	StreamEventSessionRenamed,
 );
 export type ChatStreamEvent = typeof ChatStreamEvent.Type;

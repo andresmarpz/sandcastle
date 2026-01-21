@@ -23,6 +23,10 @@ export interface CreatePlanModeMcpServerParams {
 	readonly pendingRequests: Map<string, PendingToolRequest>;
 	/** Function to emit stream events to subscribers */
 	readonly emitEvent: (event: ChatStreamEvent) => void;
+	/** Session ID (required for RenameSession tool) */
+	readonly sessionId?: string;
+	/** Callback to update session title (only provided on first message) */
+	readonly updateSessionTitle?: (title: string) => Promise<void>;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -81,15 +85,17 @@ function createTimeout(ms: number): Promise<never> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Creates an MCP server with handlers for AskUserQuestion and ExitPlanMode.
+ * Creates an MCP server with handlers for AskUserQuestion, ExitPlanMode, and optionally RenameSession.
  *
  * These handlers intercept Claude's interactive tools and:
  * 1. Emit a tool-approval-request event to the UI
  * 2. Await a Promise that resolves when the user responds
  * 3. Return the result to Claude
+ *
+ * RenameSession is a special tool that runs silently on first message to auto-generate session title.
  */
 export function createPlanModeMcpServer(params: CreatePlanModeMcpServerParams) {
-	const { pendingRequests, emitEvent } = params;
+	const { pendingRequests, emitEvent, sessionId, updateSessionTitle } = params;
 
 	return createSdkMcpServer({
 		name: "plan-mode-ui",
@@ -292,6 +298,50 @@ export function createPlanModeMcpServer(params: CreatePlanModeMcpServerParams) {
 					}
 				},
 			),
+
+			// ─── RenameSession Handler (only available on first message) ────────────
+			...(sessionId && updateSessionTitle
+				? [
+						tool(
+							"RenameSession",
+							"Rename the current session with a concise title",
+							{
+								title: z.string().min(1).max(100),
+							},
+							async (args) => {
+								try {
+									await updateSessionTitle(args.title);
+
+									// Emit event to UI so it can update cached session data
+									emitEvent({
+										type: "session-renamed",
+										sessionId,
+										title: args.title,
+									});
+
+									return {
+										content: [
+											{
+												type: "text" as const,
+												text: "Session renamed successfully.",
+											},
+										],
+									};
+								} catch (error) {
+									return {
+										content: [
+											{
+												type: "text" as const,
+												text: `Failed to rename session: ${error instanceof Error ? error.message : String(error)}`,
+											},
+										],
+										isError: true,
+									};
+								}
+							},
+						),
+					]
+				: []),
 		],
 	});
 }

@@ -99,6 +99,8 @@ export interface ChatStoreState {
 	subscriptions: Map<string, SubscriptionState>;
 	/** Session visitors (ref count) */
 	visitors: Map<string, number>;
+	/** Callback for session renamed events (set by React component for atom cache refresh) */
+	onSessionRenamed: ((sessionId: string, title: string) => void) | null;
 }
 
 export interface SendResult {
@@ -135,6 +137,10 @@ export interface ChatStoreActions {
 	): Promise<boolean>;
 	/** Set the current mode for a session */
 	setMode(sessionId: string, mode: "plan" | "build"): void;
+	/** Set callback for session renamed events */
+	setOnSessionRenamed(
+		callback: ((sessionId: string, title: string) => void) | null,
+	): void;
 }
 
 export type ChatStore = ChatStoreState & ChatStoreActions;
@@ -519,6 +525,22 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 					return;
 				}
 
+				// Handle session-renamed event (emitted when RenameSession tool runs)
+				if (streamEvent.type === "session-renamed") {
+					const renameEvent = event.event as {
+						type: "session-renamed";
+						sessionId: string;
+						title: string;
+					};
+					// Call the callback to trigger atom cache refresh
+					const callback = get().onSessionRenamed;
+					if (callback) {
+						callback(renameEvent.sessionId, renameEvent.title);
+					}
+					// Don't pass to accumulator - session renames are handled separately
+					return;
+				}
+
 				// Process stream event through accumulator
 				const session = state.sessions.get(sessionId);
 				if (
@@ -629,6 +651,7 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 		sessions: new LRUMap<string, ChatSessionState>(MAX_SESSIONS),
 		subscriptions: new Map(),
 		visitors: new Map(),
+		onSessionRenamed: null,
 
 		// Actions
 		visit(sessionId: string) {
@@ -867,6 +890,12 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 				...prev,
 				mode,
 			}));
+		},
+
+		setOnSessionRenamed(
+			callback: ((sessionId: string, title: string) => void) | null,
+		) {
+			set({ onSessionRenamed: callback });
 		},
 	};
 });
