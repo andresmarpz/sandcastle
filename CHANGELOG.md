@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.1.23](https://github.com/andresmarpz/sandcastle/compare/v0.1.22...v0.1.23) (2026-01-22)
+
+
+### Features
+
+* inverse light mode colors ([0c328c0](https://github.com/andresmarpz/sandcastle/commit/0c328c085c38a40e263d1a443513a8a1e9af5a75))
+
+
+### Bug Fixes
+
+* **ci:** resolve linux appimage and macos release upload failures ([#96](https://github.com/andresmarpz/sandcastle/issues/96)) ([6a54153](https://github.com/andresmarpz/sandcastle/commit/6a541537fb88a1324170a02235870b96e2ef10a3))
+* working path incorrect for existing worktree sessions ([b7939dd](https://github.com/andresmarpz/sandcastle/commit/b7939ddc5a41e703f5191e33668692c8c413152e))
+
 ## [0.1.22](https://github.com/andresmarpz/sandcastle/compare/v0.1.21...v0.1.22) (2026-01-22)
 
 
