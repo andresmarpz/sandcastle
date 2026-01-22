@@ -1,6 +1,6 @@
 "use client";
 
-import { CaretUpDown } from "@phosphor-icons/react";
+import { CaretUpDownIcon } from "@phosphor-icons/react/CaretUpDown";
 import type { ComponentProps } from "react";
 import { createContext, useContext } from "react";
 import { Button } from "@/components/button";
@@ -145,7 +145,7 @@ export const PlanTrigger = ({
 				{...props}
 				className="size-8"
 			>
-				<CaretUpDown className="size-4" />
+				<CaretUpDownIcon className="size-4" />
 				<span className="sr-only">Toggle plan</span>
 			</Button>
 		)}

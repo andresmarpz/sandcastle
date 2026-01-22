@@ -1,6 +1,7 @@
 "use client";
 
-import { Bookmark, type IconProps } from "@phosphor-icons/react";
+import type { IconProps } from "@phosphor-icons/react";
+import { BookmarkIcon } from "@phosphor-icons/react/Bookmark";
 import type { ComponentProps, HTMLAttributes } from "react";
 import { Button } from "@/components/button";
 import { Separator } from "@/components/separator";
@@ -34,7 +35,7 @@ export const CheckpointIcon = ({
 	...props
 }: CheckpointIconProps) =>
 	children ?? (
-		<Bookmark className={cn("size-4 shrink-0", className)} {...props} />
+		<BookmarkIcon className={cn("size-4 shrink-0", className)} {...props} />
 	);
 
 export type CheckpointTriggerProps = ComponentProps<typeof Button> & {

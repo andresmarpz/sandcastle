@@ -1,16 +1,14 @@
 "use client";
 
-import {
-	CaretDown,
-	File,
-	FileText,
-	type Icon,
-	ListChecks,
-	MagnifyingGlass,
-	Pencil,
-	Terminal,
-	Wrench,
-} from "@phosphor-icons/react";
+import type { Icon } from "@phosphor-icons/react";
+import { CaretDownIcon } from "@phosphor-icons/react/CaretDown";
+import { FileIcon } from "@phosphor-icons/react/File";
+import { FileTextIcon } from "@phosphor-icons/react/FileText";
+import { ListChecksIcon } from "@phosphor-icons/react/ListChecks";
+import { MagnifyingGlassIcon } from "@phosphor-icons/react/MagnifyingGlass";
+import { PencilIcon } from "@phosphor-icons/react/Pencil";
+import { TerminalIcon } from "@phosphor-icons/react/Terminal";
+import { WrenchIcon } from "@phosphor-icons/react/Wrench";
 import type { ComponentProps, ReactNode } from "react";
 import { memo } from "react";
 import {
@@ -23,17 +21,17 @@ import { cn } from "@/lib/utils";
 
 // Map tool names to icons
 const toolIconMap: Record<string, Icon> = {
-	Bash: Terminal,
-	Read: FileText,
-	Write: File,
-	Edit: Pencil,
-	Glob: MagnifyingGlass,
-	Grep: MagnifyingGlass,
-	TodoWrite: ListChecks,
+	Bash: TerminalIcon,
+	Read: FileTextIcon,
+	Write: FileIcon,
+	Edit: PencilIcon,
+	Glob: MagnifyingGlassIcon,
+	Grep: MagnifyingGlassIcon,
+	TodoWrite: ListChecksIcon,
 };
 
 export function getToolIcon(toolName: string): Icon {
-	return toolIconMap[toolName] ?? Wrench;
+	return toolIconMap[toolName] ?? WrenchIcon;
 }
 
 export type WorkStepProps = ComponentProps<"div"> & {
@@ -60,7 +58,7 @@ function areWorkStepPropsEqual(
 
 export const WorkStep = memo(function WorkStep({
 	className,
-	icon: IconComponent = Wrench,
+	icon: IconComponent = WrenchIcon,
 	title,
 	defaultOpen = false,
 	children,
@@ -98,7 +96,7 @@ export const WorkStep = memo(function WorkStep({
 				<div className="min-w-0 flex-1">
 					<CollapsibleTrigger className="flex w-full items-center justify-between gap-2 py-0.5">
 						<span className="text-left text-foreground">{title}</span>
-						<CaretDown className="size-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+						<CaretDownIcon className="size-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
 					</CollapsibleTrigger>
 					<WorkStepContent>{children}</WorkStepContent>
 				</div>

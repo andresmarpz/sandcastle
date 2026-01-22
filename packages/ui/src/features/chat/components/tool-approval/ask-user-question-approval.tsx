@@ -1,6 +1,6 @@
 "use client";
 
-import { Question as QuestionIcon } from "@phosphor-icons/react";
+import { QuestionIcon } from "@phosphor-icons/react/Question";
 import type { AskUserQuestionPayload } from "@sandcastle/schemas";
 import { useState } from "react";
 import { Button } from "@/components/button";

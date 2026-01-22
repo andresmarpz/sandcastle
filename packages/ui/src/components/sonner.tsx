@@ -1,9 +1,7 @@
-import {
-	CheckCircle,
-	Info,
-	Warning,
-	WarningOctagon,
-} from "@phosphor-icons/react";
+import { CheckCircleIcon } from "@phosphor-icons/react/CheckCircle";
+import { InfoIcon } from "@phosphor-icons/react/Info";
+import { WarningIcon } from "@phosphor-icons/react/Warning";
+import { WarningOctagonIcon } from "@phosphor-icons/react/WarningOctagon";
 import { Toaster as Sonner, type ToasterProps } from "sonner";
 import { Spinner } from "@/components/spinner";
 import { useTheme } from "@/context/theme-context";
@@ -17,10 +15,10 @@ const Toaster = ({ ...props }: ToasterProps) => {
 			className="toaster group"
 			closeButton
 			icons={{
-				success: <CheckCircle className="size-4 text-green-400" />,
-				info: <Info className="size-4 text-blue-400" />,
-				warning: <Warning className="size-4 text-amber-400" />,
-				error: <WarningOctagon className="size-4 text-red-400" />,
+				success: <CheckCircleIcon className="size-4 text-green-400" />,
+				info: <InfoIcon className="size-4 text-blue-400" />,
+				warning: <WarningIcon className="size-4 text-amber-400" />,
+				error: <WarningOctagonIcon className="size-4 text-red-400" />,
 				loading: <Spinner className="size-4 animate-spin" />,
 			}}
 			style={

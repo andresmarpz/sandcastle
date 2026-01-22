@@ -1,12 +1,10 @@
 "use client";
 
-import {
-	ArrowElbowDownLeft,
-	Microphone,
-	Plus,
-	Square,
-	X,
-} from "@phosphor-icons/react";
+import { ArrowElbowDownLeftIcon } from "@phosphor-icons/react/ArrowElbowDownLeft";
+import { MicrophoneIcon } from "@phosphor-icons/react/Microphone";
+import { PlusIcon } from "@phosphor-icons/react/Plus";
+import { SquareIcon } from "@phosphor-icons/react/Square";
+import { XIcon } from "@phosphor-icons/react/X";
 import type { ChatStatus, FileUIPart } from "ai";
 import { nanoid } from "nanoid";
 import {
@@ -322,7 +320,7 @@ export type PromptInputAttachmentProps = HTMLAttributes<HTMLDivElement> & {
 // //             type="button"
 // //             variant="ghost"
 // //           >
-// //             <XIcon />
+// //             <XIconIcon />
 // //             <span className="sr-only">Remove</span>
 // //           </Button>
 // //         </div>
@@ -993,7 +991,7 @@ export const PromptInputActionMenuTrigger = ({
 	<DropdownMenuTrigger
 		render={<PromptInputButton className={className} {...props} />}
 	>
-		{children ?? <Plus className="size-4" />}
+		{children ?? <PlusIcon className="size-4" />}
 	</DropdownMenuTrigger>
 );
 
@@ -1032,14 +1030,14 @@ export const PromptInputSubmit = ({
 	children,
 	...props
 }: PromptInputSubmitProps) => {
-	let Icon = <ArrowElbowDownLeft className="size-4" />;
+	let Icon = <ArrowElbowDownLeftIcon className="size-4" />;
 
 	if (status === "submitted") {
 		Icon = <Spinner className="size-4 animate-spin" />;
 	} else if (status === "streaming") {
-		Icon = <Square className="size-4" />;
+		Icon = <SquareIcon className="size-4" />;
 	} else if (status === "error") {
-		Icon = <X className="size-4" />;
+		Icon = <XIcon className="size-4" />;
 	}
 
 	return (
@@ -1211,7 +1209,7 @@ export const PromptInputSpeechButton = ({
 			onClick={toggleListening}
 			{...props}
 		>
-			<Microphone className="size-4" />
+			<MicrophoneIcon className="size-4" />
 		</PromptInputButton>
 	);
 };
