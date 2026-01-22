@@ -31,6 +31,7 @@ const { PlatformProvider } = await import(
 );
 const { open } = await import("@tauri-apps/plugin-dialog");
 const { Command } = await import("@tauri-apps/plugin-shell");
+const { invoke } = await import("@tauri-apps/api/core");
 const { UpdaterProvider } = await import("@/context/updater-context");
 const { default: Layout } = await import("@/features/app/layout");
 
@@ -56,6 +57,13 @@ const copyToClipboard = async (text: string) => {
 	await navigator.clipboard.writeText(text);
 };
 
+/**
+ * Parse markdown to HTML using native Rust comrak parser.
+ */
+const parseMarkdown = async (markdown: string): Promise<string> => {
+	return invoke<string>("parse_markdown_command", { markdown });
+};
+
 function App() {
 	return (
 		<PlatformProvider
@@ -63,6 +71,7 @@ function App() {
 			openInFileManager={openInFileManager}
 			openInEditor={openInEditor}
 			copyToClipboard={copyToClipboard}
+			parseMarkdown={parseMarkdown}
 		>
 			<UpdaterProvider>
 				<Layout />

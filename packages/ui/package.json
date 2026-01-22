@@ -56,6 +56,7 @@
 		"zustand": "^5.0.10"
 	},
 	"devDependencies": {
+		"@tailwindcss/typography": "^0.5.19",
 		"@types/bun": "latest",
 		"@types/react": "^19",
 		"@types/react-dom": "^19",

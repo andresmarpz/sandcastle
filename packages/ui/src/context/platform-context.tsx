@@ -10,6 +10,8 @@ interface PlatformContextValue {
 	openInEditor?: ((path: string) => Promise<void>) | null;
 	/** Copy a path to the clipboard. Null if not supported (falls back to navigator.clipboard). */
 	copyToClipboard?: ((text: string) => Promise<void>) | null;
+	/** Parse markdown to HTML using native Rust comrak parser (Tauri only). Null if not supported. */
+	parseMarkdown?: ((markdown: string) => Promise<string>) | null;
 }
 
 const PlatformContext = React.createContext<PlatformContextValue | undefined>(
@@ -21,6 +23,7 @@ export interface PlatformProviderProps {
 	openInFileManager?: PlatformContextValue["openInFileManager"];
 	openInEditor?: PlatformContextValue["openInEditor"];
 	copyToClipboard?: PlatformContextValue["copyToClipboard"];
+	parseMarkdown?: PlatformContextValue["parseMarkdown"];
 	children: React.ReactNode;
 }
 
@@ -29,6 +32,7 @@ export function PlatformProvider({
 	openInFileManager,
 	openInEditor,
 	copyToClipboard,
+	parseMarkdown,
 	children,
 }: PlatformProviderProps) {
 	const value = React.useMemo(
@@ -37,8 +41,15 @@ export function PlatformProvider({
 			openInFileManager,
 			openInEditor,
 			copyToClipboard,
+			parseMarkdown,
 		}),
-		[openDirectory, openInFileManager, openInEditor, copyToClipboard],
+		[
+			openDirectory,
+			openInFileManager,
+			openInEditor,
+			copyToClipboard,
+			parseMarkdown,
+		],
 	);
 	return (
 		<PlatformContext.Provider value={value}>
