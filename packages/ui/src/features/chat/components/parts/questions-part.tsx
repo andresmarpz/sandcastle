@@ -1,6 +1,12 @@
 "use client";
 
-import { Check, Clock, Question, Warning, X } from "@phosphor-icons/react";
+import {
+	Check,
+	Clock,
+	Question as QuestionIcon,
+	Warning,
+	X,
+} from "@phosphor-icons/react";
 import type { AskUserQuestionPayload } from "@sandcastle/schemas";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -428,7 +434,7 @@ export function QuestionsPart({ part, sessionId }: QuestionsPartProps) {
 			>
 				<QuestionsHeader className="flex-row items-start justify-between gap-4">
 					<div className="flex items-start gap-2">
-						<Question className="size-5 text-blue-500 mt-0.5" />
+						<QuestionIcon className="size-5 text-blue-500 mt-0.5" />
 						<div>
 							<QuestionsTitle>Questions from Claude</QuestionsTitle>
 							<QuestionsDescription>
@@ -472,9 +478,9 @@ export function QuestionsPart({ part, sessionId }: QuestionsPartProps) {
 								</TabsContent>
 							))}
 						</Tabs>
-					) : questions.length === 1 ? (
+					) : questions.length === 1 && questions[0] ? (
 						<QuestionContent
-							question={questions[0]!}
+							question={questions[0]}
 							questionIdx={0}
 							selections={selections}
 							customAnswers={customAnswers}
