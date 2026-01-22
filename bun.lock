@@ -13,7 +13,7 @@
     },
     "apps/desktop": {
       "name": "@sandcastle/desktop",
-      "version": "0.1.23",
+      "version": "0.2.0",
       "dependencies": {
         "@base-ui/react": "^1.0.0",
         "@effect-atom/atom": "^0.4.11",
@@ -31,6 +31,7 @@
         "@tauri-apps/plugin-process": "^2.3.1",
         "@tauri-apps/plugin-shell": "^2",
         "@tauri-apps/plugin-updater": "^2.9.0",
+        "babel-plugin-react-compiler": "^1.0.0",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
         "effect": "^3.19.14",
@@ -57,7 +58,7 @@
     },
     "apps/http": {
       "name": "@sandcastle/http",
-      "version": "0.1.23",
+      "version": "0.2.0",
       "dependencies": {
         "@anthropic-ai/claude-agent-sdk": "^0.2.5",
         "@anthropic-ai/sdk": "^0.71.2",
@@ -80,12 +81,13 @@
     },
     "apps/web": {
       "name": "web",
-      "version": "0.1.23",
+      "version": "0.2.0",
       "dependencies": {
         "@base-ui/react": "^1.0.0",
         "@effect-atom/atom": "^0.4.11",
         "@effect-atom/atom-react": "^0.4.4",
         "@sandcastle/ui": "workspace:*",
+        "babel-plugin-react-compiler": "^1.0.0",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
         "effect": "^3.19.14",
@@ -100,6 +102,7 @@
       },
       "devDependencies": {
         "@tailwindcss/postcss": "^4",
+        "@tailwindcss/typography": "^0.5.19",
         "@types/node": "^20",
         "@types/react": "^19",
         "@types/react-dom": "^19",
@@ -109,7 +112,7 @@
     },
     "packages/petname": {
       "name": "@sandcastle/petname",
-      "version": "0.1.23",
+      "version": "0.2.0",
       "dependencies": {
         "effect": "^3.19.14",
       },
@@ -122,7 +125,7 @@
     },
     "packages/rpc": {
       "name": "@sandcastle/rpc",
-      "version": "0.1.23",
+      "version": "0.2.0",
       "dependencies": {
         "@effect/rpc": "^0.73.0",
         "@sandcastle/schemas": "workspace:*",
@@ -135,7 +138,7 @@
     },
     "packages/schemas": {
       "name": "@sandcastle/schemas",
-      "version": "0.1.23",
+      "version": "0.2.0",
       "dependencies": {
         "effect": "^3.19.14",
       },
@@ -148,7 +151,7 @@
     },
     "packages/storage": {
       "name": "@sandcastle/storage",
-      "version": "0.1.23",
+      "version": "0.2.0",
       "dependencies": {
         "@sandcastle/schemas": "workspace:*",
         "effect": "^3.19.14",
@@ -160,7 +163,7 @@
     },
     "packages/tooling": {
       "name": "@sandcastle/tooling",
-      "version": "0.1.23",
+      "version": "0.2.0",
       "devDependencies": {
         "@types/bun": "latest",
       },
@@ -170,7 +173,7 @@
     },
     "packages/ui": {
       "name": "@sandcastle/ui",
-      "version": "0.1.23",
+      "version": "0.2.0",
       "dependencies": {
         "@ai-sdk/react": "^3.0.30",
         "@base-ui/react": "^1.0.0",
@@ -225,7 +228,7 @@
     },
     "packages/worktree": {
       "name": "@sandcastle/worktree",
-      "version": "0.1.23",
+      "version": "0.2.0",
       "dependencies": {
         "effect": "^3.19.14",
       },
@@ -966,6 +969,8 @@
     "aria-hidden": ["aria-hidden@1.2.6", "", { "dependencies": { "tslib": "^2.0.0" } }, "sha512-ik3ZgC9dY/lYVVM++OISsaYDeg1tb0VtP5uL3ouh1koGOaUMDPpbFIei4JkFimWUFPn90sbMNMXQAIVOlnYKJA=="],
 
     "ast-types": ["ast-types@0.16.1", "", { "dependencies": { "tslib": "^2.0.1" } }, "sha512-6t10qk83GOG8p0vKmaCr8eiilZwO171AvbROMtvvNiwrTly62t+7XkA8RdIIVbpMhCASAsxgAzdRSwh6nw/5Dg=="],
+
+    "babel-plugin-react-compiler": ["babel-plugin-react-compiler@1.0.0", "", { "dependencies": { "@babel/types": "^7.26.0" } }, "sha512-Ixm8tFfoKKIPYdCCKYTsqv+Fd4IJ0DQqMyEimo+pxUOMUR9cVPlwTrFt9Avu+3cb6Zp3mAzl+t1MrG2fxxKsxw=="],
 
     "bail": ["bail@2.0.2", "", {}, "sha512-0xO6mYd7JB2YesxDKplafRpsiOzPt9V02ddPCLbY1xYGPOX24NTyN50qnUxgCPcSoYMhKpAuBTjQoRZCAkUDRw=="],
 
