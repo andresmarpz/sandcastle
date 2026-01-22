@@ -2,7 +2,7 @@ pre-commit:
   commands:
     biome:
       glob: "*.{ts,tsx,js,jsx,json,css}"
-      run: bun biome --output-logs=errors-only && git add -u
+      run: bun biome --output-logs=errors-only
       stage_fixed: true
     typecheck:
       run: bun typecheck --output-logs=errors-only
