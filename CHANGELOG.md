@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.2.1](https://github.com/andresmarpz/sandcastle/compare/v0.2.0...v0.2.1) (2026-01-22)
+
+
+### Features
+
+* add lefthook pre-commit hooks for typecheck and biome ([#101](https://github.com/andresmarpz/sandcastle/issues/101)) ([3cdbb0c](https://github.com/andresmarpz/sandcastle/commit/3cdbb0c8e52cdbaf169fce19b6a6cb9fb12ac18a))
+* setup react compiler ([ede7125](https://github.com/andresmarpz/sandcastle/commit/ede7125fec913f2775d216896140bed2d9a0e7ae))
+* **ui:** remove CSS containment for native browser rendering ([3858cb5](https://github.com/andresmarpz/sandcastle/commit/3858cb58f636e66751e7f90632f1a30a32668418))
+
+
+### Bug Fixes
+
+* install @tailwind/typography on web ([ff35d5a](https://github.com/andresmarpz/sandcastle/commit/ff35d5aefc22ca9b11133948db9542c51a664281))
+* lefthook staging all unstaged files incorrectly ([62b9ef5](https://github.com/andresmarpz/sandcastle/commit/62b9ef56687cc67c79636819f6f707618d1b3650))
+
+
+### Performance Improvements
+
+* **sidebar:** memoize sidebar list and items ([c2c8d1b](https://github.com/andresmarpz/sandcastle/commit/c2c8d1bf464d34a75b7d9b57dce03bda3e749348))
+* **ui:** optimize SidebarRail click by removing isResizing state ([#104](https://github.com/andresmarpz/sandcastle/issues/104)) ([640a834](https://github.com/andresmarpz/sandcastle/commit/640a8343775c3cda45bc1f53c5ffd0b491ad011c))
+
 ## [0.2.0](https://github.com/andresmarpz/sandcastle/compare/v0.1.23...v0.2.0) (2026-01-22)
 
 
