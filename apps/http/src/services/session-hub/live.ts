@@ -575,6 +575,7 @@ export const makeSessionHub = Effect.gen(function* () {
 				_tag: "SessionStarted",
 				turnId,
 				messageId,
+				startedAt: turn.startedAt,
 			});
 
 			// 3b. Store turn context for late subscriber catch-up
@@ -583,6 +584,7 @@ export const makeSessionHub = Effect.gen(function* () {
 				messageId,
 				content,
 				clientMessageId,
+				startedAt: turn.startedAt,
 				...(parts && parts.length > 0 ? { parts } : {}),
 			});
 

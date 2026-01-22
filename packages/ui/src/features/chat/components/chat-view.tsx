@@ -152,6 +152,7 @@ function ChatViewContent({
 		error: _sessionError,
 		historyLoaded,
 		mode,
+		turnStartedAt,
 		sendMessage,
 		stop,
 		dequeue,
@@ -256,14 +257,18 @@ function ChatViewContent({
 
 	useEffect(() => {
 		if (sessionStatus === "streaming" && streamingState === null) {
+			// Use server timestamp if available, fallback to client time
+			const startTime = turnStartedAt
+				? new Date(turnStartedAt).getTime()
+				: Date.now();
 			setStreamingState({
-				startTime: Date.now(),
+				startTime,
 				word: getRandomStreamingWord(),
 			});
 		} else if (sessionStatus !== "streaming" && streamingState !== null) {
 			setStreamingState(null);
 		}
-	}, [sessionStatus, streamingState]);
+	}, [sessionStatus, streamingState, turnStartedAt]);
 
 	const showHistoryLoading =
 		historyStatus === "loading" && messages.length === 0;

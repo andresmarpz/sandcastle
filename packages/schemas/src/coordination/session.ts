@@ -36,6 +36,8 @@ export const TurnContext = Schema.Struct({
 	content: Schema.String,
 	parts: Schema.optional(Schema.Array(MessagePart)),
 	clientMessageId: Schema.String,
+	/** Server timestamp when the turn started (ISO 8601) */
+	startedAt: Schema.String,
 });
 export type TurnContext = typeof TurnContext.Type;
 
@@ -64,6 +66,8 @@ export const SessionEvent = Schema.Union(
 		_tag: Schema.Literal("SessionStarted"),
 		turnId: Schema.String,
 		messageId: Schema.String,
+		/** Server timestamp when the turn started (ISO 8601) */
+		startedAt: Schema.String,
 	}),
 	Schema.Struct({
 		_tag: Schema.Literal("SessionStopped"),
