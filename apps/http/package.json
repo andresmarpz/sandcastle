@@ -13,7 +13,7 @@
 		"start": "bun run src/server.ts",
 		"dev": "bun --watch run src/server.ts",
 		"test": "bun test",
-		"typecheck": "tsc --noEmit",
+		"typecheck": "tsgo --noEmit",
 		"biome": "biome check --write .",
 		"biome:check": "biome check ."
 	},

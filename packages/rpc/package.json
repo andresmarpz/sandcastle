@@ -18,7 +18,7 @@
 	},
 	"scripts": {
 		"test": "bun test",
-		"typecheck": "tsc --noEmit",
+		"typecheck": "tsgo --noEmit",
 		"biome": "biome check --write .",
 		"biome:check": "biome check ."
 	},

@@ -9,7 +9,7 @@
 		"build:release": "tauri build",
 		"preview": "vite preview",
 		"tauri": "tauri",
-		"typecheck": "tsc --noEmit",
+		"typecheck": "tsgo --noEmit",
 		"biome": "biome check --write .",
 		"biome:check": "biome check .",
 		"bundle:server": "bun scripts/bundle-server.ts",
