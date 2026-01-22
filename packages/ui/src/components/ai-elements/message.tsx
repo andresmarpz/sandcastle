@@ -11,7 +11,6 @@ import {
 	useMemo,
 	useState,
 } from "react";
-import { Streamdown } from "streamdown";
 import { Button } from "@/components/button";
 import { ButtonGroup, ButtonGroupText } from "@/components/button-group";
 import {
@@ -21,6 +20,7 @@ import {
 	TooltipTrigger,
 } from "@/components/tooltip";
 import { cn } from "@/lib/utils";
+import { NativeMarkdownResponse } from "./native-markdown";
 
 export type MessageProps = HTMLAttributes<HTMLDivElement> & {
 	from: UIMessage["role"];
@@ -314,11 +314,13 @@ export const MessageBranchPage = ({
 	);
 };
 
-export type MessageResponseProps = ComponentProps<typeof Streamdown>;
+export type MessageResponseProps = ComponentProps<
+	typeof NativeMarkdownResponse
+>;
 
 export const MessageResponse = memo(
 	({ className, ...props }: MessageResponseProps) => (
-		<Streamdown
+		<NativeMarkdownResponse
 			className={cn(
 				"size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
 				"[&_ul]:pl-4 [&_ol]:pl-4 [&_li]:wrap-break-word",

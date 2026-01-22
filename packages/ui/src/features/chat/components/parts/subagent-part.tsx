@@ -1,6 +1,6 @@
 "use client";
 
-import { Streamdown } from "streamdown";
+import { NativeMarkdownResponse } from "@/components/ai-elements/native-markdown";
 import {
 	Subagent,
 	SubagentContent,
@@ -119,9 +119,9 @@ export function SubagentPart({ taskPart, nestedSteps }: SubagentPartProps) {
 				{outputText && (
 					<SubagentOutput
 						output={
-							<Streamdown className="prose-sm [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+							<NativeMarkdownResponse className="prose-sm [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
 								{outputText}
-							</Streamdown>
+							</NativeMarkdownResponse>
 						}
 					/>
 				)}

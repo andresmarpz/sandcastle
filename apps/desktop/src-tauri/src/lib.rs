@@ -1,5 +1,6 @@
 use tauri::{Manager, TitleBarStyle, WebviewUrl, WebviewWindowBuilder};
 
+mod markdown;
 mod sidecar;
 use sidecar::SidecarState;
 
@@ -80,7 +81,7 @@ pub fn run() {
                 });
             }
         })
-        .invoke_handler(tauri::generate_handler![greet, get_server_port])
+        .invoke_handler(tauri::generate_handler![greet, get_server_port, markdown::parse_markdown_command])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
