@@ -87,7 +87,7 @@ export default function SidebarNewSession({ repository }: Props) {
 			payload: {
 				title: "New session",
 				repositoryId,
-				workingPath: repository.directoryPath,
+				workingPath: worktree ? worktree.path : repository.directoryPath,
 				worktreeId: worktree?.id,
 			},
 			reactivityKeys: [SESSION_LIST_KEY, `sessions:repository:${repositoryId}`],
