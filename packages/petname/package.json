@@ -1,6 +1,6 @@
 {
 	"name": "@sandcastle/petname",
-	"version": "0.1.22",
+	"version": "0.1.23",
 	"description": "Generate memorable random names for worktrees and other resources",
 	"module": "index.ts",
 	"type": "module",
