@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.1.19](https://github.com/andresmarpz/sandcastle/compare/v0.1.18...v0.1.19) (2026-01-22)
+
+
+### Features
+
+* migrate ui to phosphor icons ([5a53e2e](https://github.com/andresmarpz/sandcastle/commit/5a53e2e77d0694adf52f6d98eedf792903c6ff57))
+* revamp sidebar styling ([ef3e607](https://github.com/andresmarpz/sandcastle/commit/ef3e60785bbbef86327f2d024f3f4a9ed96b125f))
+* update sandcastle theme ([0890272](https://github.com/andresmarpz/sandcastle/commit/089027201824e34417e4fa46d7b1913231f40bf0))
+
+
+### Bug Fixes
+
+* dropdown menu styling ([85eb20c](https://github.com/andresmarpz/sandcastle/commit/85eb20c6c01e3803152ab7ea82eac85dcb4bf2c6))
+* replace sonner circle with Spinner ([5c66a7f](https://github.com/andresmarpz/sandcastle/commit/5c66a7f747d32ef6b37f0097a9622d12e6a05500))
+* replace Spinner icon in library ([56e9956](https://github.com/andresmarpz/sandcastle/commit/56e995644520ad7128ca03a3ac77a5921cdaf5a3))
+* resolve biome lint errors in UI components ([b886648](https://github.com/andresmarpz/sandcastle/commit/b886648184aca9c7be7c980bbe517bcb31d5d0d9))
+* theme switcher styling ([0b17c31](https://github.com/andresmarpz/sandcastle/commit/0b17c31d5134abb69c83f8a0bede496970492943))
+* update lock ([52b9dd4](https://github.com/andresmarpz/sandcastle/commit/52b9dd4d648a917821203d06b38afcc7f3067855))
+
 ## [0.1.18](https://github.com/andresmarpz/sandcastle/compare/v0.1.17...v0.1.18) (2026-01-21)
 
 
