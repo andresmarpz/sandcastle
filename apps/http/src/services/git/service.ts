@@ -20,6 +20,20 @@ export interface GitServiceInterface {
 		workingPath: string,
 		baseBranch: string | null,
 	) => Effect.Effect<GitDiffStats, GitOperationError | NotAGitRepositoryError>;
+
+	/**
+	 * Get the current branch name.
+	 */
+	readonly getCurrentBranch: (
+		workingPath: string,
+	) => Effect.Effect<string, GitOperationError | NotAGitRepositoryError>;
+
+	/**
+	 * Get the count of uncommitted changes (staged + unstaged).
+	 */
+	readonly getUncommittedChangesCount: (
+		workingPath: string,
+	) => Effect.Effect<number, GitOperationError | NotAGitRepositoryError>;
 }
 
 /**

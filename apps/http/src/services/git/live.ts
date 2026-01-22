@@ -194,7 +194,33 @@ export const makeGitService = Effect.sync((): GitServiceInterface => {
 		});
 	};
 
-	return { getDiffStats };
+	const getCurrentBranch = (
+		workingPath: string,
+	): Effect.Effect<string, GitOperationError | NotAGitRepositoryError> =>
+		Effect.gen(function* () {
+			const output = yield* runGitCommand(
+				["branch", "--show-current"],
+				workingPath,
+			);
+			return output.trim();
+		});
+
+	const getUncommittedChangesCount = (
+		workingPath: string,
+	): Effect.Effect<number, GitOperationError | NotAGitRepositoryError> =>
+		Effect.gen(function* () {
+			const output = yield* runGitCommand(
+				["status", "--porcelain"],
+				workingPath,
+			);
+			const lines = output
+				.trim()
+				.split("\n")
+				.filter((line) => line.length > 0);
+			return lines.length;
+		});
+
+	return { getDiffStats, getCurrentBranch, getUncommittedChangesCount };
 });
 
 /**
