@@ -1,6 +1,6 @@
 {
 	"name": "@sandcastle/schemas",
-	"version": "0.1.23",
+	"version": "0.2.0",
 	"description": "Shared types and schemas.",
 	"module": "index.ts",
 	"type": "module",
