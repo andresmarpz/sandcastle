@@ -1,6 +1,6 @@
 {
 	"name": "@sandcastle/http",
-	"version": "0.1.23",
+	"version": "0.2.0",
 	"description": "HTTP server for Sandcastle RPC endpoints.",
 	"module": "index.ts",
 	"type": "module",

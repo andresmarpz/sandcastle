@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.2.0](https://github.com/andresmarpz/sandcastle/compare/v0.1.23...v0.2.0) (2026-01-22)
+
+
+### Features
+
+* **desktop:** open external links in system browser using tauri-plugin-opener ([#99](https://github.com/andresmarpz/sandcastle/issues/99)) ([fb05961](https://github.com/andresmarpz/sandcastle/commit/fb05961207d6b8541e15e5c975b5eed298152e16))
+* **desktop:** unlock 120fps on macOS ProMotion displays ([#98](https://github.com/andresmarpz/sandcastle/issues/98)) ([55bb711](https://github.com/andresmarpz/sandcastle/commit/55bb71194e9f5debedd96181475bde9b15a560c2))
+
+
+### Miscellaneous Chores
+
+* release 0.2.0 ([7a657fc](https://github.com/andresmarpz/sandcastle/commit/7a657fc435ca956bef14edb76adfb4b9b183e128))
+
 ## [0.1.23](https://github.com/andresmarpz/sandcastle/compare/v0.1.22...v0.1.23) (2026-01-22)
 
 
