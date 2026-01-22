@@ -3219,10 +3219,13 @@ dependencies = [
 
 [[package]]
 name = "sandcastle"
-version = "0.1.19"
+version = "0.1.22"
 dependencies = [
  "cocoa",
  "comrak",
+ "objc2",
+ "objc2-foundation",
+ "objc2-web-kit",
  "reqwest",
  "serde",
  "serde_json",

@@ -4,6 +4,9 @@ mod markdown;
 mod sidecar;
 use sidecar::SidecarState;
 
+#[cfg(target_os = "macos")]
+mod high_refresh_rate;
+
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
@@ -57,14 +60,19 @@ pub fn run() {
                 unsafe {
                     // Use opaque background for better compositing performance
                     let bg_color = NSColor::colorWithRed_green_blue_alpha_(
-                        nil,
-                        0.08,
-                        0.08,
-                        0.08,
-                        1.0, // Fully opaque
+                        nil, 0.08, 0.08, 0.08, 1.0, // Fully opaque
                     );
                     ns_window.setBackgroundColor_(bg_color);
                 }
+
+                // Unlock 120fps rendering on ProMotion displays
+                // Uses private WebKit APIs - for direct distribution only, not App Store
+                let _ = window.with_webview(|wv| {
+                    if let Err(e) = high_refresh_rate::unlock_high_refresh_rate(wv.inner()) {
+                        // Non-fatal: app works fine at 60fps if this fails
+                        eprintln!("[high_refresh_rate] {}", e);
+                    }
+                });
             }
 
             Ok(())
@@ -81,7 +89,11 @@ pub fn run() {
                 });
             }
         })
-        .invoke_handler(tauri::generate_handler![greet, get_server_port, markdown::parse_markdown_command])
+        .invoke_handler(tauri::generate_handler![
+            greet,
+            get_server_port,
+            markdown::parse_markdown_command
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
