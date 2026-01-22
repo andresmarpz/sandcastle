@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.20](https://github.com/andresmarpz/sandcastle/compare/v0.1.19...v0.1.20) (2026-01-22)
+
+
+### Bug Fixes
+
+* resolve CI failure ([7f32102](https://github.com/andresmarpz/sandcastle/commit/7f32102bb39944f389989c7d62ca3b304ae08cb4))
+
 ## [0.1.19](https://github.com/andresmarpz/sandcastle/compare/v0.1.18...v0.1.19) (2026-01-22)
 
 
