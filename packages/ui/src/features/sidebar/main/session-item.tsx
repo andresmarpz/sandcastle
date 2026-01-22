@@ -124,9 +124,9 @@ export const SessionItem = memo(function SessionItem({
 										status={sessionStatusIndicator}
 									/>
 									<div className="flex-1 min-w-0">
-										<div className="flex items-center justify-between gap-2">
+										<div className="flex items-center justify-between gap-2 min-w-0">
 											<span
-												className="truncate text-sm font-medium max-w-52"
+												className="truncate text-sm font-medium flex-1 min-w-0"
 												title={session.title}
 											>
 												{session.title}
