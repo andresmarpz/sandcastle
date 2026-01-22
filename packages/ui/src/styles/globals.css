@@ -45,6 +45,8 @@
 	--sidebar-accent-foreground: oklch(0.18 0.008 50);
 	--sidebar-border: oklch(0.92 0.002 70);
 	--sidebar-ring: oklch(0.709 0.01 56.259);
+	--scrollbar-thumb: oklch(0.75 0.002 55);
+	--scrollbar-thumb-hover: oklch(0.55 0.008 55);
 }
 
 .dark {
@@ -81,6 +83,8 @@
 	--sidebar-accent-foreground: oklch(0.9 0.006 42);
 	--sidebar-border: oklch(1 0.005 38 / 18%);
 	--sidebar-ring: oklch(0.553 0.016 40);
+	--scrollbar-thumb: oklch(0.4 0.008 40);
+	--scrollbar-thumb-hover: oklch(0.55 0.008 40);
 }
 
 @theme inline {
@@ -185,7 +189,7 @@
 	/* Custom scrollbar styles */
 	* {
 		scrollbar-width: thin;
-		scrollbar-color: var(--border) transparent;
+		scrollbar-color: var(--scrollbar-thumb) transparent;
 	}
 
 	*::-webkit-scrollbar {
@@ -198,14 +202,14 @@
 	}
 
 	*::-webkit-scrollbar-thumb {
-		background-color: var(--border);
+		background-color: var(--scrollbar-thumb);
 		border-radius: 4px;
 		border: 2px solid transparent;
 		background-clip: content-box;
 	}
 
 	*::-webkit-scrollbar-thumb:hover {
-		background-color: var(--muted-foreground);
+		background-color: var(--scrollbar-thumb-hover);
 	}
 
 	*::-webkit-scrollbar-corner {
