@@ -8,6 +8,14 @@
 	"files": {
 		"includes": ["**", "!!**/dist"]
 	},
+	"overrides": [
+		{
+			"includes": ["**/tauri.conf.json"],
+			"formatter": {
+				"enabled": false
+			}
+		}
+	],
 	"formatter": {
 		"enabled": true,
 		"indentStyle": "tab",
