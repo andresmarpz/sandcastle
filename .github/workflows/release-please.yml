@@ -38,7 +38,7 @@ jobs:
         if: ${{ steps.release.outputs.prs_created == 'true' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_BRANCH: ${{ fromJSON(steps.release.outputs.pr).headBranchName }}
+          PR_BRANCH: ${{ steps.release.outputs.pr && fromJSON(steps.release.outputs.pr).headBranchName || '' }}
         run: |
           echo "PR branch: $PR_BRANCH"
 
