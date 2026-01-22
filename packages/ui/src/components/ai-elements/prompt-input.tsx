@@ -2,7 +2,6 @@
 
 import {
 	ArrowElbowDownLeft,
-	CircleNotch,
 	Microphone,
 	Plus,
 	Square,
@@ -63,6 +62,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/select";
+import { Spinner } from "@/components/spinner";
 import { cn } from "@/lib/utils";
 
 export type AttachmentsContext = {
@@ -1035,7 +1035,7 @@ export const PromptInputSubmit = ({
 	let Icon = <ArrowElbowDownLeft className="size-4" />;
 
 	if (status === "submitted") {
-		Icon = <CircleNotch className="size-4 animate-spin" />;
+		Icon = <Spinner className="size-4 animate-spin" />;
 	} else if (status === "streaming") {
 		Icon = <Square className="size-4" />;
 	} else if (status === "error") {

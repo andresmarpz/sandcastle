@@ -1,7 +1,7 @@
 "use client";
 
 import { useAtom } from "@effect-atom/atom-react";
-import { PushPin, PushPinSlash, Trash } from "@phosphor-icons/react";
+import { TrashIcon } from "@phosphor-icons/react/dist/ssr";
 import type { Repository } from "@sandcastle/schemas";
 import * as React from "react";
 import { useLocation, useNavigate } from "react-router";
@@ -27,6 +27,7 @@ import {
 } from "@/components/context-menu";
 import { SidebarMenuButton, SidebarMenuItem } from "@/components/sidebar";
 import { Spinner } from "@/components/spinner";
+import { cn } from "@/lib/utils";
 
 interface RailRepositoryItemProps {
 	repository: Repository;
@@ -55,10 +56,6 @@ export function RailRepositoryItem({ repository }: RailRepositoryItemProps) {
 		navigate(`/repository/${repository.id}`);
 	}
 
-	function handleRepositoryPin() {
-		// TODO: implement pin/unpin
-	}
-
 	function handleRepositoryDelete() {
 		deleteRepository({
 			payload: { id: repository.id },
@@ -69,39 +66,36 @@ export function RailRepositoryItem({ repository }: RailRepositoryItemProps) {
 
 	return (
 		<>
-			<ContextMenu>
-				<ContextMenuTrigger
-					render={
-						<SidebarMenuItem>
+			<SidebarMenuItem>
+				<ContextMenu>
+					<ContextMenuTrigger
+						render={
 							<SidebarMenuButton
 								size="lg"
 								onClick={handleSelect}
 								isActive={isActive}
+								className={cn(
+									isActive &&
+										"ring-[1.5px] ring-offset-[1.5px] ring-offset-border",
+									"border-[1.5px] border-border",
+								)}
 							>
 								{initials}
 							</SidebarMenuButton>
-						</SidebarMenuItem>
-					}
-				/>
+						}
+					/>
 
-				<ContextMenuContent className="min-w-[160px]">
-					<ContextMenuItem onClick={handleRepositoryPin}>
-						{repository.pinned ? (
-							<PushPinSlash className="size-4" />
-						) : (
-							<PushPin className="size-4" />
-						)}
-						{repository.pinned ? "Unpin" : "Pin"}
-					</ContextMenuItem>
-					<ContextMenuItem
-						variant="destructive"
-						onClick={() => setIsDeleteDialogOpen(true)}
-					>
-						<Trash className="size-4" />
-						Remove from list
-					</ContextMenuItem>
-				</ContextMenuContent>
-			</ContextMenu>
+					<ContextMenuContent className="min-w-[160px]">
+						<ContextMenuItem
+							variant="destructive"
+							onClick={() => setIsDeleteDialogOpen(true)}
+						>
+							<TrashIcon className="size-4" />
+							Remove from list
+						</ContextMenuItem>
+					</ContextMenuContent>
+				</ContextMenu>
+			</SidebarMenuItem>
 
 			<AlertDialog
 				open={isDeleteDialogOpen}

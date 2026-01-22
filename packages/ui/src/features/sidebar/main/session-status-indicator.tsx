@@ -123,6 +123,21 @@ export function SessionStatusDot({
 }) {
 	const config = statusConfig[status];
 	const isStreaming = status === "streaming";
+	const isIdle = status === "idle";
+
+	// Idle state shows a dash instead of a dot
+	if (isIdle) {
+		return (
+			<span
+				role="img"
+				className={cn("relative shrink-0 size-2 flex items-center", className)}
+				title={config.label}
+				aria-label={config.label}
+			>
+				<span className="w-full h-px bg-muted-foreground" />
+			</span>
+		);
+	}
 
 	return (
 		<span
