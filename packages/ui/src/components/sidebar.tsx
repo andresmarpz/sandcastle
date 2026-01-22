@@ -213,7 +213,7 @@ function Sidebar({
 			<div
 				data-slot="sidebar"
 				className={cn(
-					"bg-sidebar text-sidebar-foreground flex h-full w-(--sidebar-width) flex-col",
+					"bg-sidebar text-sidebar-foreground flex h-full w-(--sidebar-width) min-w-0 flex-col overflow-hidden",
 					className,
 				)}
 				{...props}
@@ -238,7 +238,9 @@ function Sidebar({
 						<SheetTitle>Sidebar</SheetTitle>
 						<SheetDescription>Displays the mobile sidebar.</SheetDescription>
 					</SheetHeader>
-					<div className="flex h-full w-full">{children}</div>
+					<div className="flex h-full w-full min-w-0 overflow-hidden">
+						{children}
+					</div>
 				</SheetContent>
 			</Sheet>
 		);
@@ -283,7 +285,7 @@ function Sidebar({
 				<div
 					data-sidebar="sidebar"
 					data-slot="sidebar-inner"
-					className="bg-sidebar group-data-[variant=floating]:ring-sidebar-border group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1 flex size-full flex-col"
+					className="bg-sidebar group-data-[variant=floating]:ring-sidebar-border group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1 flex size-full min-w-0 flex-col overflow-hidden"
 				>
 					{children}
 				</div>
@@ -470,7 +472,7 @@ function SidebarContent({ className, ...props }: React.ComponentProps<"div">) {
 			data-slot="sidebar-content"
 			data-sidebar="content"
 			className={cn(
-				"no-scrollbar gap-2 flex min-h-0 flex-1 flex-col overflow-auto group-data-[collapsible=icon]:overflow-hidden",
+				"no-scrollbar gap-2 flex min-h-0 min-w-0 flex-1 flex-col overflow-auto group-data-[collapsible=icon]:overflow-hidden",
 				className,
 			)}
 			{...props}
@@ -567,7 +569,7 @@ function SidebarMenuItem({ className, ...props }: React.ComponentProps<"li">) {
 		<li
 			data-slot="sidebar-menu-item"
 			data-sidebar="menu-item"
-			className={cn("group/menu-item relative", className)}
+			className={cn("group/menu-item relative min-w-0", className)}
 			{...props}
 		/>
 	);
