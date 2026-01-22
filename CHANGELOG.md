@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.22](https://github.com/andresmarpz/sandcastle/compare/v0.1.21...v0.1.22) (2026-01-22)
+
+
+### Features
+
+* **desktop:** add native Rust markdown parsing with comrak ([#94](https://github.com/andresmarpz/sandcastle/issues/94)) ([42a811e](https://github.com/andresmarpz/sandcastle/commit/42a811ea7ac89cbfeedb217df971989b7a098f8b))
+
 ## [0.1.21](https://github.com/andresmarpz/sandcastle/compare/v0.1.20...v0.1.21) (2026-01-22)
 
 
