@@ -35,7 +35,6 @@ export const Message = memo(function Message({
 		<div
 			className={cn(
 				"group flex w-full max-w-3xl flex-col gap-2",
-				"contain-[layout_style] [content-visibility:auto] [contain-intrinsic-size:auto_200px]",
 				from === "user" ? "is-user ml-auto justify-end" : "is-assistant",
 				className,
 			)}
