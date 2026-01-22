@@ -2,6 +2,7 @@
 	"name": "sandcastle",
 	"private": true,
 	"scripts": {
+		"prepare": "lefthook install",
 		"build": "turbo build",
 		"dev": "turbo dev",
 		"typecheck": "turbo typecheck",
@@ -13,6 +14,7 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.3.11",
+		"lefthook": "^2.0.15",
 		"turbo": "^2.7.3",
 		"typescript": "^5.9.3"
 	},

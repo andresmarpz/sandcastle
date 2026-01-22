@@ -41,16 +41,19 @@ For more information, read the Bun API docs in `node_modules/bun-types/docs/**.m
 ## Workflow
 
 - Never run development servers, always assume these are already running by me.
-- Only check typecheck on files you have changed.
 - No need to run 'bun build' ever.
 
-### Steps after finishing work entirely
+### Pre-commit Hooks
 
-1. Run `bun i` to check if dependencies are installed
-2. Run `bun biome` to format code and check lints
-3. Run `bun typecheck` to ensure you didn't introduce TypeScript errors
+This repo has pre-commit hooks that automatically run on every commit:
+- **Typecheck** - runs `bun typecheck` on the full codebase
+- **Biome** - runs `bun biome` (format + lint), auto-stages fixes
 
-Do not bypass these checks with `@ts-ignore`, `@ts-expect-error`, or by disabling Biome rules. Address the root cause instead.
+You do NOT need to run these checks manually. Just commit your changes and the hooks will run automatically. If there are errors, the commit will fail and show you what needs fixing.
+
+**Commit frequently** after completing significant chunks of work. This ensures your changes pass checks incrementally rather than accumulating issues.
+
+Do not bypass checks with `@ts-ignore`, `@ts-expect-error`, or by disabling Biome rules. Address the root cause instead.
 
 ## Effect.ts Library Best Practices
 
