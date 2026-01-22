@@ -2,7 +2,7 @@
 
 import { Check, Clock, Warning, X } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
-import { Streamdown } from "streamdown";
+import { NativeMarkdownResponse } from "@/components/ai-elements/native-markdown";
 import {
 	Plan,
 	PlanAction,
@@ -165,9 +165,9 @@ export function PlanPart({ part, sessionId }: PlanPartProps) {
 					</PlanAction>
 				</PlanHeader>
 				<PlanContent>
-					<Streamdown className="[&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+					<NativeMarkdownResponse className="[&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
 						{planContent}
-					</Streamdown>
+					</NativeMarkdownResponse>
 				</PlanContent>
 			</Plan>
 		</div>

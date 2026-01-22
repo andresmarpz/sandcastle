@@ -4,13 +4,13 @@ import { Brain, CaretDown } from "@phosphor-icons/react";
 import { useControllableState } from "@radix-ui/react-use-controllable-state";
 import type { ComponentProps, ReactNode } from "react";
 import { createContext, memo, useContext, useEffect, useState } from "react";
-import { Streamdown } from "streamdown";
 import {
 	Collapsible,
 	CollapsiblePanel,
 	CollapsibleTrigger,
 } from "@/components/collapsible";
 import { cn } from "@/lib/utils";
+import { NativeMarkdownResponse } from "./native-markdown";
 import { Shimmer } from "./shimmer";
 
 type ReasoningContextValue = {
@@ -175,7 +175,7 @@ export const ReasoningContent = memo(
 			)}
 			{...props}
 		>
-			<Streamdown {...props}>{children}</Streamdown>
+			<NativeMarkdownResponse>{children}</NativeMarkdownResponse>
 		</CollapsiblePanel>
 	),
 );
