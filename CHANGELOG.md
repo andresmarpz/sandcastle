@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.21](https://github.com/andresmarpz/sandcastle/compare/v0.1.20...v0.1.21) (2026-01-22)
+
+
+### Bug Fixes
+
+* **ci:** prevent fromJSON error in release-please workflow ([#92](https://github.com/andresmarpz/sandcastle/issues/92)) ([dfa78b5](https://github.com/andresmarpz/sandcastle/commit/dfa78b576b1cefa1dbc86a8a12b807de2fdb8407))
+
 ## [0.1.20](https://github.com/andresmarpz/sandcastle/compare/v0.1.19...v0.1.20) (2026-01-22)
 
 
