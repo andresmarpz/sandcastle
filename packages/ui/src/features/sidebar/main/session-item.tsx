@@ -1,7 +1,11 @@
 "use client";
 
 import { Result, useAtom, useAtomValue } from "@effect-atom/atom-react";
-import { Archive, Pencil, Trash } from "@phosphor-icons/react";
+import {
+	ArchiveIcon,
+	PencilIcon,
+	TrashIcon,
+} from "@phosphor-icons/react/dist/ssr";
 import type { Session } from "@sandcastle/schemas";
 import { formatDistanceToNow } from "date-fns";
 import * as Option from "effect/Option";
@@ -32,7 +36,7 @@ import { Spinner } from "@/components/spinner";
 import {
 	SessionStatusDot,
 	useSessionStatusIndicator,
-} from "@/features/sidebar/sessions/session-status-indicator";
+} from "@/features/sidebar/main/session-status-indicator";
 import { useSessionNavigation } from "@/hooks/use-session-navigation";
 
 interface SessionItemProps {
@@ -142,11 +146,11 @@ export function SessionItem({ session, repositoryId }: SessionItemProps) {
 
 						<ContextMenuContent className="min-w-[160px]">
 							<ContextMenuItem onClick={handleRename}>
-								<Pencil className="size-4" />
+								<PencilIcon className="size-4" />
 								Rename
 							</ContextMenuItem>
 							<ContextMenuItem onClick={handleArchive}>
-								<Archive className="size-4" />
+								<ArchiveIcon className="size-4" />
 								Archive
 							</ContextMenuItem>
 							<ContextMenuSeparator />
@@ -154,7 +158,7 @@ export function SessionItem({ session, repositoryId }: SessionItemProps) {
 								variant="destructive"
 								onClick={() => setIsDeleteDialogOpen(true)}
 							>
-								<Trash className="size-4" />
+								<TrashIcon className="size-4" />
 								Delete
 							</ContextMenuItem>
 						</ContextMenuContent>

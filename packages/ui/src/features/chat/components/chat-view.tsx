@@ -54,7 +54,7 @@ import {
 	SessionStatusDot,
 	statusConfig,
 	useSessionStatusIndicator,
-} from "@/features/sidebar/sessions/session-status-indicator";
+} from "@/features/sidebar/main/session-status-indicator";
 import { ChatInput } from "./chat-input";
 import { isAskUserQuestionTool, isExitPlanModeTool } from "./group-messages";
 import { GroupedMessageList } from "./grouped-message-list";
@@ -351,7 +351,7 @@ function ChatViewContent({
 				<ConversationScrollButton />
 			</Conversation>
 
-			<footer className="shrink-0 bg-background grid grid-cols-1 sm:grid-cols-[1fr_minmax(0,56rem)_1fr]">
+			<footer className="shrink-0 grid grid-cols-1 sm:grid-cols-[1fr_minmax(0,56rem)_1fr]">
 				<div className="hidden sm:block" />
 				<div>
 					{queue.length > 0 && <QueuePanel queue={queue} onDequeue={dequeue} />}
