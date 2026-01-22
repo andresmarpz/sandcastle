@@ -39,8 +39,6 @@ type SidebarContextProps = {
 	// Resize functionality
 	width: number;
 	setWidth: (width: number) => void;
-	isResizing: boolean;
-	setIsResizing: (isResizing: boolean) => void;
 };
 
 const SidebarContext = React.createContext<SidebarContextProps | null>(null);
@@ -92,7 +90,6 @@ function SidebarProvider({
 		}
 		return defaultWidth;
 	});
-	const [isResizing, setIsResizing] = React.useState(false);
 
 	const setWidth = React.useCallback((newWidth: number) => {
 		const clampedWidth = Math.min(
@@ -159,8 +156,6 @@ function SidebarProvider({
 			toggleSidebar,
 			width,
 			setWidth,
-			isResizing,
-			setIsResizing,
 		}),
 		[
 			state,
@@ -171,7 +166,6 @@ function SidebarProvider({
 			toggleSidebar,
 			width,
 			setWidth,
-			isResizing,
 		],
 	);
 
@@ -179,7 +173,6 @@ function SidebarProvider({
 		<SidebarContext.Provider value={contextValue}>
 			<div
 				data-slot="sidebar-wrapper"
-				data-resizing={isResizing ? "true" : undefined}
 				style={
 					{
 						"--sidebar-width": `${width}px`,
@@ -189,7 +182,6 @@ function SidebarProvider({
 				}
 				className={cn(
 					"group/sidebar-wrapper has-data-[variant=inset]:bg-sidebar flex min-h-svh w-full",
-					isResizing && "select-none",
 					className,
 				)}
 				{...props}
@@ -327,24 +319,22 @@ function SidebarTrigger({
 }
 
 function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
-	const {
-		toggleSidebar,
-		width,
-		setWidth,
-		open,
-		setOpen,
-		isResizing,
-		setIsResizing,
-	} = useSidebar();
+	const { toggleSidebar, width, setWidth, open, setOpen } = useSidebar();
 	const startXRef = React.useRef(0);
 	const startWidthRef = React.useRef(0);
+	const isResizingRef = React.useRef(false);
 
 	const handleMouseDown = React.useCallback(
 		(e: React.MouseEvent) => {
 			e.preventDefault();
 			startXRef.current = e.clientX;
 			startWidthRef.current = width;
-			setIsResizing(true);
+			isResizingRef.current = true;
+
+			// Apply select-none directly to body to prevent text selection during drag
+			// This avoids React state updates that cause expensive compositor work
+			document.body.style.userSelect = "none";
+			document.body.style.cursor = "col-resize";
 
 			const handleMouseMove = (e: MouseEvent) => {
 				const delta = e.clientX - startXRef.current;
@@ -365,7 +355,9 @@ function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
 			};
 
 			const handleMouseUp = () => {
-				setIsResizing(false);
+				isResizingRef.current = false;
+				document.body.style.userSelect = "";
+				document.body.style.cursor = "";
 				document.removeEventListener("mousemove", handleMouseMove);
 				document.removeEventListener("mouseup", handleMouseUp);
 			};
@@ -373,7 +365,7 @@ function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
 			document.addEventListener("mousemove", handleMouseMove);
 			document.addEventListener("mouseup", handleMouseUp);
 		},
-		[width, setWidth, open, setOpen, setIsResizing],
+		[width, setWidth, open, setOpen],
 	);
 
 	const handleDoubleClick = React.useCallback(() => {
@@ -400,7 +392,8 @@ function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
 				"hover:group-data-[collapsible=offExamples]:bg-sidebar group-data-[collapsible=offExamples]:translate-x-0 group-data-[collapsible=offExamples]:after:left-full",
 				"[[data-side=left][data-collapsible=offExamples]_&]:-right-2",
 				"[[data-side=right][data-collapsible=offExamples]_&]:-left-2",
-				isResizing && "after:bg-primary/50",
+				// Visual feedback on active/focus rather than during resize to avoid React state updates
+				"active:after:bg-primary/50 focus:after:bg-primary/50",
 				className,
 			)}
 			{...props}
