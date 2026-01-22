@@ -72,6 +72,13 @@ const openExternalUrl = async (url: string): Promise<void> => {
 	await openUrl(url);
 };
 
+/**
+ * Set the dock badge count (macOS).
+ */
+const setDockBadge = async (count: number): Promise<void> => {
+	await invoke("set_dock_badge", { count });
+};
+
 function App() {
 	return (
 		<PlatformProvider
@@ -81,6 +88,7 @@ function App() {
 			copyToClipboard={copyToClipboard}
 			parseMarkdown={parseMarkdown}
 			openExternalUrl={openExternalUrl}
+			setDockBadge={setDockBadge}
 		>
 			<UpdaterProvider>
 				<Layout />

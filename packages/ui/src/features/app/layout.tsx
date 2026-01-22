@@ -1,4 +1,5 @@
 import { RegistryProvider } from "@effect-atom/atom-react";
+import { useEffect } from "react";
 import { BrowserRouter, Route, Routes } from "react-router";
 import {
 	SidebarInset,
@@ -9,6 +10,7 @@ import {
 import { Toaster } from "@/components/sonner";
 import { usePlatform } from "@/context/platform-context";
 import { ThemeProvider } from "@/context/theme-context";
+import { initNotificationManager } from "@/features/chat/services/notification-manager";
 import { Sidebar } from "@/features/sidebar/sidebar";
 import { cn } from "@/lib/utils";
 import { HomePage } from "./pages/home";
@@ -16,8 +18,14 @@ import { SessionPage } from "./pages/session";
 import { WorktreePage } from "./pages/worktree";
 
 export default function Layout() {
-	// Ensure the component is wrapped with a <PlatformProvider>
-	usePlatform();
+	const platform = usePlatform();
+
+	// Initialize notification manager with platform bridge
+	useEffect(() => {
+		initNotificationManager({
+			setDockBadge: platform.setDockBadge ?? null,
+		});
+	}, [platform.setDockBadge]);
 
 	return (
 		<ThemeProvider>
