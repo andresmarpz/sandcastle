@@ -26,6 +26,7 @@ import {
 	isAskUserQuestionTool,
 	isExitPlanModeTool,
 } from "@/features/chat/components/group-messages";
+import { notifySessionComplete } from "@/features/chat/services/notification-manager";
 import {
 	forkWithStreamingClient,
 	getStreamingConnectionState,
@@ -456,6 +457,9 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 			}
 
 			case "SessionStopped": {
+				// Notify that session has completed (no pending approvals = normal completion)
+				notifySessionComplete(sessionId, false);
+
 				// Finalize the message and reset accumulator
 				if (sub.accumulator && sub.accumulator.hasContent()) {
 					const finalMessage = sub.accumulator.getMessage();
@@ -516,6 +520,10 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 						messageId: approvalEvent.messageId,
 						receivedAt: Date.now(),
 					};
+
+					// Notify that session is waiting for input
+					notifySessionComplete(sessionId, true);
+
 					updateSession(sessionId, (prev) => {
 						const newPendingRequests = new Map(prev.pendingApprovalRequests);
 						newPendingRequests.set(request.toolCallId, request);

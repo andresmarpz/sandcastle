@@ -7,6 +7,7 @@ import {
 	isAskUserQuestionTool,
 	isExitPlanModeTool,
 } from "@/features/chat/components/group-messages";
+import { clearSessionNotification } from "@/features/chat/services/notification-manager";
 import {
 	type ChatSessionState,
 	chatStore,
@@ -61,6 +62,8 @@ export function useChatSession(sessionId: string): UseChatSessionResult {
 	// Subscribe to session on mount, leave on unmount
 	useEffect(() => {
 		chatStore.getState().visit(sessionId);
+		// Clear notification when user views the session
+		clearSessionNotification(sessionId);
 		return () => {
 			chatStore.getState().leave(sessionId);
 		};

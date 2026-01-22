@@ -14,6 +14,8 @@ interface PlatformContextValue {
 	parseMarkdown?: ((markdown: string) => Promise<string>) | null;
 	/** Open an external URL in the system's default browser (Tauri only). Null if not supported. */
 	openExternalUrl?: ((url: string) => Promise<void>) | null;
+	/** Set the dock badge count (macOS only). Null if not supported. */
+	setDockBadge?: ((count: number) => Promise<void>) | null;
 }
 
 const PlatformContext = React.createContext<PlatformContextValue | undefined>(
@@ -27,6 +29,7 @@ export interface PlatformProviderProps {
 	copyToClipboard?: PlatformContextValue["copyToClipboard"];
 	parseMarkdown?: PlatformContextValue["parseMarkdown"];
 	openExternalUrl?: PlatformContextValue["openExternalUrl"];
+	setDockBadge?: PlatformContextValue["setDockBadge"];
 	children: React.ReactNode;
 }
 
@@ -37,6 +40,7 @@ export function PlatformProvider({
 	copyToClipboard,
 	parseMarkdown,
 	openExternalUrl,
+	setDockBadge,
 	children,
 }: PlatformProviderProps) {
 	const value = React.useMemo(
@@ -47,6 +51,7 @@ export function PlatformProvider({
 			copyToClipboard,
 			parseMarkdown,
 			openExternalUrl,
+			setDockBadge,
 		}),
 		[
 			openDirectory,
@@ -55,6 +60,7 @@ export function PlatformProvider({
 			copyToClipboard,
 			parseMarkdown,
 			openExternalUrl,
+			setDockBadge,
 		],
 	);
 	return (
