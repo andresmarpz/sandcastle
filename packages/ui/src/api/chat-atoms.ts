@@ -28,3 +28,8 @@ export const chatHistoryAtomFamily = Atom.family((sessionId: string) =>
  */
 export const chatHistoryQuery = (sessionId: string) =>
 	chatHistoryAtomFamily(sessionId);
+
+/**
+ * Mutation to create a PR by injecting a prompt into the session.
+ */
+export const createPRMutation = ChatClient.mutation("chat.createPR");
