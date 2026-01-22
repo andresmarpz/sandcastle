@@ -1,6 +1,6 @@
 "use client";
 
-import { Question } from "@phosphor-icons/react";
+import { Question as QuestionIcon } from "@phosphor-icons/react";
 import type { AskUserQuestionPayload } from "@sandcastle/schemas";
 import { useState } from "react";
 import { Button } from "@/components/button";
@@ -140,7 +140,7 @@ export function AskUserQuestionApproval({
 		<Card size="sm" className="w-full max-w-2xl">
 			<CardHeader>
 				<CardTitle className="flex items-center gap-2">
-					<Question className="size-5 text-blue-500" />
+					<QuestionIcon className="size-5 text-blue-500" />
 					Claude has a question
 				</CardTitle>
 			</CardHeader>
