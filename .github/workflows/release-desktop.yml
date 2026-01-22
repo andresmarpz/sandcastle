@@ -70,6 +70,8 @@ jobs:
   build-tauri:
     name: Build (${{ matrix.platform }})
     needs: prepare
+    permissions:
+      contents: write
     strategy:
       fail-fast: false
       matrix:
@@ -157,6 +159,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          # Prevent linuxdeploy strip failure on binaries with .relr.dyn sections
+          NO_STRIP: ${{ matrix.platform == 'ubuntu-22.04' }}
         with:
           projectPath: apps/desktop
           tauriScript: bunx tauri
