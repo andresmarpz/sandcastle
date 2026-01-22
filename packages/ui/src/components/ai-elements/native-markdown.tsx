@@ -1,7 +1,14 @@
 "use client";
 
 import type { ComponentProps } from "react";
-import { memo, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import {
+	memo,
+	useCallback,
+	useEffect,
+	useRef,
+	useState,
+	useSyncExternalStore,
+} from "react";
 import type { BundledLanguage, BundledTheme } from "shiki";
 import { codeToHtml } from "shiki";
 import { Streamdown } from "streamdown";
@@ -176,9 +183,29 @@ export const NativeMarkdown = memo(function NativeMarkdown({
 }: NativeMarkdownProps) {
 	const platform = usePlatform();
 	const parseMarkdown = platform.parseMarkdown;
+	const openExternalUrl = platform.openExternalUrl;
 	const isDark = useIsDarkMode();
 	const [html, setHtml] = useState<string | null>(null);
 	const currentRequestRef = useRef(0);
+
+	// Handle external link clicks - open in system browser instead of Tauri window
+	const handleLinkClick = useCallback(
+		(event: React.MouseEvent<HTMLDivElement>) => {
+			const target = event.target as HTMLElement;
+			const anchor = target.closest("a");
+			if (!anchor) return;
+
+			const href = anchor.getAttribute("href");
+			if (!href) return;
+
+			// Check if it's an external URL (http/https)
+			if (href.startsWith("http://") || href.startsWith("https://")) {
+				event.preventDefault();
+				openExternalUrl?.(href);
+			}
+		},
+		[openExternalUrl],
+	);
 
 	// Determine the Shiki theme based on dark mode
 	const currentTheme = isDark ? shikiTheme[1] : shikiTheme[0];
@@ -220,6 +247,9 @@ export const NativeMarkdown = memo(function NativeMarkdown({
 	// If native parsing is available and we have HTML, render it
 	if (parseMarkdown && html !== null) {
 		return (
+			// biome-ignore lint/a11y/useKeyWithClickEvents: Event delegation for links within rendered HTML
+			// biome-ignore lint/a11y/noStaticElementInteractions: Links inside are interactive
+			// biome-ignore lint/a11y/noNoninteractiveElementInteractions: Links inside are interactive
 			<div
 				className={cn(
 					// Base prose styling
@@ -235,6 +265,7 @@ export const NativeMarkdown = memo(function NativeMarkdown({
 					"[&>p_code]:rounded [&>p_code]:bg-muted [&>p_code]:px-1.5 [&>p_code]:py-0.5",
 					className,
 				)}
+				onClick={handleLinkClick}
 				dangerouslySetInnerHTML={{ __html: html }}
 			/>
 		);
