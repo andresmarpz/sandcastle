@@ -12,6 +12,8 @@ interface PlatformContextValue {
 	copyToClipboard?: ((text: string) => Promise<void>) | null;
 	/** Parse markdown to HTML using native Rust comrak parser (Tauri only). Null if not supported. */
 	parseMarkdown?: ((markdown: string) => Promise<string>) | null;
+	/** Open an external URL in the system's default browser (Tauri only). Null if not supported. */
+	openExternalUrl?: ((url: string) => Promise<void>) | null;
 }
 
 const PlatformContext = React.createContext<PlatformContextValue | undefined>(
@@ -24,6 +26,7 @@ export interface PlatformProviderProps {
 	openInEditor?: PlatformContextValue["openInEditor"];
 	copyToClipboard?: PlatformContextValue["copyToClipboard"];
 	parseMarkdown?: PlatformContextValue["parseMarkdown"];
+	openExternalUrl?: PlatformContextValue["openExternalUrl"];
 	children: React.ReactNode;
 }
 
@@ -33,6 +36,7 @@ export function PlatformProvider({
 	openInEditor,
 	copyToClipboard,
 	parseMarkdown,
+	openExternalUrl,
 	children,
 }: PlatformProviderProps) {
 	const value = React.useMemo(
@@ -42,6 +46,7 @@ export function PlatformProvider({
 			openInEditor,
 			copyToClipboard,
 			parseMarkdown,
+			openExternalUrl,
 		}),
 		[
 			openDirectory,
@@ -49,6 +54,7 @@ export function PlatformProvider({
 			openInEditor,
 			copyToClipboard,
 			parseMarkdown,
+			openExternalUrl,
 		],
 	);
 	return (

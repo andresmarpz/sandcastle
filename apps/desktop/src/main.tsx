@@ -32,6 +32,7 @@ const { PlatformProvider } = await import(
 const { open } = await import("@tauri-apps/plugin-dialog");
 const { Command } = await import("@tauri-apps/plugin-shell");
 const { invoke } = await import("@tauri-apps/api/core");
+const { openUrl } = await import("@tauri-apps/plugin-opener");
 const { UpdaterProvider } = await import("@/context/updater-context");
 const { default: Layout } = await import("@/features/app/layout");
 
@@ -64,6 +65,13 @@ const parseMarkdown = async (markdown: string): Promise<string> => {
 	return invoke<string>("parse_markdown_command", { markdown });
 };
 
+/**
+ * Open an external URL in the system's default browser.
+ */
+const openExternalUrl = async (url: string): Promise<void> => {
+	await openUrl(url);
+};
+
 function App() {
 	return (
 		<PlatformProvider
@@ -72,6 +80,7 @@ function App() {
 			openInEditor={openInEditor}
 			copyToClipboard={copyToClipboard}
 			parseMarkdown={parseMarkdown}
+			openExternalUrl={openExternalUrl}
 		>
 			<UpdaterProvider>
 				<Layout />
