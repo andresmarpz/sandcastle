@@ -1,6 +1,9 @@
 "use client";
 
-import { Brain, CaretDown, DotOutline, type Icon } from "@phosphor-icons/react";
+import type { Icon } from "@phosphor-icons/react";
+import { BrainIcon } from "@phosphor-icons/react/Brain";
+import { CaretDownIcon } from "@phosphor-icons/react/CaretDown";
+import { DotOutlineIcon } from "@phosphor-icons/react/DotOutline";
 import { useControllableState } from "@radix-ui/react-use-controllable-state";
 import type { ComponentProps, ReactNode } from "react";
 import { createContext, memo, useContext, useMemo } from "react";
@@ -87,11 +90,11 @@ export const ChainOfThoughtHeader = memo(
 					)}
 					{...props}
 				>
-					<Brain className="size-4" />
+					<BrainIcon className="size-4" />
 					<span className="flex-1 text-left">
 						{children ?? "Chain of Thought"}
 					</span>
-					<CaretDown
+					<CaretDownIcon
 						className={cn(
 							"size-4 transition-transform",
 							isOpen ? "rotate-180" : "rotate-0",
@@ -113,7 +116,7 @@ export type ChainOfThoughtStepProps = ComponentProps<"div"> & {
 export const ChainOfThoughtStep = memo(
 	({
 		className,
-		icon: IconComponent = DotOutline,
+		icon: IconComponent = DotOutlineIcon,
 		label,
 		description,
 		status = "complete",

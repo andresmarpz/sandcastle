@@ -1,11 +1,9 @@
 "use client";
 
-import {
-	ChatCircle,
-	Database,
-	GitBranch,
-	Palette,
-} from "@phosphor-icons/react";
+import { ChatCircleIcon } from "@phosphor-icons/react/ChatCircle";
+import { DatabaseIcon } from "@phosphor-icons/react/Database";
+import { GitBranchIcon } from "@phosphor-icons/react/GitBranch";
+import { PaletteIcon } from "@phosphor-icons/react/Palette";
 import {
 	SidebarContent,
 	SidebarMenu,
@@ -19,22 +17,22 @@ const settingsNav = [
 	{
 		id: "chat" as const,
 		label: "Chat",
-		icon: ChatCircle,
+		icon: ChatCircleIcon,
 	},
 	{
 		id: "appearance" as const,
 		label: "Appearance",
-		icon: Palette,
+		icon: PaletteIcon,
 	},
 	{
 		id: "git" as const,
 		label: "Git",
-		icon: GitBranch,
+		icon: GitBranchIcon,
 	},
 	{
 		id: "server" as const,
 		label: "Server",
-		icon: Database,
+		icon: DatabaseIcon,
 	},
 ];
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { FileCode } from "@phosphor-icons/react";
+import { FileCodeIcon } from "@phosphor-icons/react/FileCode";
 import { parseDiffFromFile } from "@pierre/diffs";
 import { FileDiff } from "@pierre/diffs/react";
 import { useMemo } from "react";
@@ -76,7 +76,7 @@ export function WritePart({ part }: WritePartProps) {
 				title="Write"
 				type="tool-Write"
 				state={mapState(part.state)}
-				icon={<FileCode className="size-4 text-muted-foreground" />}
+				icon={<FileCodeIcon className="size-4 text-muted-foreground" />}
 			/>
 			<ToolContent className="overflow-auto rounded-md border relative max-h-96 m-2 mt-0">
 				<FileDiff

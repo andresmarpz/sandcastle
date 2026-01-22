@@ -1,6 +1,7 @@
 "use client";
 
-import { Book, CaretDown } from "@phosphor-icons/react";
+import { BookIcon } from "@phosphor-icons/react/Book";
+import { CaretDownIcon } from "@phosphor-icons/react/CaretDown";
 import type { ComponentProps } from "react";
 import {
 	Collapsible,
@@ -35,7 +36,7 @@ export const SourcesTrigger = ({
 		{children ?? (
 			<>
 				<p className="font-medium">Used {count} sources</p>
-				<CaretDown className="h-4 w-4" />
+				<CaretDownIcon className="h-4 w-4" />
 			</>
 		)}
 	</CollapsibleTrigger>
@@ -69,7 +70,7 @@ export const Source = ({ href, title, children, ...props }: SourceProps) => (
 	>
 		{children ?? (
 			<>
-				<Book className="h-4 w-4" />
+				<BookIcon className="h-4 w-4" />
 				<span className="block font-medium">{title}</span>
 			</>
 		)}

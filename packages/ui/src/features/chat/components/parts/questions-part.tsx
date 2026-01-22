@@ -1,12 +1,10 @@
 "use client";
 
-import {
-	Check,
-	Clock,
-	Question as QuestionIcon,
-	Warning,
-	X,
-} from "@phosphor-icons/react";
+import { CheckIcon } from "@phosphor-icons/react/Check";
+import { ClockIcon } from "@phosphor-icons/react/Clock";
+import { QuestionIcon } from "@phosphor-icons/react/Question";
+import { WarningIcon } from "@phosphor-icons/react/Warning";
+import { XIcon } from "@phosphor-icons/react/X";
 import type { AskUserQuestionPayload } from "@sandcastle/schemas";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -592,28 +590,28 @@ function StatusBadge({ status }: { status: QuestionsStatus }) {
 		case "answered":
 			return (
 				<Badge className="flex shrink-0 items-center gap-1 bg-green-500/10 text-green-600 dark:bg-green-500/20 dark:text-green-400">
-					<Check className="size-3" />
+					<CheckIcon className="size-3" />
 					Answered
 				</Badge>
 			);
 		case "skipped":
 			return (
 				<Badge className="flex shrink-0 items-center gap-1 bg-muted text-muted-foreground">
-					<X className="size-3" />
+					<XIcon className="size-3" />
 					Skipped
 				</Badge>
 			);
 		case "error":
 			return (
 				<Badge className="flex shrink-0 items-center gap-1 bg-red-500/10 text-red-600 dark:bg-red-500/20 dark:text-red-400">
-					<Warning className="size-3" />
+					<WarningIcon className="size-3" />
 					Failed
 				</Badge>
 			);
 		case "pending":
 			return (
 				<Badge className="flex shrink-0 items-center gap-1 bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400">
-					<Clock className="size-3" />
+					<ClockIcon className="size-3" />
 					Pending
 				</Badge>
 			);

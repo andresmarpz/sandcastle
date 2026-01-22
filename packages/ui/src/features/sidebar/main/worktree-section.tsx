@@ -1,7 +1,8 @@
 "use client";
 
 import { Result, useAtomValue } from "@effect-atom/atom-react";
-import { CaretDown, GitBranch } from "@phosphor-icons/react";
+import { CaretDownIcon } from "@phosphor-icons/react/CaretDown";
+import { GitBranchIcon } from "@phosphor-icons/react/GitBranch";
 import type { Worktree } from "@sandcastle/schemas";
 import { formatDistanceToNow } from "date-fns";
 import * as Option from "effect/Option";
@@ -57,7 +58,7 @@ export function WorktreeSection({ repositoryId }: WorktreeSectionProps) {
 							render={
 								<SidebarMenuButton className="justify-between">
 									<span className="flex items-center gap-2">
-										<GitBranch className="size-4" />
+										<GitBranchIcon className="size-4" />
 										<span>Worktrees</span>
 									</span>
 									<span className="flex items-center gap-1.5">
@@ -69,7 +70,7 @@ export function WorktreeSection({ repositoryId }: WorktreeSectionProps) {
 												{worktreeCount}
 											</Badge>
 										)}
-										<CaretDown
+										<CaretDownIcon
 											className={cn(
 												"size-4 transition-transform duration-200",
 												!isOpen && "-rotate-90",
@@ -136,7 +137,7 @@ function WorktreeSubItem({ worktree }: WorktreeSubItemProps) {
 				className="h-auto flex-col items-start gap-0.5 py-1.5"
 			>
 				<span className="flex items-center gap-1.5 text-sm font-medium">
-					<GitBranch className="size-3 shrink-0" />
+					<GitBranchIcon className="size-3 shrink-0" />
 					<span className="truncate">{worktree.branch}</span>
 				</span>
 				<span className="text-muted-foreground text-xs">

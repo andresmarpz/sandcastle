@@ -1,6 +1,7 @@
 "use client";
 
-import { Brain, CaretDown } from "@phosphor-icons/react";
+import { BrainIcon } from "@phosphor-icons/react/Brain";
+import { CaretDownIcon } from "@phosphor-icons/react/CaretDown";
 import { useControllableState } from "@radix-ui/react-use-controllable-state";
 import type { ComponentProps, ReactNode } from "react";
 import { createContext, memo, useContext, useEffect, useState } from "react";
@@ -146,9 +147,9 @@ export const ReasoningTrigger = memo(
 			>
 				{children ?? (
 					<>
-						<Brain className="size-4" />
+						<BrainIcon className="size-4" />
 						{getThinkingMessage(isStreaming, duration)}
-						<CaretDown
+						<CaretDownIcon
 							className={cn(
 								"size-4 transition-transform",
 								isOpen ? "rotate-180" : "rotate-0",
