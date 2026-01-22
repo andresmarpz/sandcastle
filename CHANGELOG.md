@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.2.3](https://github.com/andresmarpz/sandcastle/compare/v0.2.2...v0.2.3) (2026-01-22)
+
+
+### Bug Fixes
+
+* some lint issues ([bb5d974](https://github.com/andresmarpz/sandcastle/commit/bb5d9743d3023be3f3f60a566531ea6d394e2ea8))
+* **ui:** add dedicated scrollbar color variables for better dark mode visibility ([#110](https://github.com/andresmarpz/sandcastle/issues/110)) ([f3b5e82](https://github.com/andresmarpz/sandcastle/commit/f3b5e82fe64ad3e71421e89f0f56ab087c3d60ef))
+* **ui:** prevent sidebar items from overflowing when resized ([#112](https://github.com/andresmarpz/sandcastle/issues/112)) ([40a9102](https://github.com/andresmarpz/sandcastle/commit/40a9102da32e93ae1d4c8aae62db037b5e088258))
+* **ui:** use server timestamp for streaming duration indicator ([#113](https://github.com/andresmarpz/sandcastle/issues/113)) ([bbe89ab](https://github.com/andresmarpz/sandcastle/commit/bbe89ab11d2ca995a41881cbedfd93f070f13414))
+
+
+### Performance Improvements
+
+* **ui:** persist sidebar width cookie only on mouse up ([#114](https://github.com/andresmarpz/sandcastle/issues/114)) ([ff4129c](https://github.com/andresmarpz/sandcastle/commit/ff4129c9eb82021d0104129eec9fec6a887541e9))
+
 ## [0.2.2](https://github.com/andresmarpz/sandcastle/compare/v0.2.1...v0.2.2) (2026-01-22)
 
 
