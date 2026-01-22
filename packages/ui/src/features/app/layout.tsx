@@ -11,6 +11,7 @@ import { usePlatform } from "@/context/platform-context";
 import { ThemeProvider } from "@/context/theme-context";
 import { Sidebar } from "@/features/sidebar/sidebar";
 import { cn } from "@/lib/utils";
+import { CreatePRButton } from "./components/create-pr-button";
 import { HomePage } from "./pages/home";
 import { SessionPage } from "./pages/session";
 import { WorktreePage } from "./pages/worktree";
@@ -35,9 +36,10 @@ export default function Layout() {
 								/>
 								<div
 									data-tauri-drag-region
-									className="flex h-(--header-height) w-full items-center gap-2"
+									className="flex h-(--header-height) w-full items-center justify-between gap-2 pr-4"
 								>
 									<SidebarTrigger />
+									<CreatePRButton />
 								</div>
 							</header>
 							<div className="flex flex-1">

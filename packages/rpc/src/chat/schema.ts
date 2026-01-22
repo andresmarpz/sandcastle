@@ -148,4 +148,17 @@ export class ChatRpc extends RpcGroup.make(
 			ToolApprovalNotFoundRpcError,
 		),
 	}),
+
+	/**
+	 * Create a PR by injecting a pre-built prompt into the session.
+	 * Fetches git context (uncommitted changes, branch info) and instructs
+	 * Claude to commit, push, and create a PR.
+	 */
+	Rpc.make("chat.createPR", {
+		payload: {
+			sessionId: Schema.String,
+		},
+		success: SendMessageResult,
+		error: Schema.Union(ChatSessionNotFoundRpcError, ChatOperationRpcError),
+	}),
 ) {}
