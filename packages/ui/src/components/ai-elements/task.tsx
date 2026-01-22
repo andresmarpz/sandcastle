@@ -1,6 +1,7 @@
 "use client";
 
-import { CaretDown, MagnifyingGlass } from "@phosphor-icons/react";
+import { CaretDownIcon } from "@phosphor-icons/react/CaretDown";
+import { MagnifyingGlassIcon } from "@phosphor-icons/react/MagnifyingGlass";
 import type { ComponentProps } from "react";
 import {
 	Collapsible,
@@ -58,9 +59,9 @@ export const TaskTrigger = ({
 	<CollapsibleTrigger className={cn("group", className)} {...props}>
 		{children ?? (
 			<div className="flex w-full cursor-pointer items-center gap-2 text-muted-foreground text-sm transition-colors hover:text-foreground">
-				<MagnifyingGlass className="size-4" />
+				<MagnifyingGlassIcon className="size-4" />
 				<p className="text-sm">{title}</p>
-				<CaretDown className="size-4 transition-transform group-data-[state=open]:rotate-180" />
+				<CaretDownIcon className="size-4 transition-transform group-data-[state=open]:rotate-180" />
 			</div>
 		)}
 	</CollapsibleTrigger>

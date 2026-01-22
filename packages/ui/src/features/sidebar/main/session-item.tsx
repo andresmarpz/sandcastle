@@ -1,11 +1,9 @@
 "use client";
 
 import { Result, useAtom, useAtomValue } from "@effect-atom/atom-react";
-import {
-	ArchiveIcon,
-	PencilIcon,
-	TrashIcon,
-} from "@phosphor-icons/react/dist/ssr";
+import { ArchiveIcon } from "@phosphor-icons/react/Archive";
+import { PencilIcon } from "@phosphor-icons/react/Pencil";
+import { TrashIcon } from "@phosphor-icons/react/Trash";
 import type { Session } from "@sandcastle/schemas";
 import { formatDistanceToNow } from "date-fns";
 import * as Option from "effect/Option";

@@ -1,6 +1,7 @@
 "use client";
 
-import { Check, Copy } from "@phosphor-icons/react";
+import { CheckIcon } from "@phosphor-icons/react/Check";
+import { CopyIcon } from "@phosphor-icons/react/Copy";
 import {
 	type ComponentProps,
 	createContext,
@@ -197,7 +198,7 @@ export const CodeBlockCopyButton = ({
 		}
 	};
 
-	const Icon = isCopied ? Check : Copy;
+	const Icon = isCopied ? CheckIcon : CopyIcon;
 
 	return (
 		<Button

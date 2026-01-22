@@ -1,13 +1,11 @@
 "use client";
 
-import {
-	CaretDown,
-	CheckCircle,
-	Circle,
-	Clock,
-	Wrench,
-	XCircle,
-} from "@phosphor-icons/react";
+import { CaretDownIcon } from "@phosphor-icons/react/CaretDown";
+import { CheckCircleIcon } from "@phosphor-icons/react/CheckCircle";
+import { CircleIcon } from "@phosphor-icons/react/Circle";
+import { ClockIcon } from "@phosphor-icons/react/Clock";
+import { WrenchIcon } from "@phosphor-icons/react/Wrench";
+import { XCircleIcon } from "@phosphor-icons/react/XCircle";
 import type { ToolUIPart } from "ai";
 import type { ComponentProps, ReactNode } from "react";
 import { isValidElement } from "react";
@@ -51,14 +49,14 @@ const getStatusBadge = (status: ToolUIPart["state"]) => {
 	};
 
 	const icons: Record<ToolUIPart["state"], ReactNode> = {
-		"input-streaming": <Circle className="size-4" />,
-		"input-available": <Clock className="size-4 animate-pulse" />,
+		"input-streaming": <CircleIcon className="size-4" />,
+		"input-available": <ClockIcon className="size-4 animate-pulse" />,
 		// state only available in AI SDK v6
-		"approval-requested": <Clock className="size-4 text-yellow-600" />,
-		"approval-responded": <CheckCircle className="size-4 text-blue-600" />,
-		"output-available": <CheckCircle className="size-4 text-green-600" />,
-		"output-error": <XCircle className="size-4 text-red-600" />,
-		"output-denied": <XCircle className="size-4 text-orange-600" />,
+		"approval-requested": <ClockIcon className="size-4 text-yellow-600" />,
+		"approval-responded": <CheckCircleIcon className="size-4 text-blue-600" />,
+		"output-available": <CheckCircleIcon className="size-4 text-green-600" />,
+		"output-error": <XCircleIcon className="size-4 text-red-600" />,
+		"output-denied": <XCircleIcon className="size-4 text-orange-600" />,
 	};
 
 	return (
@@ -85,13 +83,13 @@ export const ToolHeader = ({
 		{...props}
 	>
 		<div className="flex items-center gap-2">
-			{icon ?? <Wrench className="size-4 text-muted-foreground" />}
+			{icon ?? <WrenchIcon className="size-4 text-muted-foreground" />}
 			<span className="font-medium text-sm">
 				{title ?? type.split("-").slice(1).join("-")}
 			</span>
 			{getStatusBadge(state)}
 		</div>
-		<CaretDown className="size-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+		<CaretDownIcon className="size-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
 	</CollapsibleTrigger>
 );
 

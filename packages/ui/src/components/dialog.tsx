@@ -1,5 +1,5 @@
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
-import { X } from "@phosphor-icons/react";
+import { XIcon } from "@phosphor-icons/react/X";
 import type * as React from "react";
 import { Button } from "@/components/button";
 import { cn } from "@/lib/utils";
@@ -67,7 +67,7 @@ function DialogContent({
 							/>
 						}
 					>
-						<X />
+						<XIcon />
 						<span className="sr-only">Close</span>
 					</DialogPrimitive.Close>
 				)}

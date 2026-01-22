@@ -1,6 +1,6 @@
 "use client";
 
-import { CaretDown } from "@phosphor-icons/react";
+import { CaretDownIcon } from "@phosphor-icons/react/CaretDown";
 import type { ComponentProps, ReactNode } from "react";
 import { createContext, useContext, useEffect, useState } from "react";
 import { Button } from "@/components/button";
@@ -225,7 +225,7 @@ export const WebPreviewConsole = ({
 				}
 			>
 				Console
-				<CaretDown
+				<CaretDownIcon
 					className={cn(
 						"h-4 w-4 transition-transform duration-200",
 						consoleOpen && "rotate-180",

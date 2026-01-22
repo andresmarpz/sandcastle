@@ -1,6 +1,8 @@
 "use client";
 
-import { ArrowSquareOut, CaretDown, ChatCircle } from "@phosphor-icons/react";
+import { ArrowSquareOutIcon } from "@phosphor-icons/react/ArrowSquareOut";
+import { CaretDownIcon } from "@phosphor-icons/react/CaretDown";
+import { ChatCircleIcon } from "@phosphor-icons/react/ChatCircle";
 import { type ComponentProps, createContext, useContext } from "react";
 import { Button } from "@/components/button";
 import {
@@ -136,7 +138,7 @@ const providers = {
 			`https://t3.chat/new?${new URLSearchParams({
 				q,
 			})}`,
-		icon: <ChatCircle />,
+		icon: <ChatCircleIcon />,
 	},
 	v0: {
 		title: "Open in v0",
@@ -234,7 +236,7 @@ export const OpenInTrigger = ({ children, ...props }: OpenInTriggerProps) => (
 		{children ?? (
 			<Button type="button" variant="outline">
 				Open in chat
-				<CaretDown className="size-4" />
+				<CaretDownIcon className="size-4" />
 			</Button>
 		)}
 	</DropdownMenuTrigger>
@@ -259,7 +261,7 @@ export const OpenInChatGPT = (props: OpenInChatGPTProps) => {
 		>
 			<span className="shrink-0">{providers.chatgpt.icon}</span>
 			<span className="flex-1">{providers.chatgpt.title}</span>
-			<ArrowSquareOut className="size-4 shrink-0" />
+			<ArrowSquareOutIcon className="size-4 shrink-0" />
 		</DropdownMenuItem>
 	);
 };
@@ -283,7 +285,7 @@ export const OpenInClaude = (props: OpenInClaudeProps) => {
 		>
 			<span className="shrink-0">{providers.claude.icon}</span>
 			<span className="flex-1">{providers.claude.title}</span>
-			<ArrowSquareOut className="size-4 shrink-0" />
+			<ArrowSquareOutIcon className="size-4 shrink-0" />
 		</DropdownMenuItem>
 	);
 };
@@ -307,7 +309,7 @@ export const OpenInT3 = (props: OpenInT3Props) => {
 		>
 			<span className="shrink-0">{providers.t3.icon}</span>
 			<span className="flex-1">{providers.t3.title}</span>
-			<ArrowSquareOut className="size-4 shrink-0" />
+			<ArrowSquareOutIcon className="size-4 shrink-0" />
 		</DropdownMenuItem>
 	);
 };
@@ -331,7 +333,7 @@ export const OpenInScira = (props: OpenInSciraProps) => {
 		>
 			<span className="shrink-0">{providers.scira.icon}</span>
 			<span className="flex-1">{providers.scira.title}</span>
-			<ArrowSquareOut className="size-4 shrink-0" />
+			<ArrowSquareOutIcon className="size-4 shrink-0" />
 		</DropdownMenuItem>
 	);
 };
@@ -355,7 +357,7 @@ export const OpenInv0 = (props: OpenInv0Props) => {
 		>
 			<span className="shrink-0">{providers.v0.icon}</span>
 			<span className="flex-1">{providers.v0.title}</span>
-			<ArrowSquareOut className="size-4 shrink-0" />
+			<ArrowSquareOutIcon className="size-4 shrink-0" />
 		</DropdownMenuItem>
 	);
 };
@@ -379,7 +381,7 @@ export const OpenInCursor = (props: OpenInCursorProps) => {
 		>
 			<span className="shrink-0">{providers.cursor.icon}</span>
 			<span className="flex-1">{providers.cursor.title}</span>
-			<ArrowSquareOut className="size-4 shrink-0" />
+			<ArrowSquareOutIcon className="size-4 shrink-0" />
 		</DropdownMenuItem>
 	);
 };

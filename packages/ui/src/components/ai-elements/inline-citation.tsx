@@ -1,6 +1,7 @@
 "use client";
 
-import { ArrowLeft, ArrowRight } from "@phosphor-icons/react";
+import { ArrowLeftIcon } from "@phosphor-icons/react/ArrowLeft";
+import { ArrowRightIcon } from "@phosphor-icons/react/ArrowRight";
 import {
 	type ComponentProps,
 	createContext,
@@ -208,7 +209,7 @@ export const InlineCitationCarouselPrev = ({
 			type="button"
 			{...props}
 		>
-			<ArrowLeft className="size-4 text-muted-foreground" />
+			<ArrowLeftIcon className="size-4 text-muted-foreground" />
 		</button>
 	);
 };
@@ -235,7 +236,7 @@ export const InlineCitationCarouselNext = ({
 			type="button"
 			{...props}
 		>
-			<ArrowRight className="size-4 text-muted-foreground" />
+			<ArrowRightIcon className="size-4 text-muted-foreground" />
 		</button>
 	);
 };

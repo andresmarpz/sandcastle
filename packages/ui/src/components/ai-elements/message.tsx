@@ -1,6 +1,9 @@
 "use client";
 
-import { CaretLeft, CaretRight, Paperclip, X } from "@phosphor-icons/react";
+import { CaretLeftIcon } from "@phosphor-icons/react/CaretLeft";
+import { CaretRightIcon } from "@phosphor-icons/react/CaretRight";
+import { PaperclipIcon } from "@phosphor-icons/react/Paperclip";
+import { XIcon } from "@phosphor-icons/react/X";
 import type { FileUIPart, UIMessage } from "ai";
 import type { ComponentProps, HTMLAttributes, ReactElement } from "react";
 import {
@@ -264,7 +267,7 @@ export const MessageBranchPrevious = ({
 			variant="ghost"
 			{...props}
 		>
-			{children ?? <CaretLeft size={14} />}
+			{children ?? <CaretLeftIcon size={14} />}
 		</Button>
 	);
 };
@@ -287,7 +290,7 @@ export const MessageBranchNext = ({
 			variant="ghost"
 			{...props}
 		>
-			{children ?? <CaretRight size={14} />}
+			{children ?? <CaretRightIcon size={14} />}
 		</Button>
 	);
 };
@@ -380,7 +383,7 @@ export function MessageAttachment({
 							type="button"
 							variant="ghost"
 						>
-							<X />
+							<XIcon />
 							<span className="sr-only">Remove</span>
 						</Button>
 					)}
@@ -395,7 +398,7 @@ export function MessageAttachment({
 							// @ts-expect-error - type prop conflicts with Button's type
 							nativeButton={false}
 						>
-							<Paperclip className="size-4" />
+							<PaperclipIcon className="size-4" />
 						</TooltipTrigger>
 						<TooltipContent>
 							<p>{attachmentLabel}</p>
@@ -412,7 +415,7 @@ export function MessageAttachment({
 							type="button"
 							variant="ghost"
 						>
-							<X />
+							<XIcon />
 							<span className="sr-only">Remove</span>
 						</Button>
 					)}

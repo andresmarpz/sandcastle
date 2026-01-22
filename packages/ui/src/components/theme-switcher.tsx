@@ -1,6 +1,8 @@
 "use client";
 
-import { DesktopIcon, MoonIcon, SunIcon } from "@phosphor-icons/react/dist/ssr";
+import { DesktopIcon } from "@phosphor-icons/react/Desktop";
+import { MoonIcon } from "@phosphor-icons/react/Moon";
+import { SunIcon } from "@phosphor-icons/react/Sun";
 import {
 	DropdownMenu,
 	DropdownMenuContent,

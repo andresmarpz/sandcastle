@@ -1,6 +1,7 @@
 "use client";
 
-import { CaretDown, Copy } from "@phosphor-icons/react";
+import { CaretDownIcon } from "@phosphor-icons/react/CaretDown";
+import { CopyIcon } from "@phosphor-icons/react/Copy";
 import { Button } from "@/components/button";
 import {
 	DropdownMenu,
@@ -82,7 +83,7 @@ export function OpenPathButton({ path }: OpenPathButtonProps) {
 				render={
 					<Button variant="outline" size="xs" className="gap-1 w-fit">
 						Open
-						<CaretDown className="size-3" />
+						<CaretDownIcon className="size-3" />
 					</Button>
 				}
 			/>
@@ -109,7 +110,7 @@ export function OpenPathButton({ path }: OpenPathButtonProps) {
 					<span className="text-muted-foreground text-xs w-3">
 						{++itemIndex}
 					</span>
-					<Copy className="size-4" />
+					<CopyIcon className="size-4" />
 					Copy path
 				</DropdownMenuItem>
 			</DropdownMenuContent>

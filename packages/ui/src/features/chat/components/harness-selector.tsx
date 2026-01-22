@@ -1,6 +1,6 @@
 "use client";
 
-import { CaretDown } from "@phosphor-icons/react";
+import { CaretDownIcon } from "@phosphor-icons/react/CaretDown";
 import type { SVGProps } from "react";
 import { Button } from "@/components/button";
 import {
@@ -46,7 +46,7 @@ export function HarnessSelector() {
 				<span className="hidden text-[13px] sm:inline">
 					{selectedHarness.label}
 				</span>
-				<CaretDown className="hidden size-3 text-muted-foreground sm:inline" />
+				<CaretDownIcon className="hidden size-3 text-muted-foreground sm:inline" />
 			</DropdownMenuTrigger>
 			<DropdownMenuContent className="w-48" align="start">
 				<DropdownMenuRadioGroup value={selectedHarness.value}>

@@ -1,6 +1,9 @@
 "use client";
 
-import { CaretDown, Check, Hammer, ListChecks } from "@phosphor-icons/react";
+import { CaretDownIcon } from "@phosphor-icons/react/CaretDown";
+import { CheckIcon } from "@phosphor-icons/react/Check";
+import { HammerIcon } from "@phosphor-icons/react/Hammer";
+import { ListChecksIcon } from "@phosphor-icons/react/ListChecks";
 import { useState } from "react";
 import { Button } from "@/components/button";
 import {
@@ -15,13 +18,13 @@ const MODES = [
 	{
 		value: "plan",
 		label: "Plan",
-		icon: ListChecks,
+		icon: ListChecksIcon,
 		color: "text-green-500",
 	},
 	{
 		value: "build",
 		label: "Build",
-		icon: Hammer,
+		icon: HammerIcon,
 		color: "text-indigo-500",
 	},
 ] as const;
@@ -53,7 +56,7 @@ export function PlanSelector({
 	};
 
 	const selectedModeData = MODES.find((m) => m.value === selectedMode);
-	const SelectedIcon = selectedModeData?.icon ?? ListChecks;
+	const SelectedIcon = selectedModeData?.icon ?? ListChecksIcon;
 	const selectedColor = selectedModeData?.color ?? "text-green-500";
 
 	// When disabled, show the current mode but prevent interaction
@@ -69,7 +72,7 @@ export function PlanSelector({
 				<span className="hidden text-[13px] sm:inline">
 					{selectedModeData?.label ?? "Plan"}
 				</span>
-				<CaretDown className="hidden size-3 text-muted-foreground sm:inline" />
+				<CaretDownIcon className="hidden size-3 text-muted-foreground sm:inline" />
 			</Button>
 		);
 	}
@@ -84,7 +87,7 @@ export function PlanSelector({
 				<span className="hidden text-[13px] sm:inline">
 					{selectedModeData?.label ?? "Plan"}
 				</span>
-				<CaretDown className="hidden size-3 text-muted-foreground sm:inline" />
+				<CaretDownIcon className="hidden size-3 text-muted-foreground sm:inline" />
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="start" className="w-48">
 				{MODES.map((mode) => (
@@ -98,7 +101,7 @@ export function PlanSelector({
 							<span>{mode.label}</span>
 						</span>
 
-						{selectedMode === mode.value && <Check className="size-3" />}
+						{selectedMode === mode.value && <CheckIcon className="size-3" />}
 					</DropdownMenuItem>
 				))}
 			</DropdownMenuContent>

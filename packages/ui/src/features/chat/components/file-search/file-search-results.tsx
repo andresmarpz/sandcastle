@@ -1,5 +1,5 @@
 import { useAtomValue } from "@effect-atom/atom-react";
-import { File } from "@phosphor-icons/react";
+import { FileIcon } from "@phosphor-icons/react/File";
 import { useMemo } from "react";
 import { type FileMatch, fileSearchAtomFamily } from "@/api/files-atoms";
 import { CommandEmpty, CommandGroup, CommandItem } from "@/components/command";
@@ -39,7 +39,7 @@ function FileSearchResultsInner({
 						onSelect={() => onSelect(file.path)}
 						title={file.path}
 					>
-						<File className="h-4 w-4 shrink-0 text-muted-foreground" />
+						<FileIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
 						<span className="flex min-w-0">
 							{directory && (
 								<span className="truncate text-muted-foreground">
