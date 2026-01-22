@@ -3,12 +3,12 @@
 import { Result, useAtomValue } from "@effect-atom/atom-react";
 import type { Repository, Session } from "@sandcastle/schemas";
 import { AnimatePresence } from "motion/react";
+import { memo } from "react";
 import { repositoryAtomFamily } from "@/api/repository-atoms";
 import { sessionListByRepositoryAtomFamily } from "@/api/session-atoms";
-
 import { SidebarMenu } from "@/components/sidebar";
 import { Skeleton } from "@/components/skeleton";
-import SidebarNewSession from "@/features/sidebar/main/sidebar-new-session";
+import { SidebarNewSession } from "@/features/sidebar/main/sidebar-new-session";
 import { SessionItem } from "./session-item";
 
 interface SessionListProps {
@@ -23,29 +23,33 @@ function sortByLastActivity(sessions: readonly Session[]) {
 	);
 }
 
-export function SessionList({ repositoryId }: SessionListProps) {
-	const sessionsResult = useAtomValue(
-		sessionListByRepositoryAtomFamily(repositoryId),
-	);
-	const repositoryResult = useAtomValue(repositoryAtomFamily(repositoryId));
+export const SessionList = memo(
+	function SessionList({ repositoryId }: SessionListProps) {
+		const sessionsResult = useAtomValue(
+			sessionListByRepositoryAtomFamily(repositoryId),
+		);
+		const repositoryResult = useAtomValue(repositoryAtomFamily(repositoryId));
 
-	const combinedResult = Result.all({
-		sessions: sessionsResult,
-		repository: repositoryResult,
-	});
+		const combinedResult = Result.all({
+			sessions: sessionsResult,
+			repository: repositoryResult,
+		});
 
-	return Result.matchWithWaiting(combinedResult, {
-		onWaiting: () => <SessionListSkeleton />,
-		onError: () => <SessionListError />,
-		onDefect: () => <SessionListError />,
-		onSuccess: ({ value: { sessions, repository } }) => (
-			<SessionListContent
-				sessions={sortByLastActivity(sessions)}
-				repository={repository}
-			/>
-		),
-	});
-}
+		return Result.matchWithWaiting(combinedResult, {
+			onWaiting: () => <SessionListSkeleton />,
+			onError: () => <SessionListError />,
+			onDefect: () => <SessionListError />,
+			onSuccess: ({ value: { sessions, repository } }) => (
+				<SessionListContent
+					sessions={sortByLastActivity(sessions)}
+					repository={repository}
+				/>
+			),
+		});
+	},
+	(prev, next) => prev.repositoryId === next.repositoryId,
+);
+SessionList.displayName = "SessionList";
 
 interface SessionListContentProps {
 	sessions: readonly Session[];

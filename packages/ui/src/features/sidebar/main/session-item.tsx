@@ -10,7 +10,7 @@ import type { Session } from "@sandcastle/schemas";
 import { formatDistanceToNow } from "date-fns";
 import * as Option from "effect/Option";
 import { motion } from "motion/react";
-import { useMemo, useState } from "react";
+import { memo, useMemo, useState } from "react";
 import { useLocation } from "react-router";
 import { deleteSessionMutation, SESSION_LIST_KEY } from "@/api/session-atoms";
 import { worktreeAtomFamily } from "@/api/worktree-atoms";
@@ -54,7 +54,10 @@ function formatRelativeTime(iso: string) {
 	});
 }
 
-export function SessionItem({ session, repositoryId }: SessionItemProps) {
+export const SessionItem = memo(function SessionItem({
+	session,
+	repositoryId,
+}: SessionItemProps) {
 	const location = useLocation();
 	const { navigateToSession } = useSessionNavigation();
 	const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -188,7 +191,8 @@ export function SessionItem({ session, repositoryId }: SessionItemProps) {
 			</AlertDialog>
 		</>
 	);
-}
+});
+SessionItem.displayName = "SessionItem";
 
 interface SessionOriginBadgeProps {
 	worktreeId: string | null;

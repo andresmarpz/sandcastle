@@ -6,7 +6,7 @@ import {
 } from "@phosphor-icons/react/dist/ssr";
 import type { Repository, Worktree } from "@sandcastle/schemas";
 import { Option } from "effect";
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import { useNavigate } from "react-router";
 import { createSessionMutation, SESSION_LIST_KEY } from "@/api/session-atoms";
 import {
@@ -30,7 +30,9 @@ interface Props {
 	repository: Repository;
 }
 
-export default function SidebarNewSession({ repository }: Props) {
+export const SidebarNewSession = memo(function SidebarNewSession({
+	repository,
+}: Props) {
 	const { id: repositoryId } = repository;
 	const navigate = useNavigate();
 
@@ -159,4 +161,5 @@ export default function SidebarNewSession({ repository }: Props) {
 			</DropdownMenu>
 		</SidebarMenuItem>
 	);
-}
+});
+SidebarNewSession.displayName = "SidebarNewSession";
