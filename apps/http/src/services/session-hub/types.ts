@@ -42,6 +42,8 @@ export interface ActiveTurnContext {
 	readonly content: string;
 	readonly parts?: readonly MessagePart[];
 	readonly clientMessageId: string;
+	/** Server timestamp when the turn started (ISO 8601) */
+	readonly startedAt: string;
 }
 
 /**

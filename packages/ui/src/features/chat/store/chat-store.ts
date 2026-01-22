@@ -85,6 +85,8 @@ export interface ChatSessionState {
 	hasUnreadContent: boolean;
 	/** Real-time metadata from finish events (token usage, cost) */
 	streamingMetadata: StreamingMetadata | null;
+	/** Server timestamp when current turn started (ISO 8601), for streaming duration */
+	turnStartedAt: string | null;
 }
 
 /** Metadata from StreamEventFinish for real-time UI updates */
@@ -183,6 +185,7 @@ const DEFAULT_SESSION_STATE: ChatSessionState = {
 	answeredQuestionToolCallIds: new Set(),
 	hasUnreadContent: false,
 	streamingMetadata: null,
+	turnStartedAt: null,
 };
 
 // Frozen singleton to return for sessions that don't exist yet
@@ -204,6 +207,7 @@ const EMPTY_SESSION_STATE: ChatSessionState = {
 	answeredQuestionToolCallIds: EMPTY_ANSWERED_QUESTION_IDS,
 	hasUnreadContent: false,
 	streamingMetadata: null,
+	turnStartedAt: null,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -379,6 +383,8 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 								timestamp: event.snapshot.historyCursor.lastMessageAt ?? "",
 							}
 						: null,
+					// Capture turn start time for late subscribers
+					turnStartedAt: event.turnContext?.startedAt ?? null,
 				}));
 
 				// If there's an active turn, create accumulator and process buffer
@@ -452,6 +458,7 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 					...prev,
 					status: "streaming",
 					activeTurnId: event.turnId,
+					turnStartedAt: event.startedAt,
 				}));
 				break;
 			}
@@ -475,6 +482,7 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 								messages: newMessages,
 								status: "idle",
 								activeTurnId: null,
+								turnStartedAt: null,
 								pendingApprovalRequests: new Map(),
 								approvedPlanToolCallIds: new Set(),
 								answeredQuestionToolCallIds: new Set(),
@@ -486,6 +494,7 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 							messages: [...prev.messages, finalMessage],
 							status: "idle",
 							activeTurnId: null,
+							turnStartedAt: null,
 							pendingApprovalRequests: new Map(),
 							approvedPlanToolCallIds: new Set(),
 							answeredQuestionToolCallIds: new Set(),
@@ -497,6 +506,7 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 						...prev,
 						status: "idle",
 						activeTurnId: null,
+						turnStartedAt: null,
 						pendingApprovalRequests: new Map(),
 						approvedPlanToolCallIds: new Set(),
 						answeredQuestionToolCallIds: new Set(),
