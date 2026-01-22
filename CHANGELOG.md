@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.2.2](https://github.com/andresmarpz/sandcastle/compare/v0.2.1...v0.2.2) (2026-01-22)
+
+
+### Features
+
+* migrate typechecker from tsc to tsgo ([#106](https://github.com/andresmarpz/sandcastle/issues/106)) ([3ec5f4d](https://github.com/andresmarpz/sandcastle/commit/3ec5f4ddb540ed4e15681bc7a580b07712db6e97))
+* **ui:** add Create PR button to session header ([#109](https://github.com/andresmarpz/sandcastle/issues/109)) ([2ee359e](https://github.com/andresmarpz/sandcastle/commit/2ee359ed778daa699aeb1e5bcc3030e94e544a3c))
+* **ui:** add session completion sounds and dock badge notifications ([#108](https://github.com/andresmarpz/sandcastle/issues/108)) ([0a0042f](https://github.com/andresmarpz/sandcastle/commit/0a0042f456a70d899996a1181a179f7dbb5d0228))
+
 ## [0.2.1](https://github.com/andresmarpz/sandcastle/compare/v0.2.0...v0.2.1) (2026-01-22)
 
 
