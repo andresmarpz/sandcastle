@@ -39,6 +39,7 @@ type SidebarContextProps = {
 	// Resize functionality
 	width: number;
 	setWidth: (width: number) => void;
+	persistWidth: (width: number) => void;
 };
 
 const SidebarContext = React.createContext<SidebarContextProps | null>(null);
@@ -97,8 +98,10 @@ function SidebarProvider({
 			SIDEBAR_MAX_WIDTH,
 		);
 		_setWidth(clampedWidth);
-		// Persist to cookie
-		document.cookie = `${SIDEBAR_WIDTH_COOKIE_NAME}=${clampedWidth}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
+	}, []);
+
+	const persistWidth = React.useCallback((widthToPersist: number) => {
+		document.cookie = `${SIDEBAR_WIDTH_COOKIE_NAME}=${widthToPersist}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
 	}, []);
 
 	// This is the internal state of the sidebar.
@@ -156,6 +159,7 @@ function SidebarProvider({
 			toggleSidebar,
 			width,
 			setWidth,
+			persistWidth,
 		}),
 		[
 			state,
@@ -166,6 +170,7 @@ function SidebarProvider({
 			toggleSidebar,
 			width,
 			setWidth,
+			persistWidth,
 		],
 	);
 
@@ -321,16 +326,19 @@ function SidebarTrigger({
 }
 
 function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
-	const { toggleSidebar, width, setWidth, open, setOpen } = useSidebar();
+	const { toggleSidebar, width, setWidth, persistWidth, open, setOpen } =
+		useSidebar();
 	const startXRef = React.useRef(0);
 	const startWidthRef = React.useRef(0);
 	const isResizingRef = React.useRef(false);
+	const currentWidthRef = React.useRef(width);
 
 	const handleMouseDown = React.useCallback(
 		(e: React.MouseEvent) => {
 			e.preventDefault();
 			startXRef.current = e.clientX;
 			startWidthRef.current = width;
+			currentWidthRef.current = width;
 			isResizingRef.current = true;
 
 			// Apply select-none directly to body to prevent text selection during drag
@@ -353,6 +361,7 @@ function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
 					setOpen(true);
 				}
 
+				currentWidthRef.current = newWidth;
 				setWidth(newWidth);
 			};
 
@@ -362,12 +371,14 @@ function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
 				document.body.style.cursor = "";
 				document.removeEventListener("mousemove", handleMouseMove);
 				document.removeEventListener("mouseup", handleMouseUp);
+				// Persist width to cookie only on mouse up, not every frame
+				persistWidth(currentWidthRef.current);
 			};
 
 			document.addEventListener("mousemove", handleMouseMove);
 			document.addEventListener("mouseup", handleMouseUp);
 		},
-		[width, setWidth, open, setOpen],
+		[width, setWidth, persistWidth, open, setOpen],
 	);
 
 	const handleDoubleClick = React.useCallback(() => {
