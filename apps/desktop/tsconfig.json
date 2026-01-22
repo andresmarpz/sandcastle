@@ -19,7 +19,6 @@
 		"noUnusedLocals": true,
 		"noUnusedParameters": true,
 		"noFallthroughCasesInSwitch": true,
-		"baseUrl": ".",
 		"paths": {
 			"@/*": ["./src/*", "../../packages/ui/src/*"],
 			"@sandcastle/ui/*": ["../../packages/ui/src/*"]
