@@ -80,10 +80,9 @@ export function PlanSelector({
 	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger
-				render={<Button variant="outline" size="sm" />}
+				render={<Button variant="ghost" size="sm" />}
 				className="w-auto gap-1.5 px-2"
 			>
-				<SelectedIcon className={cn("size-3.5", selectedColor)} />
 				<span className="hidden text-[13px] sm:inline">
 					{selectedModeData?.label ?? "Plan"}
 				</span>

@@ -11,7 +11,7 @@ export type ConversationProps = ComponentProps<typeof StickToBottom>;
 
 export const Conversation = ({ className, ...props }: ConversationProps) => (
 	<StickToBottom
-		className={cn("relative min-w-0 flex-1 overflow-hidden", className)}
+		className={cn("relative min-w-0 min-h-0 flex-1 overflow-auto", className)}
 		initial="instant"
 		resize="instant"
 		role="log"

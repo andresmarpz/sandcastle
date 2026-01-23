@@ -11,7 +11,7 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-	--background: oklch(0.98 0.002 60);
+	--background: oklch(0.97 0 0);
 	--foreground: oklch(0.147 0.004 49.25);
 	--card: oklch(0.975 0.002 60);
 	--card-foreground: oklch(0.147 0.004 49.25);
@@ -30,6 +30,7 @@
 	--border: oklch(0.88 0.002 55);
 	--input: oklch(0.918 0.006 55);
 	--ring: oklch(0.709 0.01 56.259);
+	--button: oklch(0.99 0 0);
 	--shadow-color: 45 25% 15%;
 	--chart-1: oklch(0.646 0.222 41.116);
 	--chart-2: oklch(0.6 0.118 184.704);
@@ -37,7 +38,7 @@
 	--chart-4: oklch(0.828 0.189 84.429);
 	--chart-5: oklch(0.769 0.188 70.08);
 	--radius: 0.45rem;
-	--sidebar: oklch(0.997 0 0);
+	--sidebar: oklch(0.99 0 0);
 	--sidebar-foreground: oklch(0.4 0.01 55);
 	--sidebar-primary: oklch(0.216 0.006 56.043);
 	--sidebar-primary-foreground: oklch(0.97 0.003 65);
@@ -47,11 +48,14 @@
 	--sidebar-ring: oklch(0.709 0.01 56.259);
 	--scrollbar-thumb: oklch(0.75 0.002 55);
 	--scrollbar-thumb-hover: oklch(0.55 0.008 55);
+	--border-shadow:
+		0 0 0 1px #0b060032, 0 1px 2px -1px #1310100a, 0 1px 2px 0 #1310100f,
+		0 1px 3px 0 #13101014;
 }
 
 .dark {
 	--shadow-color: 0 0% 0%;
-	--background: oklch(0.135 0.006 38);
+	--background: oklch(0.165 0.006 38);
 	--foreground: oklch(0.9 0.006 42);
 	--card: oklch(0.19 0.007 40);
 	--card-foreground: oklch(0.9 0.006 42);
@@ -70,12 +74,13 @@
 	--border: oklch(1 0.005 38 / 14%);
 	--input: oklch(1 0.005 38 / 18%);
 	--ring: oklch(0.553 0.015 40);
+	--button: oklch(0 0 0);
 	--chart-1: oklch(0.488 0.243 264.376);
 	--chart-2: oklch(0.696 0.17 162.48);
 	--chart-3: oklch(0.769 0.188 70.08);
 	--chart-4: oklch(0.627 0.265 303.9);
 	--chart-5: oklch(0.645 0.246 16.439);
-	--sidebar: oklch(0.175 0.0065 40);
+	--sidebar: oklch(0.205 0.0065 40);
 	--sidebar-foreground: oklch(0.75 0.006 42);
 	--sidebar-primary: oklch(0.488 0.243 264.376);
 	--sidebar-primary-foreground: oklch(0.9 0.006 42);
@@ -85,10 +90,14 @@
 	--sidebar-ring: oklch(0.553 0.016 40);
 	--scrollbar-thumb: oklch(0.4 0.008 40);
 	--scrollbar-thumb-hover: oklch(0.55 0.008 40);
+	--border-shadow:
+		0 0 0 1px #f7ecec3f, 0 1px 2px -1px #1310100a, 0 1px 2px 0 #1310100f,
+		0 1px 3px 0 #13101014;
 }
 
 @theme inline {
 	--font-sans: "Inter Variable", sans-serif;
+	--border-shadow: var(--border-shadow);
 	--shadow-2xs: 0 1px 2px hsl(var(--shadow-color) / 0.04);
 	--shadow-xs:
 		0 1px 3px hsl(var(--shadow-color) / 0.05),
@@ -161,6 +170,7 @@
 		backface-visibility: hidden;
 		-webkit-backface-visibility: hidden;
 	}
+
 	body {
 		@apply font-sans bg-background text-foreground;
 		font-size: 13px;
@@ -174,9 +184,11 @@
 		-webkit-font-smoothing: antialiased;
 		-moz-osx-font-smoothing: grayscale;
 	}
+
 	html {
 		@apply font-sans;
 	}
+
 	h1,
 	h2,
 	h3,
