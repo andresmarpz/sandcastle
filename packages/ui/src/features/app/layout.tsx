@@ -16,7 +16,6 @@ import { cn } from "@/lib/utils";
 import { CreatePRButton } from "./components/create-pr-button";
 import { HomePage } from "./pages/home";
 import { SessionPage } from "./pages/session";
-import { WorktreePage } from "./pages/worktree";
 
 export default function Layout() {
 	const platform = usePlatform();
@@ -78,7 +77,7 @@ function SidebarMainContent() {
 			<div className="flex-1 min-h-0 overflow-hidden">
 				<Routes>
 					<Route path="/" element={<HomePage />} />
-					<Route path="/worktree/:worktreeId" element={<WorktreePage />} />
+					{/* <Route path="/worktree/:worktreeId" element={<WorktreePage />} /> */}
 					<Route path="/repository/:repositoryId" element={<HomePage />} />
 					<Route
 						path="/repository/:repositoryId/sessions/:sessionId"

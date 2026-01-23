@@ -11,20 +11,11 @@ import { clearSessionNotification } from "@/features/chat/services/notification-
 import {
 	type ChatSessionState,
 	chatStore,
-	type SendResult,
 	type StreamingMetadata,
 	type ToolApprovalRequest,
 } from "./chat-store";
 
 export interface UseChatSessionResult extends ChatSessionState {
-	/** Send a message to the session. Returns when server acknowledges. */
-	sendMessage: (options: {
-		text: string;
-		parts?: UIMessage["parts"];
-		mode?: "plan" | "build";
-	}) => Promise<SendResult>;
-	/** Stop the current stream */
-	stop: () => void;
 	/** Remove a message from the queue */
 	dequeue: (messageId: string) => Promise<boolean>;
 }
@@ -72,26 +63,6 @@ export function useChatSession(sessionId: string): UseChatSessionResult {
 	// Select session state with automatic re-renders
 	const session = useStore(chatStore, (state) => state.getSession(sessionId));
 
-	// Memoized actions
-	const sendMessage = useCallback(
-		({
-			text,
-			parts,
-			mode,
-		}: {
-			text: string;
-			parts?: UIMessage["parts"];
-			mode?: "plan" | "build";
-		}) => {
-			return chatStore.getState().send(sessionId, text, parts, mode);
-		},
-		[sessionId],
-	);
-
-	const stop = useCallback(() => {
-		chatStore.getState().stop(sessionId);
-	}, [sessionId]);
-
 	const dequeue = useCallback(
 		(messageId: string) => {
 			return chatStore.getState().dequeue(sessionId, messageId);
@@ -102,11 +73,9 @@ export function useChatSession(sessionId: string): UseChatSessionResult {
 	return useMemo(
 		() => ({
 			...session,
-			sendMessage,
-			stop,
 			dequeue,
 		}),
-		[session, sendMessage, stop, dequeue],
+		[session, dequeue],
 	);
 }
 
@@ -144,13 +113,10 @@ export function useChatActions(sessionId: string) {
 		chatStore.getState().stop(sessionId);
 	}, [sessionId]);
 
-	return useMemo(
-		() => ({
-			sendMessage,
-			stop,
-		}),
-		[sendMessage, stop],
-	);
+	return {
+		sendMessage,
+		stop,
+	};
 }
 
 /**

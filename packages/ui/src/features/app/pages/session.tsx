@@ -1,10 +1,8 @@
 import { Result, useAtomValue } from "@effect-atom/atom-react";
-import * as Option from "effect/Option";
-import { useMemo } from "react";
 import { useParams } from "react-router";
 import { sessionQuery } from "@/api/session-atoms";
 import { Spinner } from "@/components/spinner";
-import { ChatView } from "@/features/chat";
+import { ChatPanel } from "@/features/chat/components/chat-panel/chat-panel";
 
 export function SessionPage() {
 	const { repositoryId, sessionId } = useParams<{
@@ -25,20 +23,9 @@ export function SessionPage() {
 
 function SessionPageContent({ sessionId }: { sessionId: string }) {
 	const sessionResult = useAtomValue(sessionQuery(sessionId));
-	const session = useMemo(
-		() => Option.getOrElse(Result.value(sessionResult), () => null),
-		[sessionResult],
-	);
-
-	const hasSessionCache = session !== null;
 
 	return Result.matchWithWaiting(sessionResult, {
-		onWaiting: () =>
-			hasSessionCache ? (
-				<ChatView sessionId={sessionId} workingPath={session.workingPath} />
-			) : (
-				<SessionLoading />
-			),
+		onWaiting: () => <SessionLoading />,
 		onError: () => (
 			<div className="flex h-full items-center justify-center text-muted-foreground">
 				Failed to load session
@@ -49,9 +36,7 @@ function SessionPageContent({ sessionId }: { sessionId: string }) {
 				Failed to load session
 			</div>
 		),
-		onSuccess: () => (
-			<ChatView sessionId={sessionId} workingPath={session?.workingPath} />
-		),
+		onSuccess: (result) => <ChatPanel session={result.value} />,
 	});
 }
 

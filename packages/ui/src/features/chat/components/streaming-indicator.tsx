@@ -5,7 +5,8 @@ import { PixelSpinner } from "@/components/ai-elements/pixel-spinner";
 import { cn } from "@/lib/utils";
 
 export interface StreamingIndicatorProps {
-	startTime: number;
+	// ISO 8601 timestamp
+	startTime: string;
 	word: string;
 	className?: string;
 }
@@ -24,7 +25,7 @@ export const StreamingIndicator = memo(function StreamingIndicator({
 	useEffect(() => {
 		// Update elapsed time every 100ms
 		const interval = setInterval(() => {
-			setElapsed(Date.now() - startTime);
+			setElapsed(Date.now() - Date.parse(startTime));
 		}, 100);
 
 		return () => clearInterval(interval);
