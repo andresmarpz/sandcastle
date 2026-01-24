@@ -278,6 +278,7 @@ export const makeSessionHub = Effect.gen(function* () {
 								turnId,
 								seq: index,
 								metadata: msg.metadata,
+								parentToolCallId: msg.parentToolCallId,
 							})),
 						)
 						.pipe(

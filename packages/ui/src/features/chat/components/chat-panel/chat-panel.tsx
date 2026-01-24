@@ -6,25 +6,11 @@ import * as Option from "effect/Option";
 import { memo, useEffect, useMemo } from "react";
 import { chatHistoryQuery } from "@/api/chat-atoms";
 import { Spinner } from "@/components/spinner";
-import { chatStore, useChatSession } from "../../store";
+import { chatStore } from "../../store";
 import { ChatPanelContent } from "./chat-panel-content";
 
 interface ChatPanelProps {
 	session: Session;
-}
-
-function mapHistoryToUiMessages(history: GetHistoryResult | null): UIMessage[] {
-	if (!history) return [];
-	return history.messages.map(mapChatMessageToUi);
-}
-
-function mapChatMessageToUi(message: ChatMessage): UIMessage {
-	return {
-		id: message.id,
-		role: message.role,
-		parts: message.parts as UIMessage["parts"],
-		...(message.metadata ? { metadata: message.metadata } : {}),
-	};
 }
 
 export const ChatPanel = memo(function ChatPanel({ session }: ChatPanelProps) {
@@ -39,7 +25,10 @@ export const ChatPanel = memo(function ChatPanel({ session }: ChatPanelProps) {
 		if (cachedHistory) {
 			chatStore
 				.getState()
-				.setHistory(session.id, mapHistoryToUiMessages(cachedHistory));
+				.setHistory(
+					session.id,
+					cachedHistory.messages as unknown as UIMessage[],
+				);
 		}
 	}, [cachedHistory, session.id]);
 
@@ -49,7 +38,7 @@ export const ChatPanel = memo(function ChatPanel({ session }: ChatPanelProps) {
 		onDefect: () => <div>defect</div>,
 		onSuccess: (result) => (
 			<ChatPanelContent
-				initialMessages={mapHistoryToUiMessages(result.value)}
+				initialMessages={result.value.messages as unknown as UIMessage[]}
 				session={session}
 			/>
 		),
