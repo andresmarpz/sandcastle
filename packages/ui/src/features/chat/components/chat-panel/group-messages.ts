@@ -5,7 +5,13 @@ import type { UIMessage } from "ai";
  */
 export type ToolMetadata =
 	| { tool: "Skill"; commandName: string; allowedTools?: string[] }
-	| { tool: "ExitPlanMode"; approved: boolean; reason?: string };
+	| { tool: "ExitPlanMode"; approved: boolean; reason?: string }
+	| {
+			tool: "TodoWrite";
+			added: string[];
+			completed: string[];
+			started: string[];
+	  };
 
 /**
  * Represents a single tool invocation with extracted metadata.
@@ -46,11 +52,42 @@ export interface SubagentItem {
 	responseText: string | null;
 }
 
+/**
+ * Represents a single todo item from TodoWrite.
+ */
+export interface TodoItem {
+	content: string;
+	status: "pending" | "in_progress" | "completed";
+	activeForm: string;
+}
+
+/**
+ * Represents the current todo list state from TodoWrite.
+ */
+export interface TasksItem {
+	type: "tasks";
+	id: string;
+	todos: TodoItem[];
+}
+
+/**
+ * Represents a TodoWrite trace showing what changed.
+ */
+export interface TodoTraceItem {
+	type: "todo-trace";
+	id: string;
+	added: string[];
+	completed: string[];
+	started: string[];
+}
+
 export type GroupedItem =
 	| { type: "user-message"; id: string; message: UIMessage }
 	| { type: "assistant-text"; id: string; messageId: string; text: string }
 	| { type: "work-unit"; id: string; steps: ToolStep[] }
-	| SubagentItem;
+	| SubagentItem
+	| TasksItem
+	| TodoTraceItem;
 
 function getToolName(part: { type: string; toolName?: string }): string {
 	if (part.type === "dynamic-tool") {
@@ -79,6 +116,40 @@ function normalizeState(state: string | undefined): ToolStep["state"] {
 		default:
 			return "pending";
 	}
+}
+
+/**
+ * Computes the diff between two todo lists.
+ */
+function computeTodoDiff(
+	prev: TodoItem[],
+	curr: TodoItem[],
+): { added: string[]; completed: string[]; started: string[] } {
+	// Build a map of previous todos by content for comparison
+	const prevByContent = new Map<string, TodoItem>();
+	for (const todo of prev) {
+		prevByContent.set(todo.content, todo);
+	}
+
+	const added: string[] = [];
+	const completed: string[] = [];
+	const started: string[] = [];
+
+	for (const todo of curr) {
+		const prevTodo = prevByContent.get(todo.content);
+		if (!prevTodo) {
+			added.push(todo.content);
+		} else {
+			if (todo.status === "completed" && prevTodo.status !== "completed") {
+				completed.push(todo.content);
+			}
+			if (todo.status === "in_progress" && prevTodo.status === "pending") {
+				started.push(todo.content);
+			}
+		}
+	}
+
+	return { added, completed, started };
 }
 
 /**
@@ -156,6 +227,10 @@ export function groupMessages(messages: readonly UIMessage[]): GroupedItem[] {
 	let pendingSteps: ToolStep[] = [];
 	let stepIndex = 0;
 
+	// Track the latest TodoWrite (only render the last one)
+	let latestTodoWrite: { id: string; todos: TodoItem[] } | null = null;
+	let previousTodos: TodoItem[] = [];
+
 	const flushWorkUnit = () => {
 		const firstStep = pendingSteps[0];
 		if (!firstStep) return;
@@ -171,7 +246,6 @@ export function groupMessages(messages: readonly UIMessage[]): GroupedItem[] {
 	for (const message of messages) {
 		if (message.role === "user") {
 			// Skip user messages that are part of a subagent (Task tool) conversation
-			console.log(message);
 			const parentToolCallId = (message as { parentToolCallId?: string | null })
 				.parentToolCallId;
 			if (parentToolCallId) {
@@ -224,6 +298,27 @@ export function groupMessages(messages: readonly UIMessage[]): GroupedItem[] {
 					continue;
 				}
 
+				// TodoWrite -> flush work unit, emit trace, track latest for full render
+				if (step.toolName === "TodoWrite") {
+					flushWorkUnit();
+
+					const input = step.input as { todos?: TodoItem[] };
+					const currentTodos = input.todos ?? [];
+					const diff = computeTodoDiff(previousTodos, currentTodos);
+
+					result.push({
+						type: "todo-trace",
+						id: `todo-trace-${step.id}`,
+						added: diff.added,
+						completed: diff.completed,
+						started: diff.started,
+					});
+
+					latestTodoWrite = { id: step.id, todos: currentTodos };
+					previousTodos = currentTodos;
+					continue;
+				}
+
 				// Regular tool -> add to pending work unit
 				pendingSteps.push(step);
 			}
@@ -234,6 +329,15 @@ export function groupMessages(messages: readonly UIMessage[]): GroupedItem[] {
 
 	// Flush any remaining pending steps
 	flushWorkUnit();
+
+	// Emit the latest TodoWrite as a single tasks item
+	if (latestTodoWrite) {
+		result.push({
+			type: "tasks",
+			id: `tasks-${latestTodoWrite.id}`,
+			todos: latestTodoWrite.todos,
+		});
+	}
 
 	return result;
 }
