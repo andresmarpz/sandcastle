@@ -122,6 +122,13 @@ const migrations: Migration[] = [
 			ALTER TABLE sessions ADD COLUMN cacheCreationInputTokens INTEGER NOT NULL DEFAULT 0;
 		`,
 	},
+	{
+		version: 5,
+		name: "add_parent_tool_call_id",
+		up: `
+			ALTER TABLE chat_messages ADD COLUMN parentToolCallId TEXT;
+		`,
+	},
 ];
 
 const ensureMigrationsTable = (db: Database): void => {

@@ -120,6 +120,7 @@ export function processMessage(
 	state: StreamState,
 	config: AdapterConfig,
 ): ProcessResult {
+	console.log("MSG ", JSON.stringify(message, null, 2));
 	const events: ChatStreamEvent[] = [];
 	let newState = state;
 

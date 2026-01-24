@@ -43,17 +43,6 @@ export function ChatPanelContent({
 									/>*/}
 						<ChatPanelMessages messages={messages} />
 
-						{/*{streamingState && (
-										<Message from="assistant">
-											<MessageContent>
-												<StreamingIndicator
-													startTime={streamingState.startTime}
-													word={streamingState.word}
-												/>
-											</MessageContent>
-										</Message>
-									)}
-							*/}
 						{turnStartedAt && (
 							<Message from="assistant">
 								<MessageContent>
