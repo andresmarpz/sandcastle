@@ -8,6 +8,7 @@ import {
 } from "@/components/ai-elements/message";
 import { type GroupedItem, groupMessages } from "./group-messages";
 import { SubagentMessage } from "./messages/subagent";
+import { TasksMessage, TodoTraceMessage } from "./messages/tasks";
 import { WorkUnit } from "./work-unit";
 
 interface ChatPanelMessagesProps {
@@ -82,6 +83,24 @@ const GroupedItemRenderer = memo(function GroupedItemRenderer({
 				<Message from="assistant">
 					<MessageContent>
 						<SubagentMessage item={item} />
+					</MessageContent>
+				</Message>
+			);
+
+		case "tasks":
+			return (
+				<Message from="assistant">
+					<MessageContent>
+						<TasksMessage item={item} />
+					</MessageContent>
+				</Message>
+			);
+
+		case "todo-trace":
+			return (
+				<Message from="assistant">
+					<MessageContent>
+						<TodoTraceMessage item={item} />
 					</MessageContent>
 				</Message>
 			);
