@@ -7,7 +7,6 @@ import { cn } from "@/lib/utils";
 export interface StreamingIndicatorProps {
 	// ISO 8601 timestamp
 	startTime: string;
-	word: string;
 	className?: string;
 }
 
@@ -17,9 +16,9 @@ export interface StreamingIndicatorProps {
  */
 export const StreamingIndicator = memo(function StreamingIndicator({
 	startTime,
-	word,
 	className,
 }: StreamingIndicatorProps) {
+	const [word] = useState(() => getRandomStreamingWord());
 	const [elapsed, setElapsed] = useState(0);
 
 	useEffect(() => {

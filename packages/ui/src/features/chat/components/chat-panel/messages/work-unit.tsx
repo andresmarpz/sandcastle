@@ -1,18 +1,49 @@
 "use client";
 
-import { CaretDown as CaretDownIcon } from "@phosphor-icons/react/CaretDown";
-import { Code as CodeIcon } from "@phosphor-icons/react/Code";
-import { FileMagnifyingGlass as FileMagnifyingGlassIcon } from "@phosphor-icons/react/FileMagnifyingGlass";
-import { FilePlus as FilePlusIcon } from "@phosphor-icons/react/FilePlus";
-import { FileText as FileTextIcon } from "@phosphor-icons/react/FileText";
-import { MagnifyingGlass as MagnifyingGlassIcon } from "@phosphor-icons/react/MagnifyingGlass";
-import { PencilSimpleLine as PencilSimpleLineIcon } from "@phosphor-icons/react/PencilSimpleLine";
-import { Sparkle as SparkleIcon } from "@phosphor-icons/react/Sparkle";
-import { Terminal as TerminalIcon } from "@phosphor-icons/react/Terminal";
-import { Wrench as WrenchIcon } from "@phosphor-icons/react/Wrench";
+import { CaretDownIcon } from "@phosphor-icons/react/CaretDown";
+import { CodeIcon } from "@phosphor-icons/react/Code";
+import { FileMagnifyingGlassIcon } from "@phosphor-icons/react/FileMagnifyingGlass";
+import { FilePlusIcon } from "@phosphor-icons/react/FilePlus";
+import { FileTextIcon } from "@phosphor-icons/react/FileText";
+import { MagnifyingGlassIcon } from "@phosphor-icons/react/MagnifyingGlass";
+import { PencilSimpleLineIcon } from "@phosphor-icons/react/PencilSimpleLine";
+import { SparkleIcon } from "@phosphor-icons/react/Sparkle";
+import { TerminalIcon } from "@phosphor-icons/react/Terminal";
+import { WrenchIcon } from "@phosphor-icons/react/Wrench";
 import { type ComponentType, memo, useState } from "react";
 import { cn } from "@/lib/utils";
-import type { ToolStep } from "./group-messages";
+import { BashTool } from "../tools/bash-tool";
+
+/**
+ * Tool-specific metadata (discriminated union by `tool` field).
+ */
+export type ToolMetadata =
+	| { tool: "Skill"; commandName: string; allowedTools?: string[] }
+	| { tool: "ExitPlanMode"; approved: boolean; reason?: string }
+	| {
+			tool: "TodoWrite";
+			added: string[];
+			completed: string[];
+			started: string[];
+	  };
+
+/**
+ * Represents a single tool invocation with extracted metadata.
+ */
+export interface ToolStep {
+	id: string;
+	messageId: string;
+	toolType: string;
+	toolName: string;
+	state: "pending" | "running" | "complete" | "error";
+	parentToolCallId: string | null;
+	/** Tool input arguments for rendering context */
+	input: Record<string, unknown>;
+	/** Tool output (available when state is "complete") */
+	output?: unknown;
+	/** Tool-specific metadata (e.g., skill info, plan approval) */
+	toolMetadata?: ToolMetadata;
+}
 
 interface WorkUnitProps {
 	steps: ToolStep[];
@@ -237,6 +268,11 @@ function extractFileName(filePath: string): string {
 const ToolStepRenderer = memo(function ToolStepRenderer({
 	step,
 }: ToolStepRendererProps) {
+	// Use specialized renderers for specific tools
+	if (step.toolName === "Bash") {
+		return <BashTool step={step} />;
+	}
+
 	const Icon = getToolIcon(step.toolName);
 	const { title, detail } = getToolDisplayInfo(step);
 

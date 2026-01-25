@@ -6,10 +6,10 @@ import {
 	MessageContent,
 	MessageResponse,
 } from "@/components/ai-elements/message";
-import { type GroupedItem, groupMessages } from "./group-messages";
+import { type GroupedItem, groupMessages } from "./helpers/group-messages";
 import { SubagentMessage } from "./messages/subagent";
 import { TasksMessage, TodoTraceMessage } from "./messages/tasks";
-import { WorkUnit } from "./work-unit";
+import { WorkUnit } from "./messages/work-unit";
 
 interface ChatPanelMessagesProps {
 	messages: readonly UIMessage[];

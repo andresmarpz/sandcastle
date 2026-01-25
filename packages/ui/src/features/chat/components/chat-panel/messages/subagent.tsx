@@ -9,8 +9,19 @@ import {
 	SubagentOutput,
 	SubagentPrompt,
 } from "@/components/ai-elements/subagent";
-import type { SubagentItem, ToolStep } from "../group-messages";
-import { WorkUnit } from "../work-unit";
+import { type ToolStep, WorkUnit } from "./work-unit";
+
+/**
+ * Represents a Task tool invocation with its nested steps.
+ */
+export interface SubagentItem {
+	type: "subagent";
+	id: string;
+	taskStep: ToolStep;
+	prompt: string | null;
+	nestedSteps: ToolStep[];
+	responseText: string | null;
+}
 
 type SubagentStatus = "streaming" | "running" | "complete" | "error";
 
