@@ -1,11 +1,36 @@
 "use client";
 
-import { CheckCircle as CheckCircleIcon } from "@phosphor-icons/react/CheckCircle";
-import { Circle as CircleIcon } from "@phosphor-icons/react/Circle";
-import { CircleHalf as CircleHalfIcon } from "@phosphor-icons/react/CircleHalf";
+import { CheckCircleIcon } from "@phosphor-icons/react/CheckCircle";
+import { CircleIcon } from "@phosphor-icons/react/Circle";
+import { CircleHalfIcon } from "@phosphor-icons/react/CircleHalf";
 import { memo } from "react";
 import { cn } from "@/lib/utils";
-import type { TasksItem, TodoItem, TodoTraceItem } from "../group-messages";
+
+export interface TodoItem {
+	content: string;
+	status: "pending" | "in_progress" | "completed";
+	activeForm: string;
+}
+
+/**
+ * Represents the current todo list state from TodoWrite.
+ */
+export interface TasksItem {
+	type: "tasks";
+	id: string;
+	todos: TodoItem[];
+}
+
+/**
+ * Represents a TodoWrite trace showing what changed.
+ */
+export interface TodoTraceItem {
+	type: "todo-trace";
+	id: string;
+	added: string[];
+	completed: string[];
+	started: string[];
+}
 
 interface TasksMessageProps {
 	item: TasksItem;

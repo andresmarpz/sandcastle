@@ -47,8 +47,8 @@ export function ChatPanelContent({
 							<Message from="assistant">
 								<MessageContent>
 									<StreamingIndicator
+										key={`indicator_${turnStartedAt}`}
 										startTime={turnStartedAt}
-										word={"Cooking"}
 									/>
 								</MessageContent>
 							</Message>

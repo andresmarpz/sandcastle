@@ -1,6 +1,5 @@
 import { Result, useAtomValue } from "@effect-atom/atom-react";
-import type { GetHistoryResult } from "@sandcastle/rpc/chat";
-import type { ChatMessage, Session } from "@sandcastle/schemas";
+import type { Session } from "@sandcastle/schemas";
 import type { UIMessage } from "ai";
 import * as Option from "effect/Option";
 import { memo, useEffect, useMemo } from "react";
