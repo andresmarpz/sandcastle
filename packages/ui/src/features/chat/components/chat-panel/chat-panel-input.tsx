@@ -48,7 +48,7 @@ interface ChatPanelInputProps {
 export const ChatPanelInput = memo(function ChatPanelInput({
 	sessionId,
 	workingPath,
-	autoFocus = false,
+	autoFocus = true,
 }: ChatPanelInputProps) {
 	// Store hooks for state and actions
 	const { sendMessage, stop } = useChatActions(sessionId);
