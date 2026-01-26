@@ -17,6 +17,8 @@ export const ChatMessage = Schema.Struct({
 	parts: Schema.Array(MessagePart),
 	createdAt: Schema.String,
 	metadata: Schema.optional(MessageMetadata),
+	/** Parent tool call ID - links user messages to their parent subagent (Task tool) */
+	parentToolCallId: Schema.optional(Schema.NullOr(Schema.String)),
 });
 export type ChatMessage = typeof ChatMessage.Type;
 

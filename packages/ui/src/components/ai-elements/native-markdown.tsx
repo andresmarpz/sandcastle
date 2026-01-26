@@ -261,7 +261,8 @@ export const NativeMarkdown = memo(function NativeMarkdown({
 					"[&_pre]:overflow-auto [&_pre]:rounded-md [&_pre]:p-4 [&_pre]:bg-muted",
 					"[&_code]:font-mono [&_code]:text-sm",
 					"[&_pre_code]:bg-transparent [&_pre_code]:p-0",
-					// Inline code
+					// Inline code - remove prose backticks and reduce font weight
+					"[&_code]:font-normal! [&_code]:before:content-none! [&_code]:after:content-none!",
 					"[&>p_code]:rounded [&>p_code]:bg-muted [&>p_code]:px-1.5 [&>p_code]:py-0.5",
 					className,
 				)}
@@ -277,6 +278,7 @@ export const NativeMarkdown = memo(function NativeMarkdown({
 			className={cn(
 				"size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
 				"[&_ul]:pl-4 [&_ol]:pl-4 [&_li]:wrap-break-word",
+				"[&_code]:font-normal! [&_code]:before:content-none! [&_code]:after:content-none!",
 				className,
 			)}
 			shikiTheme={shikiTheme}
@@ -314,6 +316,7 @@ export const NativeMarkdownResponse = memo(
 					className={cn(
 						"size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
 						"[&_ul]:pl-4 [&_ol]:pl-4 [&_li]:wrap-break-word",
+						"[&_code]:font-normal! [&_code]:before:content-none! [&_code]:after:content-none!",
 						className,
 					)}
 					shikiTheme={shikiTheme}

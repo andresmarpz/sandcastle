@@ -120,6 +120,7 @@ export function processMessage(
 	state: StreamState,
 	config: AdapterConfig,
 ): ProcessResult {
+	console.log("MSG ", JSON.stringify(message, null, 2));
 	const events: ChatStreamEvent[] = [];
 	let newState = state;
 
@@ -347,8 +348,11 @@ function processUserMessage(
 					output: block.content,
 					parentToolCallId: parentToolUseId ?? null,
 					...(approvalInfo && {
-						approved: approvalInfo.approved,
-						...(approvalInfo.feedback && { feedback: approvalInfo.feedback }),
+						approval: {
+							id: block.tool_use_id,
+							approved: approvalInfo.approved,
+							reason: approvalInfo.feedback,
+						},
 					}),
 				} satisfies StreamEventToolOutputAvailable);
 			}

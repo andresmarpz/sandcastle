@@ -59,7 +59,7 @@ export const MessageContent = memo(function MessageContent({
 				"flex max-w-full flex-col gap-4 overflow-hidden text-sm",
 				"w-[85%]",
 				"group-[.is-user]:ml-auto group-[.is-user]:w-fit group-[.is-user]:rounded-lg group-[.is-user]:bg-secondary group-[.is-user]:px-4 group-[.is-user]:py-3 group-[.is-user]:text-foreground",
-				"group-[.is-assistant]:text-foreground",
+				"group-[.is-assistant]:prose group-[.is-assistant]:prose-sm group-[.is-assistant]:dark:prose-invert",
 				className,
 			)}
 			{...props}

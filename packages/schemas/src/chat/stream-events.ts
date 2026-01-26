@@ -1,6 +1,7 @@
 import { Schema } from "effect";
 import { FinishReason, ProviderMetadata } from "../primitives";
 import { MessageMetadata } from "./message";
+import { ToolApproval } from "./parts";
 
 export const StreamEventTextStart = Schema.Struct({
 	type: Schema.Literal("text-start"),
@@ -97,7 +98,6 @@ export const StreamEventToolApprovalRequest = Schema.Struct({
 	type: Schema.Literal("tool-approval-request"),
 	toolCallId: Schema.String,
 	toolName: Schema.String,
-	input: Schema.Unknown,
 	/** ID of the message containing context (e.g., plan content for ExitPlanMode) */
 	messageId: Schema.optional(Schema.String),
 });
@@ -155,10 +155,8 @@ export const StreamEventToolOutputAvailable = Schema.Struct({
 	providerExecuted: Schema.optional(Schema.Boolean),
 	dynamic: Schema.optional(Schema.Boolean),
 	preliminary: Schema.optional(Schema.Boolean),
-	/** For tools requiring approval (e.g., ExitPlanMode): whether the user approved */
-	approved: Schema.optional(Schema.Boolean),
-	/** For tools requiring approval: user feedback when rejecting */
-	feedback: Schema.optional(Schema.String),
+	/** For tools requiring approval (e.g., ExitPlanMode): approval status and feedback */
+	approval: Schema.optional(ToolApproval),
 	parentToolCallId: Schema.optional(Schema.NullOr(Schema.String)),
 });
 export type StreamEventToolOutputAvailable =
