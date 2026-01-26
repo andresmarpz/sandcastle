@@ -7,16 +7,14 @@ import {
 	MessageContent,
 	MessageResponse,
 } from "@/components/ai-elements/message";
+import { PlanMessage } from "./chat-panel/messages/plan-message";
+import { SubagentMessage } from "./chat-panel/messages/subagent";
 import {
 	type GroupedItem,
 	getToolName,
 	getToolTitle,
 	groupMessages,
 } from "./group-messages";
-import { PlanPart } from "./parts/plan-part";
-import { QuestionsPart } from "./parts/questions-part";
-import { ReasoningPart } from "./parts/reasoning-part";
-import { SubagentPart } from "./parts/subagent-part";
 import { getToolIcon, WorkStep } from "./work-step";
 import { WorkUnit, WorkUnitContent, WorkUnitHeader } from "./work-unit";
 
@@ -162,18 +160,6 @@ const GroupedItemRenderer = memo(function GroupedItemRenderer({
 				</Message>
 			);
 
-		case "reasoning":
-			return (
-				<Message from="assistant">
-					<MessageContent>
-						<ReasoningPart
-							reasoning={item.text}
-							isStreaming={item.isStreaming}
-						/>
-					</MessageContent>
-				</Message>
-			);
-
 		case "work-unit":
 			return (
 				<Message from="assistant">
@@ -204,28 +190,25 @@ const GroupedItemRenderer = memo(function GroupedItemRenderer({
 			return (
 				<Message from="assistant">
 					<MessageContent>
-						<PlanPart part={item.part} sessionId={sessionId} />
+						<PlanMessage part={item.part} sessionId={sessionId} />
 					</MessageContent>
 				</Message>
 			);
 
-		case "questions":
-			return (
-				<Message from="assistant">
-					<MessageContent>
-						<QuestionsPart part={item.part} sessionId={sessionId} />
-					</MessageContent>
-				</Message>
-			);
+		// case "questions":
+		// 	return (
+		// 		<Message from="assistant">
+		// 			<MessageContent>
+		// 				<QuestionsPart part={item.part} sessionId={sessionId} />
+		// 			</MessageContent>
+		// 		</Message>
+		// 	);
 
 		case "subagent":
 			return (
 				<Message from="assistant">
 					<MessageContent>
-						<SubagentPart
-							taskPart={item.taskPart}
-							nestedSteps={item.nestedSteps}
-						/>
+						{/* <SubagentMessage item={item} /> */}
 					</MessageContent>
 				</Message>
 			);

@@ -1,19 +1,10 @@
 "use client";
 
-import { CaretDownIcon } from "@phosphor-icons/react/CaretDown";
 import { TerminalIcon } from "@phosphor-icons/react/Terminal";
 import { memo, useState } from "react";
-import {
-	Collapsible,
-	CollapsiblePanel,
-	CollapsibleTrigger,
-} from "@/components/collapsible";
+import { Tool, ToolContent, ToolTrigger } from "@/components/ai-elements/tool";
 import { cn } from "@/lib/utils";
 import type { ToolStep } from "../messages/work-unit";
-
-interface BashToolProps {
-	step: ToolStep;
-}
 
 /**
  * Truncates a string to a maximum length.
@@ -34,9 +25,12 @@ function stripAnsi(str: string): string {
 	return str.replace(new RegExp(`${escapeChar}\\[[0-9;]*[a-zA-Z]`, "g"), "");
 }
 
+interface BashToolProps {
+	step: ToolStep;
+}
+
 /**
  * Minimal collapsible bash tool renderer.
- * Matches the WorkUnit ToolStepRenderer styling with expandable output.
  */
 export const BashTool = memo(function BashTool({ step }: BashToolProps) {
 	const [isOpen, setIsOpen] = useState(false);
@@ -52,66 +46,29 @@ export const BashTool = memo(function BashTool({ step }: BashToolProps) {
 	const isError = step.state === "error";
 
 	return (
-		<Collapsible open={isOpen} onOpenChange={setIsOpen}>
-			<div
-				className={cn(
-					"rounded-md border border-border",
-					"bg-background",
-					"overflow-hidden",
-				)}
-			>
-				<CollapsibleTrigger
-					className={cn(
-						"flex items-center gap-2 px-3 py-2 w-full",
-						"text-sm text-subtle-foreground",
-						"hover:bg-muted/50 transition-colors",
-					)}
-				>
-					<TerminalIcon className="size-4 shrink-0" />
-					<span className="font-medium">Bash</span>
-					{detail && (
-						<>
-							<span className="text-muted-foreground">/</span>
-							<span className="truncate text-muted-foreground">{detail}</span>
-						</>
-					)}
-					{hasOutput && (
-						<div
-							className={cn(
-								"ml-auto size-4 shrink-0 transition-transform",
-								isOpen && "rotate-180",
-							)}
-						>
-							<CaretDownIcon className="size-4" />
-						</div>
-					)}
-				</CollapsibleTrigger>
-
-				{hasOutput && (
-					<CollapsiblePanel>
-						<div className="border-t border-border">
-							{/* Command */}
-							<div className="px-3 py-2 border-b border-border bg-muted/30">
-								<code className="font-mono font-normal text-xs text-muted-foreground break-all whitespace-pre-wrap before:content-none after:content-none">
-									$ {command}
-								</code>
-							</div>
-
-							{/* Output */}
-							<div className={cn(isError && "bg-destructive/5")}>
-								<pre
-									className={cn(
-										"font-mono text-xs overflow-auto max-h-60 whitespace-pre m-0! rounded-t-none!",
-										isError ? "text-destructive" : "text-foreground",
-									)}
-								>
-									{output}
-								</pre>
-							</div>
-						</div>
-					</CollapsiblePanel>
-				)}
-			</div>
-		</Collapsible>
+		<Tool open={isOpen} onOpenChange={setIsOpen}>
+			<ToolTrigger
+				icon={<TerminalIcon className="size-4 shrink-0" />}
+				title="Bash"
+				detail={detail}
+				state={step.state}
+				showCaret={hasOutput}
+			/>
+			<ToolContent>
+				<div className="px-3 py-2 bg-muted/30">
+					<code className="font-mono font-normal text-xs text-foreground/70 break-all whitespace-pre-wrap">
+						$ {command}
+					</code>
+					<pre
+						className={cn(
+							"m-0 pb-2 pt-6 font-mono text-xs overflow-auto max-h-60 whitespace-pre",
+							isError ? "text-destructive" : "text-foreground/70",
+						)}
+					>
+						{output}
+					</pre>
+				</div>
+			</ToolContent>
+		</Tool>
 	);
 });

@@ -22,10 +22,7 @@ import type {
 import type { UIMessage } from "ai";
 import { Cause, Effect, Exit, Fiber, Stream } from "effect";
 import { createStore } from "zustand/vanilla";
-import {
-	isAskUserQuestionTool,
-	isExitPlanModeTool,
-} from "@/features/chat/components/group-messages";
+import { isAskUserQuestionTool } from "@/features/chat/components/group-messages";
 import { notifySessionComplete } from "@/features/chat/services/notification-manager";
 import {
 	forkWithStreamingClient,
@@ -77,8 +74,6 @@ export interface ChatSessionState {
 	pendingApprovalRequests: Map<string, ToolApprovalRequest>;
 	/** Current mode (plan or build) - updated when ExitPlanMode is approved */
 	mode: "plan" | "build";
-	/** Tool call IDs for approved ExitPlanMode requests (for inline plan badge) */
-	approvedPlanToolCallIds: Set<string>;
 	/** Tool call IDs for answered AskUserQuestion requests (for inline questions badge) */
 	answeredQuestionToolCallIds: Set<string>;
 	/** Whether session has unread content (set on SessionStopped, cleared on visit) */
@@ -167,7 +162,6 @@ export type ChatStore = ChatStoreState & ChatStoreActions;
 const MAX_SESSIONS = 20;
 
 const EMPTY_APPROVAL_REQUESTS: Map<string, ToolApprovalRequest> = new Map();
-const EMPTY_APPROVED_PLAN_IDS: Set<string> = new Set();
 const EMPTY_ANSWERED_QUESTION_IDS: Set<string> = new Set();
 
 const DEFAULT_SESSION_STATE: ChatSessionState = {
@@ -181,7 +175,6 @@ const DEFAULT_SESSION_STATE: ChatSessionState = {
 	historyLoaded: false,
 	pendingApprovalRequests: new Map(),
 	mode: "build",
-	approvedPlanToolCallIds: new Set(),
 	answeredQuestionToolCallIds: new Set(),
 	hasUnreadContent: false,
 	streamingMetadata: null,
@@ -203,7 +196,6 @@ const EMPTY_SESSION_STATE: ChatSessionState = {
 	historyLoaded: false,
 	pendingApprovalRequests: EMPTY_APPROVAL_REQUESTS,
 	mode: "build",
-	approvedPlanToolCallIds: EMPTY_APPROVED_PLAN_IDS,
 	answeredQuestionToolCallIds: EMPTY_ANSWERED_QUESTION_IDS,
 	hasUnreadContent: false,
 	streamingMetadata: null,
@@ -484,8 +476,8 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 								activeTurnId: null,
 								turnStartedAt: null,
 								pendingApprovalRequests: new Map(),
-								approvedPlanToolCallIds: new Set(),
 								answeredQuestionToolCallIds: new Set(),
+								mode: "build",
 								hasUnreadContent: true,
 							};
 						}
@@ -496,8 +488,8 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 							activeTurnId: null,
 							turnStartedAt: null,
 							pendingApprovalRequests: new Map(),
-							approvedPlanToolCallIds: new Set(),
 							answeredQuestionToolCallIds: new Set(),
+							mode: "build",
 							hasUnreadContent: true,
 						};
 					});
@@ -508,8 +500,8 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 						activeTurnId: null,
 						turnStartedAt: null,
 						pendingApprovalRequests: new Map(),
-						approvedPlanToolCallIds: new Set(),
 						answeredQuestionToolCallIds: new Set(),
+						mode: "build",
 						hasUnreadContent: true,
 					}));
 				}
@@ -902,15 +894,6 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 			sessionId: string,
 			response: ToolApprovalResponse,
 		): Promise<boolean> {
-			// Track approved ExitPlanMode tool calls for inline badge display
-			if (isExitPlanModeTool(response.toolName) && response.approved) {
-				updateSession(sessionId, (prev) => {
-					const newApprovedPlanIds = new Set(prev.approvedPlanToolCallIds);
-					newApprovedPlanIds.add(response.toolCallId);
-					return { ...prev, approvedPlanToolCallIds: newApprovedPlanIds };
-				});
-			}
-
 			// Track answered AskUserQuestion tool calls for inline badge display
 			if (isAskUserQuestionTool(response.toolName)) {
 				updateSession(sessionId, (prev) => {

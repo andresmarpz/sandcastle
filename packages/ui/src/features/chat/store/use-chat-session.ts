@@ -346,35 +346,6 @@ export function usePendingExitPlanApproval(
 }
 
 /**
- * Hook for checking if a plan (ExitPlanMode tool call) has been approved.
- *
- * Used to show "Approved" badge on inline plan components after approval.
- *
- * @example
- * ```tsx
- * function PlanPart({ sessionId, toolCallId }: Props) {
- *   const isApproved = useIsApprovedPlan(sessionId, toolCallId)
- *
- *   return (
- *     <Plan defaultOpen={!isApproved}>
- *       {isApproved && <Badge>Approved</Badge>}
- *       <PlanContent>...</PlanContent>
- *     </Plan>
- *   )
- * }
- * ```
- */
-export function useIsApprovedPlan(
-	sessionId: string,
-	toolCallId: string,
-): boolean {
-	return useStore(chatStore, (state) => {
-		const session = state.getSession(sessionId);
-		return session.approvedPlanToolCallIds.has(toolCallId);
-	});
-}
-
-/**
  * Hook for reading the pending AskUserQuestion approval request for a specific tool call.
  *
  * Returns the matching AskUserQuestion approval request if one exists,

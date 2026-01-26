@@ -169,6 +169,22 @@
 		@apply border-border outline-ring/50;
 	}
 
+	/* Typography plugin table overrides - use theme border color */
+	.prose
+	:where(thead th):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+		border-bottom-color: var(--border);
+	}
+
+	.prose
+		:where(tbody tr):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+		border-bottom-color: var(--border);
+	}
+
+	.prose
+		:where(thead):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+		border-bottom-color: var(--border);
+	}
+
 	body {
 		@apply font-sans bg-background text-foreground;
 		font-size: 13px;

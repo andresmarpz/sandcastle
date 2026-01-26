@@ -1,14 +1,23 @@
 import type { UIMessage } from "ai";
+import type { ToolCallPart } from "../../parts";
 import type { TodoItem } from "../messages/tasks";
 import type { ToolMetadata, ToolStep } from "../messages/work-unit";
 import { computeTodoDiff, getToolName, normalizeState } from "./helpers";
-import type { GroupedItem } from "./types";
+import type { GroupedItem, PlanItem } from "./types";
 
 export type { SubagentItem } from "../messages/subagent";
 export type { TasksItem, TodoItem, TodoTraceItem } from "../messages/tasks";
 export type { ToolMetadata, ToolStep } from "../messages/work-unit";
 // Re-export types for consumers
-export type { GroupedItem } from "./types";
+export type { GroupedItem, PlanItem } from "./types";
+
+/**
+ * Checks if a tool name is the ExitPlanMode tool.
+ * Handles both direct name ("ExitPlanMode") and MCP-prefixed name.
+ */
+function isExitPlanModeTool(toolName: string): boolean {
+	return toolName === "ExitPlanMode" || toolName.endsWith("__ExitPlanMode");
+}
 
 /**
  * Result of collecting tool steps from messages.
@@ -46,6 +55,10 @@ function collectToolSteps(messages: readonly UIMessage[]): CollectedSteps {
 			};
 
 			if (toolPart.toolName?.includes("RenameSession")) continue;
+
+			// Skip ExitPlanMode - it's handled separately as a "plan" item
+			const toolName = getToolName(toolPart);
+			if (isExitPlanModeTool(toolName)) continue;
 
 			const toolCallId =
 				toolPart.toolCallId ?? `${message.id}-tool-${allSteps.length}`;
@@ -150,7 +163,21 @@ function processMessages(
 
 			// Tool part
 			if (part.type.startsWith("tool-") || part.type === "dynamic-tool") {
-				if (part.type.includes("RenameSession")) continue;
+				const toolPart = part as ToolCallPart;
+				if (toolPart.toolName?.includes("RenameSession")) continue;
+
+				// ExitPlanMode → emit plan item (not in allSteps)
+				const partToolName = getToolName(toolPart);
+				if (isExitPlanModeTool(partToolName)) {
+					flushWorkUnit();
+					items.push({
+						type: "plan",
+						id: `plan-${toolPart.toolCallId}`,
+						messageId: message.id,
+						part: toolPart,
+					});
+					continue;
+				}
 
 				const step = allSteps[stepIndex++];
 				if (!step) continue;

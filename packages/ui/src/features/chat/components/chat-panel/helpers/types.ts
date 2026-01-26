@@ -1,4 +1,5 @@
 import type { UIMessage } from "ai";
+import type { ToolCallPart } from "../../parts";
 import type { SubagentItem } from "../messages/subagent";
 import type { TasksItem, TodoTraceItem } from "../messages/tasks";
 import type { ToolStep } from "../messages/work-unit";
@@ -18,6 +19,13 @@ export type AssistantMessageItem = {
 
 export type WorkUnitItem = { type: "work-unit"; id: string; steps: ToolStep[] };
 
+export type PlanItem = {
+	type: "plan";
+	id: string;
+	messageId: string;
+	part: ToolCallPart;
+};
+
 /**
  * Union of all grouped item types for rendering.
  */
@@ -27,4 +35,5 @@ export type GroupedItem =
 	| WorkUnitItem
 	| SubagentItem
 	| TasksItem
-	| TodoTraceItem;
+	| TodoTraceItem
+	| PlanItem;

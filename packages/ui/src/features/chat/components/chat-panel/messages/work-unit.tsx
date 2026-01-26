@@ -13,6 +13,11 @@ import { WrenchIcon } from "@phosphor-icons/react/Wrench";
 import { type ComponentType, memo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { BashTool } from "../tools/bash-tool";
+import { EditTool } from "../tools/edit-tool";
+import { GlobTool } from "../tools/glob-tool";
+import { GrepTool } from "../tools/grep-tool";
+import { ReadTool } from "../tools/read-tool";
+import { WriteTool } from "../tools/write-tool";
 
 /**
  * Tool-specific metadata (discriminated union by `tool` field).
@@ -271,6 +276,21 @@ const ToolStepRenderer = memo(function ToolStepRenderer({
 	// Use specialized renderers for specific tools
 	if (step.toolName === "Bash") {
 		return <BashTool step={step} />;
+	}
+	if (step.toolName === "Edit") {
+		return <EditTool step={step} />;
+	}
+	if (step.toolName === "Glob") {
+		return <GlobTool step={step} />;
+	}
+	if (step.toolName === "Grep") {
+		return <GrepTool step={step} />;
+	}
+	if (step.toolName === "Read") {
+		return <ReadTool step={step} />;
+	}
+	if (step.toolName === "Write") {
+		return <WriteTool step={step} />;
 	}
 
 	const Icon = getToolIcon(step.toolName);

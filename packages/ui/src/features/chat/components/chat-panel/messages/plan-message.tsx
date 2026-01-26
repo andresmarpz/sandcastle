@@ -16,11 +16,8 @@ import {
 	PlanTrigger,
 } from "@/components/ai-elements/plan";
 import { Badge } from "@/components/badge";
-import {
-	useIsApprovedPlan,
-	usePendingExitPlanApproval,
-} from "@/features/chat/store";
-import type { ToolCallPart } from "./index";
+import { usePendingExitPlanApproval } from "@/features/chat/store";
+import type { ToolCallPart } from "../../parts";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -44,18 +41,16 @@ type PlanStatus =
 /**
  * Derive the plan status from available state.
  *
- * State machine priority:
+ * Single source of truth approach:
  * 1. streaming - Still generating the plan
  * 2. error - Tool failed (timeout, etc.)
  * 3. output-available with explicit approved field - Use persisted approval status
- * 4. approved - User approved the plan (from store, during active session)
- * 5. pending - Waiting for user approval
- * 6. rejected - User rejected or tool completed without approval
+ * 4. pending - Waiting for user approval (from pendingApprovalRequests)
+ * 5. input-available but not pending - reconnection edge case, treat as pending
  */
 function derivePlanStatus(
 	part: ToolCallPart,
 	isPendingApproval: boolean,
-	isApproved: boolean,
 ): PlanStatus {
 	// 1. Check if streaming (still generating)
 	if (part.state === "input-streaming") {
@@ -81,18 +76,14 @@ function derivePlanStatus(
 		}
 	}
 
-	// 4. Check if approved via store (during active session before output persists)
-	if (isApproved) {
-		return { status: "approved" };
-	}
-
-	// 5. Check if pending (waiting for user response)
+	// 4. Check if pending (waiting for user response)
 	if (isPendingApproval) {
 		return { status: "pending" };
 	}
 
-	// 6. Output available but no explicit approved field = rejected (legacy/edge case)
-	return { status: "rejected" };
+	// 5. input-available but not in pending = reconnection edge case, treat as pending
+	// Also handles legacy data without explicit approved field
+	return { status: "pending" };
 }
 
 /**
@@ -120,18 +111,22 @@ function getStatusDescription(planStatus: PlanStatus): string {
 // Component
 // ─────────────────────────────────────────────────────────────────────────────
 
-interface PlanPartProps {
+interface PlanMessageProps {
 	part: ToolCallPart;
 	sessionId: string;
 }
 
-export function PlanPart({ part, sessionId }: PlanPartProps) {
-	const isApproved = useIsApprovedPlan(sessionId, part.toolCallId);
+/**
+ * Display-only component for ExitPlanMode tool.
+ * Shows plan content with status badge.
+ * Approval buttons are handled by ChatPanelInput.
+ */
+export function PlanMessage({ part, sessionId }: PlanMessageProps) {
 	const pendingApproval = usePendingExitPlanApproval(sessionId);
 	const isPendingApproval = pendingApproval?.toolCallId === part.toolCallId;
 
-	// Derive plan status from state
-	const planStatus = derivePlanStatus(part, isPendingApproval, isApproved);
+	// Derive plan status from state (single source of truth)
+	const planStatus = derivePlanStatus(part, isPendingApproval);
 
 	// Extract plan content from input
 	const input = part.input as { plan?: string } | undefined;
@@ -207,7 +202,6 @@ function StatusBadge({ status }: { status: PlanStatus }) {
 					Failed
 				</Badge>
 			);
-		// No badge for streaming or pending states
 		case "pending":
 			return (
 				<Badge className="flex shrink-0 items-center gap-1 bg-muted text-muted-foreground">
@@ -215,7 +209,8 @@ function StatusBadge({ status }: { status: PlanStatus }) {
 					Pending
 				</Badge>
 			);
-		default:
+		case "streaming":
+			// No badge for streaming state
 			return null;
 	}
 }
