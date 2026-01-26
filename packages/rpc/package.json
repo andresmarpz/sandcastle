@@ -1,6 +1,6 @@
 {
 	"name": "@sandcastle/rpc",
-	"version": "0.2.3",
+	"version": "0.2.4",
 	"description": "Effect-based RPC schemas for Sandcastle entities.",
 	"module": "index.ts",
 	"type": "module",
