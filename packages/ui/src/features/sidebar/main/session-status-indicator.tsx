@@ -158,7 +158,7 @@ export function SessionStatusDot({
 			{/* Core dot */}
 			<span
 				className={cn(
-					"absolute inset-0 rounded-full",
+					"absolute inset-0 rounded-full shadow-sm/2 shadow-black",
 					config.color,
 					config.animate && !isStreaming && "animate-pulse",
 					config.ring && "ring-3 ring-green-500/30",

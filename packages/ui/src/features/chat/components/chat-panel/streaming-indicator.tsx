@@ -1,7 +1,6 @@
 "use client";
 
 import { memo, useEffect, useState } from "react";
-import { PixelSpinner } from "@/components/ai-elements/pixel-spinner";
 import { cn } from "@/lib/utils";
 
 export interface StreamingIndicatorProps {
@@ -34,9 +33,8 @@ export const StreamingIndicator = memo(function StreamingIndicator({
 	const formattedTime = (elapsed / 1000).toFixed(1);
 
 	return (
-		<div className={cn("flex items-center gap-3", className)}>
-			<PixelSpinner />
-			<div className="flex items-center gap-2 text-sm text-muted-foreground">
+		<div className={cn("flex items-center gap-3 text-sm", className)}>
+			<div className="flex items-center gap-2 text-muted-foreground">
 				<span>{word}...</span>
 				<span className="tabular-nums">{formattedTime}s</span>
 			</div>

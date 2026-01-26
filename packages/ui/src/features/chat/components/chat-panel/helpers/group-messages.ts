@@ -6,7 +6,7 @@ import { computeTodoDiff, getToolName, normalizeState } from "./helpers";
 import type { GroupedItem } from "./types";
 
 export type { SubagentItem } from "../messages/subagent";
-export type { TasksItem, TodoItem, TodoTraceItem } from "../messages/tasks";
+export type { TodoItem, TodoTraceItem } from "../messages/tasks";
 export type { ToolMetadata, ToolStep } from "../messages/work-unit";
 // Re-export types for consumers
 export type { GroupedItem, PlanItem, QuestionsItem } from "./types";
@@ -111,7 +111,6 @@ function collectToolSteps(messages: readonly UIMessage[]): CollectedSteps {
  */
 interface ProcessResult {
 	items: GroupedItem[];
-	latestTodoWrite: { id: string; todos: TodoItem[] } | null;
 }
 
 /**
@@ -126,8 +125,7 @@ function processMessages(
 	let pendingSteps: ToolStep[] = [];
 	let stepIndex = 0;
 
-	// Todo state tracking
-	let latestTodoWrite: { id: string; todos: TodoItem[] } | null = null;
+	// Todo state tracking for computing diffs between TodoWrite calls
 	let previousTodos: TodoItem[] = [];
 
 	const flushWorkUnit = () => {
@@ -239,7 +237,6 @@ function processMessages(
 						started: diff.started,
 					});
 
-					latestTodoWrite = { id: step.id, todos: currentTodos };
 					previousTodos = currentTodos;
 					continue;
 				}
@@ -253,7 +250,7 @@ function processMessages(
 	// Flush any remaining pending steps
 	flushWorkUnit();
 
-	return { items, latestTodoWrite };
+	return { items };
 }
 
 /**
@@ -262,20 +259,10 @@ function processMessages(
  * Algorithm:
  * 1. Collect all tool steps and build parent-child relationships
  * 2. Process messages in order, emitting grouped items
- * 3. Append the final tasks item (showing current todo state)
  */
 export function groupMessages(messages: readonly UIMessage[]): GroupedItem[] {
 	const collected = collectToolSteps(messages);
-	const { items, latestTodoWrite } = processMessages(messages, collected);
-
-	// Append final tasks item showing current todo state
-	if (latestTodoWrite) {
-		items.push({
-			type: "tasks",
-			id: `tasks-${latestTodoWrite.id}`,
-			todos: latestTodoWrite.todos,
-		});
-	}
+	const { items } = processMessages(messages, collected);
 
 	return items;
 }
