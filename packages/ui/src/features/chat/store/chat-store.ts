@@ -22,7 +22,10 @@ import type {
 import type { UIMessage } from "ai";
 import { Cause, Effect, Exit, Fiber, Stream } from "effect";
 import { createStore } from "zustand/vanilla";
-import { isAskUserQuestionTool } from "@/features/chat/components/group-messages";
+import {
+	isAskUserQuestionTool,
+	isExitPlanModeTool,
+} from "@/features/chat/components/group-messages";
 import { notifySessionComplete } from "@/features/chat/services/notification-manager";
 import {
 	forkWithStreamingClient,
@@ -82,6 +85,8 @@ export interface ChatSessionState {
 	streamingMetadata: StreamingMetadata | null;
 	/** Server timestamp when current turn started (ISO 8601), for streaming duration */
 	turnStartedAt: string | null;
+	/** Optimistic approval responses (cleared when server confirms or session ends) */
+	optimisticApprovals: Map<string, { approved: boolean; feedback?: string }>;
 }
 
 /** Metadata from StreamEventFinish for real-time UI updates */
@@ -163,6 +168,10 @@ const MAX_SESSIONS = 20;
 
 const EMPTY_APPROVAL_REQUESTS: Map<string, ToolApprovalRequest> = new Map();
 const EMPTY_ANSWERED_QUESTION_IDS: Set<string> = new Set();
+const EMPTY_OPTIMISTIC_APPROVALS: Map<
+	string,
+	{ approved: boolean; feedback?: string }
+> = new Map();
 
 const DEFAULT_SESSION_STATE: ChatSessionState = {
 	messages: [],
@@ -179,6 +188,7 @@ const DEFAULT_SESSION_STATE: ChatSessionState = {
 	hasUnreadContent: false,
 	streamingMetadata: null,
 	turnStartedAt: null,
+	optimisticApprovals: new Map(),
 };
 
 // Frozen singleton to return for sessions that don't exist yet
@@ -200,6 +210,7 @@ const EMPTY_SESSION_STATE: ChatSessionState = {
 	hasUnreadContent: false,
 	streamingMetadata: null,
 	turnStartedAt: null,
+	optimisticApprovals: EMPTY_OPTIMISTIC_APPROVALS,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -477,6 +488,7 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 								turnStartedAt: null,
 								pendingApprovalRequests: new Map(),
 								answeredQuestionToolCallIds: new Set(),
+								optimisticApprovals: new Map(),
 								mode: "build",
 								hasUnreadContent: true,
 							};
@@ -489,6 +501,7 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 							turnStartedAt: null,
 							pendingApprovalRequests: new Map(),
 							answeredQuestionToolCallIds: new Set(),
+							optimisticApprovals: new Map(),
 							mode: "build",
 							hasUnreadContent: true,
 						};
@@ -501,6 +514,7 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 						turnStartedAt: null,
 						pendingApprovalRequests: new Map(),
 						answeredQuestionToolCallIds: new Set(),
+						optimisticApprovals: new Map(),
 						mode: "build",
 						hasUnreadContent: true,
 					}));
@@ -587,6 +601,19 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 						}));
 					}
 					// Continue to pass to accumulator for message finalization
+				}
+
+				// Clear optimistic approval when server confirms the tool output
+				if (streamEvent.type === "tool-output-available") {
+					const outputEvent = event.event as { toolCallId: string };
+					updateSession(sessionId, (prev) => {
+						if (prev.optimisticApprovals.has(outputEvent.toolCallId)) {
+							const newOptimistic = new Map(prev.optimisticApprovals);
+							newOptimistic.delete(outputEvent.toolCallId);
+							return { ...prev, optimisticApprovals: newOptimistic };
+						}
+						return prev;
+					});
 				}
 
 				// Process stream event through accumulator
@@ -900,6 +927,22 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 					const newAnsweredIds = new Set(prev.answeredQuestionToolCallIds);
 					newAnsweredIds.add(response.toolCallId);
 					return { ...prev, answeredQuestionToolCallIds: newAnsweredIds };
+				});
+			}
+
+			// Track optimistic approval for ExitPlanMode tools (for immediate UI feedback)
+			if (isExitPlanModeTool(response.toolName)) {
+				const feedback =
+					response.payload?.type === "ExitPlanModePayload"
+						? response.payload.feedback
+						: undefined;
+				updateSession(sessionId, (prev) => {
+					const newOptimistic = new Map(prev.optimisticApprovals);
+					newOptimistic.set(response.toolCallId, {
+						approved: response.approved,
+						feedback,
+					});
+					return { ...prev, optimisticApprovals: newOptimistic };
 				});
 			}
 
