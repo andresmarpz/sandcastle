@@ -117,6 +117,8 @@ export interface ChatStoreState {
 	subscriptions: Map<string, SubscriptionState>;
 	/** Session visitors (ref count) */
 	visitors: Map<string, number>;
+	/** Currently focused session ID (the one user is actively viewing) */
+	focusedSessionId: string | null;
 	/** Callback for session renamed events (set by React component for atom cache refresh) */
 	onSessionRenamed: ((sessionId: string, title: string) => void) | null;
 }
@@ -159,6 +161,8 @@ export interface ChatStoreActions {
 	setOnSessionRenamed(
 		callback: ((sessionId: string, title: string) => void) | null,
 	): void;
+	/** Set the currently focused session (user is actively viewing it) */
+	setFocusedSession(sessionId: string | null): void;
 }
 
 export type ChatStore = ChatStoreState & ChatStoreActions;
@@ -459,8 +463,14 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 			}
 
 			case "SessionStopped": {
-				// Notify that session has completed (no pending approvals = normal completion)
-				notifySessionComplete(sessionId, false);
+				// Check if user is currently viewing this session
+				const isFocused = state.focusedSessionId === sessionId;
+
+				// Always play sound, but only update badge if not focused
+				notifySessionComplete(sessionId, false, { updateBadge: !isFocused });
+
+				// Only mark as unread if user is not currently viewing this session
+				const hasUnreadContent = !isFocused;
 
 				// Finalize the message and reset accumulator
 				if (sub.accumulator && sub.accumulator.hasContent()) {
@@ -482,7 +492,7 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 								answeredQuestionToolCallIds: new Set(),
 								optimisticApprovals: new Map(),
 								mode: "build",
-								hasUnreadContent: true,
+								hasUnreadContent,
 							};
 						}
 						return {
@@ -495,7 +505,7 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 							answeredQuestionToolCallIds: new Set(),
 							optimisticApprovals: new Map(),
 							mode: "build",
-							hasUnreadContent: true,
+							hasUnreadContent,
 						};
 					});
 				} else {
@@ -508,7 +518,7 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 						answeredQuestionToolCallIds: new Set(),
 						optimisticApprovals: new Map(),
 						mode: "build",
-						hasUnreadContent: true,
+						hasUnreadContent,
 					}));
 				}
 
@@ -529,7 +539,9 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 					};
 
 					// Notify that session is waiting for input
-					notifySessionComplete(sessionId, true);
+					// Always play sound, but only update badge if not focused
+					const isFocused = state.focusedSessionId === sessionId;
+					notifySessionComplete(sessionId, true, { updateBadge: !isFocused });
 
 					updateSession(sessionId, (prev) => {
 						const newPendingRequests = new Map(prev.pendingApprovalRequests);
@@ -717,6 +729,7 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 		sessions: new LRUMap<string, ChatSessionState>(MAX_SESSIONS),
 		subscriptions: new Map(),
 		visitors: new Map(),
+		focusedSessionId: null,
 		onSessionRenamed: null,
 
 		// Actions
@@ -969,6 +982,10 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 			callback: ((sessionId: string, title: string) => void) | null,
 		) {
 			set({ onSessionRenamed: callback });
+		},
+
+		setFocusedSession(sessionId: string | null) {
+			set({ focusedSessionId: sessionId });
 		},
 	};
 });

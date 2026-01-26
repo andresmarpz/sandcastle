@@ -53,10 +53,16 @@ export function useChatSession(sessionId: string): UseChatSessionResult {
 	// Subscribe to session on mount, leave on unmount
 	useEffect(() => {
 		chatStore.getState().visit(sessionId);
+		// Mark this session as focused (actively viewed by user)
+		chatStore.getState().setFocusedSession(sessionId);
 		// Clear notification when user views the session
 		clearSessionNotification(sessionId);
 		return () => {
 			chatStore.getState().leave(sessionId);
+			// Clear focused session if this was the focused one
+			if (chatStore.getState().focusedSessionId === sessionId) {
+				chatStore.getState().setFocusedSession(null);
+			}
 		};
 	}, [sessionId]);
 

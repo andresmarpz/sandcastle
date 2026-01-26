@@ -78,23 +78,36 @@ async function updateDockBadge(): Promise<void> {
 	}
 }
 
+interface NotifyOptions {
+	/** Play the notification sound (default: true) */
+	playSound?: boolean;
+	/** Update the dock badge and track session for attention (default: true) */
+	updateBadge?: boolean;
+}
+
 /**
  * Notify that a session has completed and needs attention.
  * Plays the appropriate sound and updates the dock badge.
  *
  * @param sessionId - The session that completed
  * @param hasApprovals - Whether the session is waiting for user input
+ * @param options - Control which notifications to trigger
  */
 export function notifySessionComplete(
 	sessionId: string,
 	hasApprovals: boolean,
+	options: NotifyOptions = {},
 ): void {
-	// Always play sound (even if session is already tracked)
-	const type: NotificationType = hasApprovals ? "waiting_input" : "complete";
-	playSound(type);
+	const { playSound: shouldPlaySound = true, updateBadge = true } = options;
 
-	// Track session for badge count
-	if (!sessionsNeedingAttention.has(sessionId)) {
+	// Play sound if enabled
+	if (shouldPlaySound) {
+		const type: NotificationType = hasApprovals ? "waiting_input" : "complete";
+		playSound(type);
+	}
+
+	// Track session for badge count if enabled
+	if (updateBadge && !sessionsNeedingAttention.has(sessionId)) {
 		sessionsNeedingAttention.add(sessionId);
 		updateDockBadge();
 	}
