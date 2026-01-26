@@ -22,10 +22,10 @@ import type {
 import type { UIMessage } from "ai";
 import { Cause, Effect, Exit, Fiber, Stream } from "effect";
 import { createStore } from "zustand/vanilla";
-import {
-	isAskUserQuestionTool,
-	isExitPlanModeTool,
-} from "@/features/chat/components/group-messages";
+// import {
+// 	isAskUserQuestionTool,
+// 	isExitPlanModeTool,
+// } from "@/features/chat/components/group-messages";
 import { notifySessionComplete } from "@/features/chat/services/notification-manager";
 import {
 	forkWithStreamingClient,
@@ -36,6 +36,10 @@ import {
 	waitForStreamingConnection,
 } from "@/features/chat/transport/rpc-websocket-client";
 import { LRUMap } from "@/lib/lru-map";
+import {
+	isAskUserQuestionTool,
+	isExitPlanModeTool,
+} from "../components/chat-panel/helpers/helpers";
 import { MessageAccumulator } from "./message-accumulator";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -51,7 +55,6 @@ export interface HistoryCursor {
 export interface ToolApprovalRequest {
 	toolCallId: string;
 	toolName: string;
-	input: unknown;
 	messageId?: string;
 	receivedAt: number;
 }
@@ -427,20 +430,9 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 					const pendingRequests = new Map<string, ToolApprovalRequest>();
 
 					for (const approval of event.pendingApprovals) {
-						// Find the matching tool-input-available event in the buffer
-						const toolInputEvent = event.buffer.find(
-							(e) =>
-								e.type === "tool-input-available" &&
-								(e as { toolCallId?: string }).toolCallId ===
-									approval.toolCallId,
-						) as
-							| { toolCallId: string; toolName: string; input: unknown }
-							| undefined;
-
 						pendingRequests.set(approval.toolCallId, {
 							toolCallId: approval.toolCallId,
 							toolName: approval.toolName,
-							input: toolInputEvent?.input ?? {},
 							receivedAt: Date.now(),
 						});
 					}
@@ -532,7 +524,6 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 					const request: ToolApprovalRequest = {
 						toolCallId: approvalEvent.toolCallId,
 						toolName: approvalEvent.toolName,
-						input: approvalEvent.input,
 						messageId: approvalEvent.messageId,
 						receivedAt: Date.now(),
 					};

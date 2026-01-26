@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { CreatePRButton } from "./components/create-pr-button";
 import { HomePage } from "./pages/home";
 import { SessionPage } from "./pages/session";
+import { StatusPlayground } from "./pages/status-playground";
 
 export default function Layout() {
 	const platform = usePlatform();
@@ -83,6 +84,7 @@ function SidebarMainContent() {
 						path="/repository/:repositoryId/sessions/:sessionId"
 						element={<SessionPage />}
 					/>
+					<Route path="/ui/status" element={<StatusPlayground />} />
 				</Routes>
 			</div>
 		</SidebarInset>

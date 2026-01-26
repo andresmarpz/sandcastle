@@ -8,6 +8,7 @@ import {
 } from "@/components/ai-elements/message";
 import { type GroupedItem, groupMessages } from "./helpers/group-messages";
 import { PlanMessage } from "./messages/plan-message";
+import { Questions } from "./messages/questions";
 import { SubagentMessage } from "./messages/subagent";
 import { TasksMessage, TodoTraceMessage } from "./messages/tasks";
 import { WorkUnit } from "./messages/work-unit";
@@ -111,10 +112,14 @@ const GroupedItemRenderer = memo(function GroupedItemRenderer({
 			);
 
 		case "plan":
+			// PlanMessage renders full-width, outside Message wrapper
+			return <PlanMessage part={item.part} sessionId={sessionId} />;
+
+		case "questions":
 			return (
 				<Message from="assistant">
 					<MessageContent>
-						<PlanMessage part={item.part} sessionId={sessionId} />
+						<Questions part={item.part} sessionId={sessionId} />
 					</MessageContent>
 				</Message>
 			);

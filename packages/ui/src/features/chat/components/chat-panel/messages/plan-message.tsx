@@ -1,25 +1,16 @@
 "use client";
 
-import { CaretUpDownIcon } from "@phosphor-icons/react/CaretUpDown";
+import { ArrowCounterClockwiseIcon } from "@phosphor-icons/react/ArrowCounterClockwise";
+import { CaretDownIcon } from "@phosphor-icons/react/CaretDown";
 import { CheckIcon } from "@phosphor-icons/react/Check";
-import { ClockIcon } from "@phosphor-icons/react/Clock";
-import { WarningIcon } from "@phosphor-icons/react/Warning";
+import { HourglassIcon } from "@phosphor-icons/react/Hourglass";
+import { ListChecksIcon } from "@phosphor-icons/react/ListChecks";
+import { SpinnerIcon } from "@phosphor-icons/react/Spinner";
 import { XIcon } from "@phosphor-icons/react/X";
+import type { ToolCallPart } from "@sandcastle/schemas";
 import { useCallback, useEffect, useState } from "react";
 import { useStickToBottomContext } from "use-stick-to-bottom";
 import { NativeMarkdownResponse } from "@/components/ai-elements/native-markdown";
-import { Shimmer } from "@/components/ai-elements/shimmer";
-import { Badge } from "@/components/badge";
-import { Button } from "@/components/button";
-import {
-	Card,
-	CardAction,
-	CardContent,
-	CardDescription,
-	CardFooter,
-	CardHeader,
-	CardTitle,
-} from "@/components/card";
 import {
 	Collapsible,
 	CollapsiblePanel,
@@ -30,29 +21,26 @@ import {
 	usePendingExitPlanApproval,
 } from "@/features/chat/store";
 import { cn } from "@/lib/utils";
-import type { ToolCallPart } from "../../parts";
 
 /**
  * Discriminated union representing all possible plan states.
- * This provides a single source of truth for plan status.
+ * - streaming: Plan is being generated
+ * - pending: Waiting for user approval
+ * - approved: User approved the plan
+ * - changes-requested: User rejected with feedback (wants revisions)
+ * - denied: User rejected without feedback (doesn't want this approach)
+ * - error: Something went wrong
  */
 type PlanStatus =
 	| { status: "streaming" }
 	| { status: "pending" }
 	| { status: "approved" }
-	| { status: "rejected"; feedback?: string }
+	| { status: "changes-requested"; feedback: string }
+	| { status: "denied" }
 	| { status: "error"; errorText: string };
 
 /**
  * Derive the plan status from available state.
- *
- * Single source of truth approach:
- * 1. optimistic approval - Immediate feedback after user clicks approve/reject
- * 2. streaming - Still generating the plan
- * 3. error - Tool failed (timeout, etc.)
- * 4. output-available with explicit approved field - Use persisted approval status
- * 5. pending - Waiting for user approval (from pendingApprovalRequests)
- * 6. input-available but not pending - reconnection edge case, treat as pending
  */
 function derivePlanStatus(
 	part: ToolCallPart,
@@ -64,7 +52,14 @@ function derivePlanStatus(
 		if (optimisticApproval.approved) {
 			return { status: "approved" };
 		}
-		return { status: "rejected", feedback: optimisticApproval.feedback };
+		// Differentiate between changes requested and denied
+		if (optimisticApproval.feedback) {
+			return {
+				status: "changes-requested",
+				feedback: optimisticApproval.feedback,
+			};
+		}
+		return { status: "denied" };
 	}
 
 	// 2. Check if streaming (still generating)
@@ -81,13 +76,15 @@ function derivePlanStatus(
 	}
 
 	// 4. Output available - check the persisted approval field
-	// This is the source of truth after page reload
 	if (part.state === "output-available" && part.approval) {
 		if (part.approval.approved === true) {
 			return { status: "approved" };
 		}
 		if (part.approval.approved === false) {
-			return { status: "rejected", feedback: part.approval.reason };
+			if (part.approval.reason) {
+				return { status: "changes-requested", feedback: part.approval.reason };
+			}
+			return { status: "denied" };
 		}
 	}
 
@@ -96,28 +93,8 @@ function derivePlanStatus(
 		return { status: "pending" };
 	}
 
-	// 6. input-available but not in pending = reconnection edge case, treat as pending
-	// Also handles legacy data without explicit approved field
+	// 6. Fallback to pending
 	return { status: "pending" };
-}
-
-/**
- * Get the description text for each plan status.
- * Note: Rejection feedback is displayed separately in FeedbackSection.
- */
-function getStatusDescription(planStatus: PlanStatus): string {
-	switch (planStatus.status) {
-		case "streaming":
-			return "Planning in progress...";
-		case "pending":
-			return "Review the plan below and approve to proceed with implementation.";
-		case "approved":
-			return "Plan has been approved and implementation has started.";
-		case "rejected":
-			return "Plan was not approved.";
-		case "error":
-			return `Plan approval failed: ${planStatus.errorText}`;
-	}
 }
 
 interface PlanMessageProps {
@@ -127,8 +104,7 @@ interface PlanMessageProps {
 
 /**
  * Display-only component for ExitPlanMode tool.
- * Shows plan content with status badge.
- * Approval buttons are handled by ChatPanelInput.
+ * Shows plan content with status. Approval buttons are handled by ChatPanelInput.
  */
 export function PlanMessage({ part, sessionId }: PlanMessageProps) {
 	const pendingApproval = usePendingExitPlanApproval(sessionId);
@@ -138,14 +114,11 @@ export function PlanMessage({ part, sessionId }: PlanMessageProps) {
 		part.toolCallId,
 	);
 
-	// Derive plan status from state (single source of truth)
 	const planStatus = derivePlanStatus(
 		part,
 		isPendingApproval,
 		optimisticApproval,
 	);
-
-	const isStreaming = planStatus.status === "streaming";
 
 	// Extract plan content from input
 	const input = part.input as { plan?: string } | undefined;
@@ -156,10 +129,8 @@ export function PlanMessage({ part, sessionId }: PlanMessageProps) {
 		planStatus.status === "pending" || planStatus.status === "streaming";
 	const [isOpen, setIsOpen] = useState(shouldBeOpen);
 
-	// Get stopScroll to prevent auto-scrolling when user opens the collapsible
 	const { stopScroll } = useStickToBottomContext();
 
-	// Handle open state change - stop scroll when user manually opens/closes to avoid unexpected scrolling
 	const handleOpenChange = useCallback(
 		(open: boolean) => {
 			stopScroll();
@@ -168,110 +139,121 @@ export function PlanMessage({ part, sessionId }: PlanMessageProps) {
 		[stopScroll],
 	);
 
-	// Sync open state when status changes (e.g., auto-collapse when approved)
 	useEffect(() => {
 		setIsOpen(shouldBeOpen);
 	}, [shouldBeOpen]);
 
-	const hasFeedback = planStatus.status === "rejected" && planStatus.feedback;
+	const hasChangesRequested = planStatus.status === "changes-requested";
 
 	return (
-		<Collapsible open={isOpen} onOpenChange={handleOpenChange}>
-			<Card
-				className={cn(
-					"border border-border shadow-none ring-0 py-0",
-					// Remove gap when there's a feedback footer to avoid extra space
-					hasFeedback && "gap-0",
-				)}
-			>
-				<CardHeader className="flex-row items-start justify-between gap-4 py-4">
-					<div>
-						<CardTitle>
-							{isStreaming ? (
-								<Shimmer>Implementation Plan</Shimmer>
-							) : (
-								"Implementation Plan"
-							)}
-						</CardTitle>
-						<CardDescription className="text-balance">
-							{isStreaming ? (
-								<Shimmer>{getStatusDescription(planStatus)}</Shimmer>
-							) : (
-								getStatusDescription(planStatus)
-							)}
-						</CardDescription>
+		<div className="w-full rounded-md border border-border bg-background overflow-hidden">
+			{/* Collapsible section: trigger + plan content */}
+			<Collapsible open={isOpen} onOpenChange={handleOpenChange}>
+				<CollapsibleTrigger
+					className={cn(
+						"flex items-center gap-3 px-4 py-3 w-full",
+						"text-sm",
+						"hover:bg-muted/50 transition-colors",
+					)}
+				>
+					<ListChecksIcon className="size-5 shrink-0 text-muted-foreground" />
+					<span className="font-medium text-foreground">
+						Implementation Plan
+					</span>
+					<div className="ml-auto flex items-center gap-3">
+						<StatusLabel status={planStatus} />
+						<div className="size-4 shrink-0 transition-transform text-muted-foreground group-data-[state=open]:rotate-180">
+							<CaretDownIcon className="size-4" />
+						</div>
 					</div>
-					<CardAction className="flex items-center gap-2">
-						<StatusBadge status={planStatus} />
-						<CollapsibleTrigger
-							render={(props) => (
-								<Button variant="ghost" {...props} className="size-8">
-									<CaretUpDownIcon className="size-4" />
-									<span className="sr-only">Toggle plan</span>
-								</Button>
-							)}
-						/>
-					</CardAction>
-				</CardHeader>
-				<CollapsiblePanel>
-					<CardContent className="pb-4">
-						<NativeMarkdownResponse className="[&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+				</CollapsibleTrigger>
+
+				<CollapsiblePanel className="border-t border-border">
+					<div className="px-4 py-4 bg-muted/30">
+						<NativeMarkdownResponse className="prose prose-sm prose-neutral dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
 							{planContent}
 						</NativeMarkdownResponse>
-					</CardContent>
-					{hasFeedback && (
-						<CardFooter className="border-t border-border bg-muted/50 p-4">
-							<div>
-								<div className="mb-1 text-xs font-medium text-muted-foreground">
-									Requested Changes
-								</div>
-								<div className="text-sm text-foreground">
-									{planStatus.feedback}
-								</div>
-							</div>
-						</CardFooter>
-					)}
+					</div>
 				</CollapsiblePanel>
-			</Card>
-		</Collapsible>
+			</Collapsible>
+
+			{/* Feedback section - always visible when changes requested */}
+			{hasChangesRequested && (
+				<div className="border-t border-border px-4 py-3">
+					<div className="text-xs font-medium text-muted-foreground mb-1">
+						Changes requested
+					</div>
+					<div className="text-sm text-foreground/80">
+						{planStatus.feedback}
+					</div>
+				</div>
+			)}
+		</div>
 	);
 }
 
+/** Base styles for status badges */
+const badgeBase =
+	"inline-flex items-center gap-1.5 px-2 py-1 rounded-sm text-xs font-medium";
+
 /**
- * Renders the appropriate badge based on plan status.
+ * Renders the status badge with appropriate icon, color, and background.
  */
-function StatusBadge({ status }: { status: PlanStatus }) {
+function StatusLabel({ status }: { status: PlanStatus }) {
 	switch (status.status) {
-		case "approved":
+		case "streaming":
 			return (
-				<Badge className="flex shrink-0 items-center gap-1 bg-green-500/10 text-green-600 dark:bg-green-500/20 dark:text-green-400">
-					<CheckIcon className="size-3" />
-					Approved
-				</Badge>
-			);
-		case "rejected":
-			return (
-				<Badge className="flex shrink-0 items-center gap-1 bg-red-400/10 text-red-500/70">
-					<XIcon className="size-3" />
-					Not approved
-				</Badge>
-			);
-		case "error":
-			return (
-				<Badge className="flex shrink-0 items-center gap-1 bg-red-500/10 text-red-600 dark:bg-red-500/20 dark:text-red-400">
-					<WarningIcon className="size-3" />
-					Failed
-				</Badge>
+				<span
+					className={`${badgeBase} bg-black/5 text-zinc-600 dark:bg-white/10 dark:text-zinc-300`}
+				>
+					<SpinnerIcon className="size-3 animate-spin" />
+					Planning...
+				</span>
 			);
 		case "pending":
 			return (
-				<Badge className="flex shrink-0 items-center gap-1 bg-muted text-muted-foreground">
-					<ClockIcon className="size-3" />
+				<span
+					className={`${badgeBase} bg-amber-500/10 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300`}
+				>
+					<HourglassIcon className="size-3" />
 					Pending
-				</Badge>
+				</span>
 			);
-		case "streaming":
-			// No badge for streaming state
-			return null;
+		case "approved":
+			return (
+				<span
+					className={`${badgeBase} bg-green-600/15 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300`}
+				>
+					<CheckIcon className="size-3" />
+					Approved
+				</span>
+			);
+		case "changes-requested":
+			return (
+				<span
+					className={`${badgeBase} bg-violet-500/15 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300`}
+				>
+					<ArrowCounterClockwiseIcon className="size-3" />
+					Changes requested
+				</span>
+			);
+		case "denied":
+			return (
+				<span
+					className={`${badgeBase} bg-red-500/10 text-red-700 dark:bg-red-500/20 dark:text-red-300`}
+				>
+					<XIcon className="size-3" />
+					Denied
+				</span>
+			);
+		case "error":
+			return (
+				<span
+					className={`${badgeBase} bg-red-500/10 text-red-700 dark:bg-red-500/20 dark:text-red-300`}
+				>
+					<XIcon className="size-3" />
+					Failed
+				</span>
+			);
 	}
 }

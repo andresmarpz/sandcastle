@@ -3,11 +3,11 @@ import type { UIMessage } from "ai";
 import { useCallback, useEffect, useMemo } from "react";
 import { useStore } from "zustand";
 import { useShallow } from "zustand/react/shallow";
+import { clearSessionNotification } from "@/features/chat/services/notification-manager";
 import {
 	isAskUserQuestionTool,
 	isExitPlanModeTool,
-} from "@/features/chat/components/group-messages";
-import { clearSessionNotification } from "@/features/chat/services/notification-manager";
+} from "../components/chat-panel/helpers/helpers";
 import {
 	type ChatSessionState,
 	chatStore,
