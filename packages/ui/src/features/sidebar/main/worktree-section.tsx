@@ -1,20 +1,42 @@
 "use client";
 
-import { Result, useAtomValue } from "@effect-atom/atom-react";
+import { Result, useAtom, useAtomValue } from "@effect-atom/atom-react";
 import { CaretDownIcon } from "@phosphor-icons/react/CaretDown";
 import { GitBranchIcon } from "@phosphor-icons/react/GitBranch";
+import { TrashIcon } from "@phosphor-icons/react/Trash";
 import type { Worktree } from "@sandcastle/schemas";
 import { formatDistanceToNow } from "date-fns";
 import * as Option from "effect/Option";
+import { AnimatePresence, motion } from "motion/react";
 import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
-import { worktreeListByRepositoryAtomFamily } from "@/api/worktree-atoms";
+import {
+	deleteWorktreeMutation,
+	WORKTREE_LIST_KEY,
+	worktreeListByRepositoryAtomFamily,
+} from "@/api/worktree-atoms";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/alert-dialog";
 import { Badge } from "@/components/badge";
 import {
 	Collapsible,
 	CollapsiblePanel,
 	CollapsibleTrigger,
 } from "@/components/collapsible";
+import {
+	ContextMenu,
+	ContextMenuContent,
+	ContextMenuItem,
+	ContextMenuTrigger,
+} from "@/components/context-menu";
 import {
 	SidebarMenu,
 	SidebarMenuButton,
@@ -24,6 +46,7 @@ import {
 	SidebarMenuSubItem,
 } from "@/components/sidebar";
 import { Skeleton } from "@/components/skeleton";
+import { Spinner } from "@/components/spinner";
 import { cn } from "@/lib/utils";
 
 interface WorktreeSectionProps {
@@ -87,9 +110,11 @@ export function WorktreeSection({ repositoryId }: WorktreeSectionProps) {
 								) : worktrees.length === 0 ? (
 									<WorktreeSectionEmpty />
 								) : (
-									worktrees.map((worktree) => (
-										<WorktreeSubItem key={worktree.id} worktree={worktree} />
-									))
+									<AnimatePresence initial={false}>
+										{worktrees.map((worktree) => (
+											<WorktreeSubItem key={worktree.id} worktree={worktree} />
+										))}
+									</AnimatePresence>
 								)}
 							</SidebarMenuSub>
 						</CollapsiblePanel>
@@ -117,6 +142,9 @@ function formatRelativeTime(iso: string) {
 function WorktreeSubItem({ worktree }: WorktreeSubItemProps) {
 	const location = useLocation();
 	const navigate = useNavigate();
+	const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+	const [isDeleting, setIsDeleting] = useState(false);
+	const [, deleteWorktree] = useAtom(deleteWorktreeMutation);
 
 	const createdAtLabel = useMemo(
 		() => formatRelativeTime(worktree.createdAt),
@@ -129,22 +157,83 @@ function WorktreeSubItem({ worktree }: WorktreeSubItemProps) {
 		navigate(`/worktree/${worktree.id}`);
 	}
 
+	function handleDelete() {
+		setIsDeleteDialogOpen(false);
+		setIsDeleting(true);
+		deleteWorktree({
+			payload: { id: worktree.id },
+			reactivityKeys: [
+				WORKTREE_LIST_KEY,
+				`worktrees:repo:${worktree.repositoryId}`,
+			],
+		});
+	}
+
 	return (
-		<SidebarMenuSubItem>
-			<SidebarMenuSubButton
-				onClick={handleSelect}
-				isActive={isActive}
-				className="h-auto flex-col items-start gap-0.5 py-1.5"
+		<>
+			<motion.div
+				exit={{ opacity: 0, scale: 0.95, height: 0 }}
+				transition={{ duration: 0.075, ease: "easeOut" }}
+				style={{ overflow: "hidden" }}
 			>
-				<span className="flex items-center gap-1.5 text-sm font-medium">
-					<GitBranchIcon className="size-3 shrink-0" />
-					<span className="truncate">{worktree.branch}</span>
-				</span>
-				<span className="text-muted-foreground text-xs">
-					{worktree.name} · {createdAtLabel}
-				</span>
-			</SidebarMenuSubButton>
-		</SidebarMenuSubItem>
+				<SidebarMenuSubItem>
+					<ContextMenu>
+						<ContextMenuTrigger
+							render={
+								<SidebarMenuSubButton
+									onClick={handleSelect}
+									isActive={isActive}
+									className="h-auto flex-col items-start gap-0.5 py-1.5"
+								>
+									<span className="flex w-full items-center justify-between gap-1.5">
+										<span className="flex items-center gap-1.5 text-sm font-medium min-w-0">
+											<GitBranchIcon className="size-3 shrink-0" />
+											<span className="truncate">{worktree.branch}</span>
+										</span>
+										{isDeleting && (
+											<Spinner className="size-3 text-muted-foreground shrink-0" />
+										)}
+									</span>
+									<span className="text-muted-foreground text-xs">
+										{worktree.name} · {createdAtLabel}
+									</span>
+								</SidebarMenuSubButton>
+							}
+						/>
+						<ContextMenuContent className="min-w-[160px]">
+							<ContextMenuItem
+								variant="destructive"
+								onClick={() => setIsDeleteDialogOpen(true)}
+							>
+								<TrashIcon className="size-4" />
+								Delete worktree
+							</ContextMenuItem>
+						</ContextMenuContent>
+					</ContextMenu>
+				</SidebarMenuSubItem>
+			</motion.div>
+
+			<AlertDialog
+				open={isDeleteDialogOpen}
+				onOpenChange={setIsDeleteDialogOpen}
+			>
+				<AlertDialogContent size="sm">
+					<AlertDialogHeader>
+						<AlertDialogTitle>Delete worktree?</AlertDialogTitle>
+						<AlertDialogDescription>
+							This will remove the worktree "{worktree.branch}" from disk and
+							Sandcastle. Review any pending work before deleting.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Cancel</AlertDialogCancel>
+						<AlertDialogAction variant="destructive" onClick={handleDelete}>
+							Delete worktree
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+		</>
 	);
 }
 
