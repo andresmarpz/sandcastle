@@ -39,6 +39,7 @@ export {
 	useChatSessionSnapshot,
 	useChatStatus,
 	useIsAnsweredQuestion,
+	useOptimisticPlanApproval,
 	usePendingAskUserQuestionApproval,
 	usePendingExitPlanApproval,
 	usePendingToolApprovals,

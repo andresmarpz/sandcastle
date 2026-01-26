@@ -94,11 +94,13 @@ function areGroupedItemsEqual(
 			);
 
 		case "plan":
-			// Compare plan items by tool call ID and state
+			// Compare plan items by tool call ID, state, and approval fields
 			return (
 				nextItem.type === "plan" &&
 				prevItem.part.toolCallId === nextItem.part.toolCallId &&
-				prevItem.part.state === nextItem.part.state
+				prevItem.part.state === nextItem.part.state &&
+				prevItem.part.approval?.approved === nextItem.part.approval?.approved &&
+				prevItem.part.approval?.reason === nextItem.part.approval?.reason
 			);
 
 		case "questions":

@@ -175,7 +175,7 @@ function deriveQuestionsStatus(
 			return { status: "answered" };
 		}
 		// If approved is explicitly false, it was skipped
-		if (part.approved === false) {
+		if (part.approval?.approved === false) {
 			return { status: "skipped" };
 		}
 		// Output available but no answers = skipped

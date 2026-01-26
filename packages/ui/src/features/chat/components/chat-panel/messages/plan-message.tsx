@@ -1,27 +1,35 @@
 "use client";
 
+import { CaretUpDownIcon } from "@phosphor-icons/react/CaretUpDown";
 import { CheckIcon } from "@phosphor-icons/react/Check";
 import { ClockIcon } from "@phosphor-icons/react/Clock";
 import { WarningIcon } from "@phosphor-icons/react/Warning";
 import { XIcon } from "@phosphor-icons/react/X";
 import { useEffect, useState } from "react";
 import { NativeMarkdownResponse } from "@/components/ai-elements/native-markdown";
-import {
-	Plan,
-	PlanAction,
-	PlanContent,
-	PlanDescription,
-	PlanHeader,
-	PlanTitle,
-	PlanTrigger,
-} from "@/components/ai-elements/plan";
+import { Shimmer } from "@/components/ai-elements/shimmer";
 import { Badge } from "@/components/badge";
-import { usePendingExitPlanApproval } from "@/features/chat/store";
+import { Button } from "@/components/button";
+import {
+	Card,
+	CardAction,
+	CardContent,
+	CardDescription,
+	CardFooter,
+	CardHeader,
+	CardTitle,
+} from "@/components/card";
+import {
+	Collapsible,
+	CollapsiblePanel,
+	CollapsibleTrigger,
+} from "@/components/collapsible";
+import {
+	useOptimisticPlanApproval,
+	usePendingExitPlanApproval,
+} from "@/features/chat/store";
+import { cn } from "@/lib/utils";
 import type { ToolCallPart } from "../../parts";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Types
-// ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * Discriminated union representing all possible plan states.
@@ -34,30 +42,36 @@ type PlanStatus =
 	| { status: "rejected"; feedback?: string }
 	| { status: "error"; errorText: string };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────────────────────────
-
 /**
  * Derive the plan status from available state.
  *
  * Single source of truth approach:
- * 1. streaming - Still generating the plan
- * 2. error - Tool failed (timeout, etc.)
- * 3. output-available with explicit approved field - Use persisted approval status
- * 4. pending - Waiting for user approval (from pendingApprovalRequests)
- * 5. input-available but not pending - reconnection edge case, treat as pending
+ * 1. optimistic approval - Immediate feedback after user clicks approve/reject
+ * 2. streaming - Still generating the plan
+ * 3. error - Tool failed (timeout, etc.)
+ * 4. output-available with explicit approved field - Use persisted approval status
+ * 5. pending - Waiting for user approval (from pendingApprovalRequests)
+ * 6. input-available but not pending - reconnection edge case, treat as pending
  */
 function derivePlanStatus(
 	part: ToolCallPart,
 	isPendingApproval: boolean,
+	optimisticApproval: { approved: boolean; feedback?: string } | null,
 ): PlanStatus {
-	// 1. Check if streaming (still generating)
+	// 1. Check optimistic approval first (immediate feedback)
+	if (optimisticApproval) {
+		if (optimisticApproval.approved) {
+			return { status: "approved" };
+		}
+		return { status: "rejected", feedback: optimisticApproval.feedback };
+	}
+
+	// 2. Check if streaming (still generating)
 	if (part.state === "input-streaming") {
 		return { status: "streaming" };
 	}
 
-	// 2. Check for errors (timeout, etc.)
+	// 3. Check for errors (timeout, etc.)
 	if (part.state === "output-error") {
 		return {
 			status: "error",
@@ -65,29 +79,30 @@ function derivePlanStatus(
 		};
 	}
 
-	// 3. Output available - check the persisted approved field
+	// 4. Output available - check the persisted approval field
 	// This is the source of truth after page reload
-	if (part.state === "output-available") {
-		if (part.approved === true) {
+	if (part.state === "output-available" && part.approval) {
+		if (part.approval.approved === true) {
 			return { status: "approved" };
 		}
-		if (part.approved === false) {
-			return { status: "rejected", feedback: part.feedback };
+		if (part.approval.approved === false) {
+			return { status: "rejected", feedback: part.approval.reason };
 		}
 	}
 
-	// 4. Check if pending (waiting for user response)
+	// 5. Check if pending (waiting for user response)
 	if (isPendingApproval) {
 		return { status: "pending" };
 	}
 
-	// 5. input-available but not in pending = reconnection edge case, treat as pending
+	// 6. input-available but not in pending = reconnection edge case, treat as pending
 	// Also handles legacy data without explicit approved field
 	return { status: "pending" };
 }
 
 /**
  * Get the description text for each plan status.
+ * Note: Rejection feedback is displayed separately in FeedbackSection.
  */
 function getStatusDescription(planStatus: PlanStatus): string {
 	switch (planStatus.status) {
@@ -98,18 +113,11 @@ function getStatusDescription(planStatus: PlanStatus): string {
 		case "approved":
 			return "Plan has been approved and implementation has started.";
 		case "rejected":
-			if (planStatus.feedback) {
-				return `Plan was not approved: ${planStatus.feedback}`;
-			}
-			return "Plan was not approved. You can send a new message to request changes.";
+			return "Plan was not approved.";
 		case "error":
 			return `Plan approval failed: ${planStatus.errorText}`;
 	}
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Component
-// ─────────────────────────────────────────────────────────────────────────────
 
 interface PlanMessageProps {
 	part: ToolCallPart;
@@ -124,9 +132,19 @@ interface PlanMessageProps {
 export function PlanMessage({ part, sessionId }: PlanMessageProps) {
 	const pendingApproval = usePendingExitPlanApproval(sessionId);
 	const isPendingApproval = pendingApproval?.toolCallId === part.toolCallId;
+	const optimisticApproval = useOptimisticPlanApproval(
+		sessionId,
+		part.toolCallId,
+	);
 
 	// Derive plan status from state (single source of truth)
-	const planStatus = derivePlanStatus(part, isPendingApproval);
+	const planStatus = derivePlanStatus(
+		part,
+		isPendingApproval,
+		optimisticApproval,
+	);
+
+	const isStreaming = planStatus.status === "streaming";
 
 	// Extract plan content from input
 	const input = part.input as { plan?: string } | undefined;
@@ -142,39 +160,69 @@ export function PlanMessage({ part, sessionId }: PlanMessageProps) {
 		setIsOpen(shouldBeOpen);
 	}, [shouldBeOpen]);
 
+	const hasFeedback = planStatus.status === "rejected" && planStatus.feedback;
+
 	return (
-		<div className="py-px">
-			<Plan
-				className="border border-border ring-0"
-				isStreaming={planStatus.status === "streaming"}
-				open={isOpen}
-				onOpenChange={setIsOpen}
+		<Collapsible open={isOpen} onOpenChange={setIsOpen}>
+			<Card
+				className={cn(
+					"border border-border shadow-none ring-0 py-0",
+					// Remove gap when there's a feedback footer to avoid extra space
+					hasFeedback && "gap-0",
+				)}
 			>
-				<PlanHeader className="flex-row items-start justify-between gap-4">
+				<CardHeader className="flex-row items-start justify-between gap-4 py-4">
 					<div>
-						<PlanTitle>Implementation Plan</PlanTitle>
-						<PlanDescription>
-							{getStatusDescription(planStatus)}
-						</PlanDescription>
+						<CardTitle>
+							{isStreaming ? (
+								<Shimmer>Implementation Plan</Shimmer>
+							) : (
+								"Implementation Plan"
+							)}
+						</CardTitle>
+						<CardDescription className="text-balance">
+							{isStreaming ? (
+								<Shimmer>{getStatusDescription(planStatus)}</Shimmer>
+							) : (
+								getStatusDescription(planStatus)
+							)}
+						</CardDescription>
 					</div>
-					<PlanAction className="flex items-center gap-2">
+					<CardAction className="flex items-center gap-2">
 						<StatusBadge status={planStatus} />
-						<PlanTrigger />
-					</PlanAction>
-				</PlanHeader>
-				<PlanContent>
-					<NativeMarkdownResponse className="[&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
-						{planContent}
-					</NativeMarkdownResponse>
-				</PlanContent>
-			</Plan>
-		</div>
+						<CollapsibleTrigger
+							render={(props) => (
+								<Button variant="ghost" {...props} className="size-8">
+									<CaretUpDownIcon className="size-4" />
+									<span className="sr-only">Toggle plan</span>
+								</Button>
+							)}
+						/>
+					</CardAction>
+				</CardHeader>
+				<CollapsiblePanel>
+					<CardContent className="pb-4">
+						<NativeMarkdownResponse className="[&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+							{planContent}
+						</NativeMarkdownResponse>
+					</CardContent>
+					{hasFeedback && (
+						<CardFooter className="border-t border-border bg-muted/50 p-4">
+							<div>
+								<div className="mb-1 text-xs font-medium text-muted-foreground">
+									Requested Changes
+								</div>
+								<div className="text-sm text-foreground">
+									{planStatus.feedback}
+								</div>
+							</div>
+						</CardFooter>
+					)}
+				</CollapsiblePanel>
+			</Card>
+		</Collapsible>
 	);
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Status Badge
-// ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * Renders the appropriate badge based on plan status.
@@ -190,7 +238,7 @@ function StatusBadge({ status }: { status: PlanStatus }) {
 			);
 		case "rejected":
 			return (
-				<Badge className="flex shrink-0 items-center gap-1 bg-muted text-muted-foreground">
+				<Badge className="flex shrink-0 items-center gap-1 bg-red-400/10 text-red-500/70">
 					<XIcon className="size-3" />
 					Not approved
 				</Badge>

@@ -410,3 +410,36 @@ export function useStreamingMetadata(
 ): StreamingMetadata | null {
 	return useChatSessionSelector(sessionId, (s) => s.streamingMetadata);
 }
+
+/**
+ * Hook for reading optimistic approval state for a plan (ExitPlanMode tool).
+ *
+ * Returns the optimistic approval if one exists for this toolCallId,
+ * otherwise returns null. This provides immediate UI feedback when
+ * the user approves/rejects a plan, before the server confirms.
+ *
+ * The optimistic state is cleared automatically when:
+ * - The server sends tool-output-available event (confirmation)
+ * - The session ends (SessionStopped event)
+ *
+ * @example
+ * ```tsx
+ * function PlanMessage({ sessionId, toolCallId }: Props) {
+ *   const optimisticApproval = useOptimisticPlanApproval(sessionId, toolCallId)
+ *
+ *   if (optimisticApproval?.approved) {
+ *     return <Badge>Approved</Badge>
+ *   }
+ *   // ... rest of component
+ * }
+ * ```
+ */
+export function useOptimisticPlanApproval(
+	sessionId: string,
+	toolCallId: string,
+): { approved: boolean; feedback?: string } | null {
+	return useStore(chatStore, (state) => {
+		const session = state.getSession(sessionId);
+		return session.optimisticApprovals.get(toolCallId) ?? null;
+	});
+}

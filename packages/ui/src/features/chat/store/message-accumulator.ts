@@ -36,9 +36,12 @@ export type ToolInvocationPart = {
 	title?: string;
 	providerExecuted?: boolean;
 	dynamic?: boolean;
-	// Approval fields for tools like ExitPlanMode
-	approved?: boolean;
-	feedback?: string;
+	// Approval for tools like ExitPlanMode (nested structure matching storage schema)
+	approval?: {
+		id: string;
+		approved?: boolean;
+		reason?: string;
+	};
 	// Error text for output-error state
 	errorText?: string;
 	// Parent tool call ID - links this tool to its parent subagent (Task tool)
@@ -282,12 +285,9 @@ export class MessageAccumulator {
 					const part = this.parts[state.index] as ToolInvocationPart;
 					part.state = "output-available";
 					part.output = event.output;
-					// Copy approval fields if present (for tools like ExitPlanMode)
-					if (event.approved !== undefined) {
-						part.approved = event.approved;
-					}
-					if (event.feedback !== undefined) {
-						part.feedback = event.feedback;
+					// Copy nested approval if present (for tools like ExitPlanMode)
+					if (event.approval !== undefined) {
+						part.approval = event.approval;
 					}
 				}
 				break;

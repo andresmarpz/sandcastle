@@ -36,22 +36,51 @@ function isExitPlanModeTool(toolName: string): boolean {
 /**
  * Parse ExitPlanMode output to extract approval status and feedback.
  * Returns undefined if the output doesn't match expected patterns.
+ *
+ * Handles both string and array formats:
+ * - String: "Plan approved" or "Plan rejected. User feedback: ..."
+ * - Array (MCP content): [{ type: "text", text: "..." }]
  */
-function parseExitPlanModeOutput(output: string):
+function parseExitPlanModeOutput(output: unknown):
 	| {
 			approved: boolean;
 			reason?: string;
 	  }
 	| undefined {
+	// Extract text content from output
+	let text: string | undefined;
+
+	if (typeof output === "string") {
+		text = output;
+	} else if (Array.isArray(output)) {
+		// Handle MCP content array: [{ type: "text", text: "..." }]
+		const textBlock = output.find(
+			(block) =>
+				typeof block === "object" &&
+				block !== null &&
+				"type" in block &&
+				block.type === "text",
+		);
+		if (
+			textBlock &&
+			"text" in textBlock &&
+			typeof textBlock.text === "string"
+		) {
+			text = textBlock.text;
+		}
+	}
+
+	if (!text) return undefined;
+
 	// Check for approval pattern
-	if (output.includes("Plan approved")) {
+	if (text.includes("Plan approved")) {
 		return { approved: true };
 	}
 
 	// Check for rejection pattern
-	if (output.includes("Plan rejected")) {
+	if (text.includes("Plan rejected")) {
 		// Extract feedback if present (format: "Plan rejected. User feedback: ...")
-		const feedbackMatch = output.match(/User feedback:\s*(.+)$/);
+		const feedbackMatch = text.match(/User feedback:\s*(.+)$/);
 		return {
 			approved: false,
 			reason: feedbackMatch?.[1]?.trim() || undefined,
@@ -419,9 +448,10 @@ function applyToolResult(
 			: JSON.stringify(result.content);
 
 	// For ExitPlanMode, extract approval info from parsed output
+	// Pass raw content - parseExitPlanModeOutput handles both string and array formats
 	const approvalInfo =
 		!result.is_error && isExitPlanModeTool(toolPart.toolName)
-			? parseExitPlanModeOutput(outputAsString)
+			? parseExitPlanModeOutput(output)
 			: undefined;
 
 	// Build tool-specific metadata (discriminated union by `tool` field)
