@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.2.5](https://github.com/andresmarpz/sandcastle/compare/v0.2.4...v0.2.5) (2026-01-26)
+
+
+### Features
+
+* create session metadata panel ([4677aaa](https://github.com/andresmarpz/sandcastle/commit/4677aaa957d8ea8f423f5a81ee889025d9d2d97a))
+
+
+### Bug Fixes
+
+* downgrade claude agent sdk ([a69b883](https://github.com/andresmarpz/sandcastle/commit/a69b883085a03737d963e986a857c4f7388da25f))
+* **ui:** prevent notification badge when session is focused ([#117](https://github.com/andresmarpz/sandcastle/issues/117)) ([ef074a4](https://github.com/andresmarpz/sandcastle/commit/ef074a4dba3a91fa0b3c0d16fdf7a81ee95047d4))
+
 ## [0.2.4](https://github.com/andresmarpz/sandcastle/compare/v0.2.3...v0.2.4) (2026-01-26)
 
 
