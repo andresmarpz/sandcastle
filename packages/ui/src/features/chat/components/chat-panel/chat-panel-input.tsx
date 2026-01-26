@@ -37,7 +37,7 @@ import {
 	useSetChatMode,
 } from "../../store";
 import { FilePickerPopover } from "../file-search";
-import { type Mode, PlanSelector } from "../plan-selector";
+import { type Mode, PlanSelector } from "./plan-selector";
 
 interface ChatPanelInputProps {
 	sessionId: string;

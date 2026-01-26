@@ -66,3 +66,64 @@ export function computeTodoDiff(
 
 	return { added, completed, started };
 }
+
+/**
+ * The base tool name for ExitPlanMode (without MCP prefix)
+ */
+export const EXIT_PLAN_MODE_TOOL = "ExitPlanMode";
+
+/**
+ * Checks if a tool name is the ExitPlanMode tool.
+ * Handles both direct name ("ExitPlanMode") and MCP-prefixed name ("mcp__plan-mode-ui__ExitPlanMode")
+ */
+export function isExitPlanModeTool(toolName: string): boolean {
+	return (
+		toolName === EXIT_PLAN_MODE_TOOL ||
+		toolName.endsWith(`__${EXIT_PLAN_MODE_TOOL}`)
+	);
+}
+
+/**
+ * The base tool name for AskUserQuestion (without MCP prefix)
+ */
+export const ASK_USER_QUESTION_TOOL = "AskUserQuestion";
+
+/**
+ * Checks if a tool name is the AskUserQuestion tool.
+ * Handles both direct name ("AskUserQuestion") and MCP-prefixed name
+ */
+export function isAskUserQuestionTool(toolName: string): boolean {
+	return (
+		toolName === ASK_USER_QUESTION_TOOL ||
+		toolName.endsWith(`__${ASK_USER_QUESTION_TOOL}`)
+	);
+}
+
+/**
+ * The base tool name for RenameSession (without MCP prefix)
+ */
+export const RENAME_SESSION_TOOL = "RenameSession";
+
+/**
+ * Checks if a tool name is the RenameSession tool.
+ * Handles both direct name ("RenameSession") and MCP-prefixed name
+ */
+export function isRenameSessionTool(toolName: string): boolean {
+	return (
+		toolName === RENAME_SESSION_TOOL ||
+		toolName.endsWith(`__${RENAME_SESSION_TOOL}`)
+	);
+}
+
+/**
+ * The base tool name for Task (subagent invocation)
+ */
+export const TASK_TOOL = "Task";
+
+/**
+ * Checks if a tool name is the Task tool (subagent).
+ * Handles both direct name ("Task") and MCP-prefixed name
+ */
+export function isTaskTool(toolName: string): boolean {
+	return toolName === TASK_TOOL || toolName.endsWith(`__${TASK_TOOL}`);
+}

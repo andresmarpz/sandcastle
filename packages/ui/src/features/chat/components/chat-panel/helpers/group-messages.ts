@@ -1,15 +1,15 @@
+import type { ToolCallPart } from "@sandcastle/schemas";
 import type { UIMessage } from "ai";
-import type { ToolCallPart } from "../../parts";
 import type { TodoItem } from "../messages/tasks";
 import type { ToolMetadata, ToolStep } from "../messages/work-unit";
 import { computeTodoDiff, getToolName, normalizeState } from "./helpers";
-import type { GroupedItem, PlanItem } from "./types";
+import type { GroupedItem } from "./types";
 
 export type { SubagentItem } from "../messages/subagent";
 export type { TasksItem, TodoItem, TodoTraceItem } from "../messages/tasks";
 export type { ToolMetadata, ToolStep } from "../messages/work-unit";
 // Re-export types for consumers
-export type { GroupedItem, PlanItem } from "./types";
+export type { GroupedItem, PlanItem, QuestionsItem } from "./types";
 
 /**
  * Checks if a tool name is the ExitPlanMode tool.
@@ -17,6 +17,14 @@ export type { GroupedItem, PlanItem } from "./types";
  */
 function isExitPlanModeTool(toolName: string): boolean {
 	return toolName === "ExitPlanMode" || toolName.endsWith("__ExitPlanMode");
+}
+
+/**
+ * Checks if a tool name is the AskUserQuestion tool.
+ * Handles both direct name ("AskUserQuestion") and MCP-prefixed name.
+ */
+function isAskUserQuestionTool(toolName: string): boolean {
+	return toolName === "AskUserQuestion" || toolName.includes("AskUserQuestion");
 }
 
 /**
@@ -56,9 +64,10 @@ function collectToolSteps(messages: readonly UIMessage[]): CollectedSteps {
 
 			if (toolPart.toolName?.includes("RenameSession")) continue;
 
-			// Skip ExitPlanMode - it's handled separately as a "plan" item
+			// Skip ExitPlanMode and AskUserQuestion - they're handled separately
 			const toolName = getToolName(toolPart);
 			if (isExitPlanModeTool(toolName)) continue;
+			if (isAskUserQuestionTool(toolName)) continue;
 
 			const toolCallId =
 				toolPart.toolCallId ?? `${message.id}-tool-${allSteps.length}`;
@@ -173,6 +182,18 @@ function processMessages(
 					items.push({
 						type: "plan",
 						id: `plan-${toolPart.toolCallId}`,
+						messageId: message.id,
+						part: toolPart,
+					});
+					continue;
+				}
+
+				// AskUserQuestion → emit questions item (not in allSteps)
+				if (isAskUserQuestionTool(partToolName)) {
+					flushWorkUnit();
+					items.push({
+						type: "questions",
+						id: `questions-${toolPart.toolCallId}`,
 						messageId: message.id,
 						part: toolPart,
 					});

@@ -98,7 +98,6 @@ export const StreamEventToolApprovalRequest = Schema.Struct({
 	type: Schema.Literal("tool-approval-request"),
 	toolCallId: Schema.String,
 	toolName: Schema.String,
-	input: Schema.Unknown,
 	/** ID of the message containing context (e.g., plan content for ExitPlanMode) */
 	messageId: Schema.optional(Schema.String),
 });

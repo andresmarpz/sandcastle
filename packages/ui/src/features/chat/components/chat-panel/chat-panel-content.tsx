@@ -7,10 +7,10 @@ import {
 } from "@/components/ai-elements/conversation";
 import { Message, MessageContent } from "@/components/ai-elements/message";
 import { useChatSession } from "../../store";
-import { StreamingIndicator } from "../streaming-indicator";
 import { ChatPanelInput } from "./chat-panel-input";
 import { ChatPanelMessageQueue } from "./chat-panel-message-queue";
 import { ChatPanelMessages } from "./chat-panel-messages";
+import { StreamingIndicator } from "./streaming-indicator";
 
 export interface ChatPanelContentProps {
 	session: Session;
