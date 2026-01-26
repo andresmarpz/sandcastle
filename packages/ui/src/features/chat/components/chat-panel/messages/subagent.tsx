@@ -1,6 +1,7 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useCallback } from "react";
+import { useStickToBottomContext } from "use-stick-to-bottom";
 import { NativeMarkdownResponse } from "@/components/ai-elements/native-markdown";
 import {
 	Subagent,
@@ -97,8 +98,18 @@ export const SubagentMessage = memo(function SubagentMessage({
 	const responseText =
 		item.responseText ?? extractFirstText(item.taskStep.output);
 
+	const { stopScroll } = useStickToBottomContext();
+
+	const handleClick = useCallback(() => {
+		stopScroll();
+	}, [stopScroll]);
+
 	return (
-		<Subagent status={status} defaultOpen={status === "running"}>
+		<Subagent
+			status={status}
+			defaultOpen={status === "running"}
+			onClickCapture={handleClick}
+		>
 			<SubagentHeader title={title} subagentType={subagentType} />
 
 			<SubagentContent>
