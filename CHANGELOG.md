@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.2.4](https://github.com/andresmarpz/sandcastle/compare/v0.2.3...v0.2.4) (2026-01-26)
+
+
+### Features
+
+* create todo components ([a78ff10](https://github.com/andresmarpz/sandcastle/commit/a78ff10063381ee62fa5eed532e79d2c6695c9cb))
+* final ui refactor ([ede737f](https://github.com/andresmarpz/sandcastle/commit/ede737fd5a49ab92145407e81cb44bf897ae2e8e))
+* improve tool approval and craft plan rendering ([29f6880](https://github.com/andresmarpz/sandcastle/commit/29f688033033ec90735803d3fe8baf9d652c8cf9))
+* many ui improvements ([893d57a](https://github.com/andresmarpz/sandcastle/commit/893d57a27933ce6473d267fb8eb177443bb2c9e6))
+* rework chat UI ([#116](https://github.com/andresmarpz/sandcastle/issues/116)) ([4a5848f](https://github.com/andresmarpz/sandcastle/commit/4a5848f8ab87ea7f872c97b141ad61fe4eddc41b))
+* tune background colors on white theme ([d82f1aa](https://github.com/andresmarpz/sandcastle/commit/d82f1aa32eec096b00ab02e64626cdb5e0fd4e72))
+* update vercel skills ([fbd72cd](https://github.com/andresmarpz/sandcastle/commit/fbd72cd85d4ba6bc653517c09917b746505984ee))
+
+
+### Bug Fixes
+
+* bump cargo.lock ([59cecfb](https://github.com/andresmarpz/sandcastle/commit/59cecfbcf1986855552766f0d466e9c6cac032e3))
+* stop scrolling when opening plan ([18792ed](https://github.com/andresmarpz/sandcastle/commit/18792ed98ff9fc917c25bf89a90c6a43eb6c9a18))
+* type error ([5e73d3a](https://github.com/andresmarpz/sandcastle/commit/5e73d3a842c060f09087c0dc7cba4a27a7d87c1f))
+* update bun.lock ([f3ab9ba](https://github.com/andresmarpz/sandcastle/commit/f3ab9ba5c69b6697da3eac92c9012f64d1047f55))
+* update vercel build script ([9542910](https://github.com/andresmarpz/sandcastle/commit/95429102d416a1b0fd017416f2390df727ed2f23))
+
 ## [0.2.3](https://github.com/andresmarpz/sandcastle/compare/v0.2.2...v0.2.3) (2026-01-22)
 
 
