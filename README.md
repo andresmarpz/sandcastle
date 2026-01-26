@@ -25,6 +25,9 @@
 
 <br/>
 
+> [!WARNING]
+> **Early Development** — This project is under active development. Real usage is not recommended at this time. Expect breaking changes and potential data loss until we reach a stable release.
+
 ## About
 
 Sandcastle is an open-source agent orchestrator for managing fleets of AI coding agents. Spawn isolated development environments, assign Claude Code instances to specific tasks, and monitor progress across all your work streams—from a beautiful, unified interface.
