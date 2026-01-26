@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.6](https://github.com/andresmarpz/sandcastle/compare/v0.2.5...v0.2.6) (2026-01-26)
+
+
+### Features
+
+* improve session metadata panel ([767e42e](https://github.com/andresmarpz/sandcastle/commit/767e42e1e1897e0e784707f710540a15caf29aac))
+
 ## [0.2.5](https://github.com/andresmarpz/sandcastle/compare/v0.2.4...v0.2.5) (2026-01-26)
 
 
