@@ -10,7 +10,7 @@ import { type GroupedItem, groupMessages } from "./helpers/group-messages";
 import { PlanMessage } from "./messages/plan-message";
 import { Questions } from "./messages/questions";
 import { SubagentMessage } from "./messages/subagent";
-import { TasksMessage, TodoTraceMessage } from "./messages/tasks";
+import { TodoTraceMessage } from "./messages/tasks";
 import { WorkUnit } from "./messages/work-unit";
 
 interface ChatPanelMessagesProps {
@@ -89,15 +89,6 @@ const GroupedItemRenderer = memo(function GroupedItemRenderer({
 				<Message from="assistant">
 					<MessageContent>
 						<SubagentMessage item={item} />
-					</MessageContent>
-				</Message>
-			);
-
-		case "tasks":
-			return (
-				<Message from="assistant">
-					<MessageContent>
-						<TasksMessage item={item} />
 					</MessageContent>
 				</Message>
 			);

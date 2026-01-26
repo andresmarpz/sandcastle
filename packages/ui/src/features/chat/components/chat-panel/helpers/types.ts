@@ -1,7 +1,7 @@
 import type { ToolCallPart } from "@sandcastle/schemas";
 import type { UIMessage } from "ai";
 import type { SubagentItem } from "../messages/subagent";
-import type { TasksItem, TodoTraceItem } from "../messages/tasks";
+import type { TodoTraceItem } from "../messages/tasks";
 import type { ToolStep } from "../messages/work-unit";
 
 // Re-export from canonical source
@@ -44,7 +44,6 @@ export type GroupedItem =
 	| AssistantMessageItem
 	| WorkUnitItem
 	| SubagentItem
-	| TasksItem
 	| TodoTraceItem
 	| PlanItem
 	| QuestionsItem;

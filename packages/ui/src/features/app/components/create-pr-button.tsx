@@ -32,7 +32,7 @@ function CreatePRButtonInner({ sessionId }: { sessionId: string }) {
 	return (
 		<Button
 			variant="outline"
-			size="sm"
+			size="xs"
 			onClick={handleClick}
 			disabled={isDisabled}
 		>
