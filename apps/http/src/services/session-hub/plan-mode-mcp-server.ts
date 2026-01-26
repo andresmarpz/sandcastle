@@ -150,7 +150,6 @@ export function createPlanModeMcpServer(params: CreatePlanModeMcpServerParams) {
 						type: "tool-approval-request",
 						toolCallId: toolUseId,
 						toolName,
-						input: args,
 					});
 
 					try {
@@ -246,7 +245,6 @@ export function createPlanModeMcpServer(params: CreatePlanModeMcpServerParams) {
 						type: "tool-approval-request",
 						toolCallId: toolUseId,
 						toolName,
-						input: args,
 					});
 
 					try {
