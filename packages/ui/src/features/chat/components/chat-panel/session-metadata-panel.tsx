@@ -5,12 +5,10 @@ import { CircleIcon } from "@phosphor-icons/react/Circle";
 import { CircleHalfIcon } from "@phosphor-icons/react/CircleHalf";
 import type { Session } from "@sandcastle/schemas";
 import type { UIMessage } from "ai";
-import { memo, useEffect, useMemo, useState } from "react";
-import {
-	SessionStatusDot,
-	statusConfig,
-	useSessionStatusIndicator,
-} from "@/features/sidebar/main/session-status-indicator";
+import { memo, useMemo } from "react";
+import { ClaudeAI } from "@/components/icons/anthropic.icon";
+import { useSessionStatusIndicator } from "@/features/sidebar/main/session-status-indicator";
+import { getModelDisplayName } from "@/lib/models";
 import { cn } from "@/lib/utils";
 import { useChatSession } from "../../store";
 import { StreamingIndicator } from "./streaming-indicator";
@@ -54,6 +52,24 @@ function extractLatestTodos(messages: readonly UIMessage[]): TodoItem[] {
 }
 
 /**
+ * Extracts the model name from the latest assistant message metadata.
+ */
+function extractModelFromMessages(
+	messages: readonly UIMessage[],
+): string | null {
+	for (let i = messages.length - 1; i >= 0; i--) {
+		const msg = messages[i];
+		if (!msg || msg.role !== "assistant") continue;
+
+		const metadata = msg.metadata as { model?: string } | undefined;
+		if (metadata?.model) {
+			return metadata.model;
+		}
+	}
+	return null;
+}
+
+/**
  * Floating session metadata panel displayed in the top-right column.
  * Shows status, mode, model, context usage, cost, and current tasks.
  */
@@ -69,20 +85,6 @@ export const SessionMetadataPanel = memo(function SessionMetadataPanel({
 		sessionId,
 		status: session.status,
 	});
-	const statusLabel = statusConfig[indicatorStatus].label;
-
-	// Streaming duration timer
-	const [elapsed, setElapsed] = useState(0);
-	useEffect(() => {
-		if (!turnStartedAt) {
-			setElapsed(0);
-			return;
-		}
-		const interval = setInterval(() => {
-			setElapsed(Date.now() - Date.parse(turnStartedAt));
-		}, 100);
-		return () => clearInterval(interval);
-	}, [turnStartedAt]);
 
 	// Calculate context usage percentage
 	// Context = inputTokens + cacheReadInputTokens + cacheCreationInputTokens
@@ -110,36 +112,35 @@ export const SessionMetadataPanel = memo(function SessionMetadataPanel({
 	// Extract latest todos from messages
 	const todos = useMemo(() => extractLatestTodos(messages), [messages]);
 
-	const formattedTime = `${(elapsed / 1000).toFixed(1)}s`;
+	// Get model from session or extract from latest message metadata
+	const modelId = useMemo(
+		() => session.model ?? extractModelFromMessages(messages),
+		[session.model, messages],
+	);
+	const modelDisplayName = getModelDisplayName(modelId);
+
 	const isStreaming = indicatorStatus === "streaming";
 
 	return (
 		<div className="min-w-[250px] max-w-[300px] p-2.5 backdrop-blur-sm space-y-2.5 text-xs prose">
-			{/* Status row */}
-			<div className="flex items-center justify-between gap-2">
-				{/* <div className="flex items-center gap-1.5">
-					<span className="text-muted-foreground">{statusLabel}</span>
-					<SessionStatusDot status={indicatorStatus} className="size-1.5" />
-				</div> */}
-			</div>
-
 			{/* Model */}
-			{session.model && (
-				<div className="text-muted-foreground truncate">{session.model}</div>
+			{modelDisplayName && (
+				<div className="flex items-center gap-1.5 text-muted-foreground">
+					<ClaudeAI className="size-3.5 shrink-0" />
+					<span className="truncate">{modelDisplayName}</span>
+				</div>
 			)}
 
 			{/* Context usage bar */}
-			{contextWindow > 0 && (
-				<div className="space-y-[2px]">
-					<div className="flex items-center justify-between">
-						<span className="text-muted-foreground">Context</span>
-						<span className="tabular-nums text-muted-foreground">
-							{Math.round(contextPercentage)}%
-						</span>
-					</div>
-					<ContextBar percentage={contextPercentage} />
+			<div className="space-y-[2px]">
+				<div className="flex items-center justify-between">
+					<span className="text-muted-foreground">Context</span>
+					<span className="tabular-nums text-muted-foreground">
+						{Math.round(contextPercentage)}%
+					</span>
 				</div>
-			)}
+				<ContextBar percentage={contextPercentage} />
+			</div>
 
 			{/* Cost */}
 			{totalCost > 0 && (
