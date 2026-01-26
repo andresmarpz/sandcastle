@@ -21,6 +21,8 @@ const rowToChatMessage = (row: Record<string, unknown>): ChatMessage => {
 	const metadataJson = row.metadata as string | null;
 	const metadata = metadataJson ? JSON.parse(metadataJson) : undefined;
 
+	const parentToolCallId = row.parentToolCallId as string | null | undefined;
+
 	return {
 		id: row.id as string,
 		sessionId: row.sessionId as string,
@@ -28,6 +30,7 @@ const rowToChatMessage = (row: Record<string, unknown>): ChatMessage => {
 		parts,
 		createdAt: row.createdAt as string,
 		metadata,
+		parentToolCallId: parentToolCallId ?? undefined,
 	};
 };
 
@@ -63,6 +66,7 @@ export const createChatMessagesService = (db: DbInstance) => ({
 		role: MessageRole;
 		parts: readonly (typeof MessagePart.Type)[];
 		metadata?: Record<string, unknown>;
+		parentToolCallId?: string | null;
 	}) =>
 		Effect.gen(function* () {
 			const now = nowIso();
@@ -95,9 +99,17 @@ export const createChatMessagesService = (db: DbInstance) => ({
 
 			yield* tryDb("chatMessages.create", () =>
 				db.run(
-					`INSERT INTO chat_messages (id, sessionId, role, parts, createdAt, metadata)
-					 VALUES (?, ?, ?, ?, ?, ?)`,
-					[id, input.sessionId, input.role, partsJson, now, metadataJson],
+					`INSERT INTO chat_messages (id, sessionId, role, parts, createdAt, metadata, parentToolCallId)
+					 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+					[
+						id,
+						input.sessionId,
+						input.role,
+						partsJson,
+						now,
+						metadataJson,
+						input.parentToolCallId ?? null,
+					],
 				),
 			);
 
@@ -108,6 +120,7 @@ export const createChatMessagesService = (db: DbInstance) => ({
 				parts: input.parts,
 				createdAt: now,
 				metadata: input.metadata,
+				parentToolCallId: input.parentToolCallId ?? undefined,
 			};
 		}),
 
@@ -138,6 +151,7 @@ export const createChatMessagesService = (db: DbInstance) => ({
 			turnId?: string;
 			seq?: number;
 			metadata?: Record<string, unknown>;
+			parentToolCallId?: string | null;
 		}>,
 	) =>
 		Effect.gen(function* () {
@@ -155,8 +169,8 @@ export const createChatMessagesService = (db: DbInstance) => ({
 
 				yield* tryDb("chatMessages.createMany", () =>
 					db.run(
-						`INSERT INTO chat_messages (id, sessionId, role, parts, createdAt, metadata, turnId, seq)
-						 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+						`INSERT INTO chat_messages (id, sessionId, role, parts, createdAt, metadata, turnId, seq, parentToolCallId)
+						 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 						[
 							id,
 							input.sessionId,
@@ -166,6 +180,7 @@ export const createChatMessagesService = (db: DbInstance) => ({
 							metadataJson,
 							input.turnId ?? null,
 							input.seq ?? 0,
+							input.parentToolCallId ?? null,
 						],
 					),
 				);
@@ -177,6 +192,7 @@ export const createChatMessagesService = (db: DbInstance) => ({
 					parts: input.parts,
 					createdAt: now,
 					metadata: input.metadata,
+					parentToolCallId: input.parentToolCallId ?? undefined,
 				});
 			}
 

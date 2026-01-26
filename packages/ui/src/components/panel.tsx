@@ -17,7 +17,9 @@ import {
 	useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Plus, X } from "lucide-react";
+import { DotsSixVerticalIcon } from "@phosphor-icons/react/DotsSixVertical";
+import { PlusIcon } from "@phosphor-icons/react/Plus";
+import { XIcon } from "@phosphor-icons/react/X";
 import {
 	createContext,
 	type ReactNode,
@@ -26,7 +28,6 @@ import {
 	useMemo,
 	useState,
 } from "react";
-
 import { cn } from "@/lib/utils";
 import { Button } from "./button";
 
@@ -259,7 +260,7 @@ function SortableTab({
 					{...attributes}
 					{...listeners}
 				>
-					<GripVertical className="size-3" />
+					<DotsSixVerticalIcon className="size-3" />
 				</span>
 			)}
 			<span className="truncate max-w-[150px]">{tab.label}</span>
@@ -286,7 +287,7 @@ function SortableTab({
 					)}
 					aria-label={`Close ${tab.label}`}
 				>
-					<X className="size-3" />
+					<XIcon className="size-3" />
 				</span>
 			)}
 		</TabsPrimitive.Tab>
@@ -368,7 +369,7 @@ function PanelHeader({ className, children }: PanelHeaderProps) {
 									className="mx-1 shrink-0"
 									aria-label="Add tab"
 								>
-									<Plus className="size-3.5" />
+									<PlusIcon className="size-3.5" />
 								</Button>
 							)}
 						</TabsPrimitive.List>

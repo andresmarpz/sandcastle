@@ -22,10 +22,10 @@ import type {
 import type { UIMessage } from "ai";
 import { Cause, Effect, Exit, Fiber, Stream } from "effect";
 import { createStore } from "zustand/vanilla";
-import {
-	isAskUserQuestionTool,
-	isExitPlanModeTool,
-} from "@/features/chat/components/group-messages";
+// import {
+// 	isAskUserQuestionTool,
+// 	isExitPlanModeTool,
+// } from "@/features/chat/components/group-messages";
 import { notifySessionComplete } from "@/features/chat/services/notification-manager";
 import {
 	forkWithStreamingClient,
@@ -36,6 +36,10 @@ import {
 	waitForStreamingConnection,
 } from "@/features/chat/transport/rpc-websocket-client";
 import { LRUMap } from "@/lib/lru-map";
+import {
+	isAskUserQuestionTool,
+	isExitPlanModeTool,
+} from "../components/chat-panel/helpers/helpers";
 import { MessageAccumulator } from "./message-accumulator";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -51,7 +55,6 @@ export interface HistoryCursor {
 export interface ToolApprovalRequest {
 	toolCallId: string;
 	toolName: string;
-	input: unknown;
 	messageId?: string;
 	receivedAt: number;
 }
@@ -77,8 +80,6 @@ export interface ChatSessionState {
 	pendingApprovalRequests: Map<string, ToolApprovalRequest>;
 	/** Current mode (plan or build) - updated when ExitPlanMode is approved */
 	mode: "plan" | "build";
-	/** Tool call IDs for approved ExitPlanMode requests (for inline plan badge) */
-	approvedPlanToolCallIds: Set<string>;
 	/** Tool call IDs for answered AskUserQuestion requests (for inline questions badge) */
 	answeredQuestionToolCallIds: Set<string>;
 	/** Whether session has unread content (set on SessionStopped, cleared on visit) */
@@ -87,6 +88,8 @@ export interface ChatSessionState {
 	streamingMetadata: StreamingMetadata | null;
 	/** Server timestamp when current turn started (ISO 8601), for streaming duration */
 	turnStartedAt: string | null;
+	/** Optimistic approval responses (cleared when server confirms or session ends) */
+	optimisticApprovals: Map<string, { approved: boolean; feedback?: string }>;
 }
 
 /** Metadata from StreamEventFinish for real-time UI updates */
@@ -167,8 +170,11 @@ export type ChatStore = ChatStoreState & ChatStoreActions;
 const MAX_SESSIONS = 20;
 
 const EMPTY_APPROVAL_REQUESTS: Map<string, ToolApprovalRequest> = new Map();
-const EMPTY_APPROVED_PLAN_IDS: Set<string> = new Set();
 const EMPTY_ANSWERED_QUESTION_IDS: Set<string> = new Set();
+const EMPTY_OPTIMISTIC_APPROVALS: Map<
+	string,
+	{ approved: boolean; feedback?: string }
+> = new Map();
 
 const DEFAULT_SESSION_STATE: ChatSessionState = {
 	messages: [],
@@ -181,11 +187,11 @@ const DEFAULT_SESSION_STATE: ChatSessionState = {
 	historyLoaded: false,
 	pendingApprovalRequests: new Map(),
 	mode: "build",
-	approvedPlanToolCallIds: new Set(),
 	answeredQuestionToolCallIds: new Set(),
 	hasUnreadContent: false,
 	streamingMetadata: null,
 	turnStartedAt: null,
+	optimisticApprovals: new Map(),
 };
 
 // Frozen singleton to return for sessions that don't exist yet
@@ -203,11 +209,11 @@ const EMPTY_SESSION_STATE: ChatSessionState = {
 	historyLoaded: false,
 	pendingApprovalRequests: EMPTY_APPROVAL_REQUESTS,
 	mode: "build",
-	approvedPlanToolCallIds: EMPTY_APPROVED_PLAN_IDS,
 	answeredQuestionToolCallIds: EMPTY_ANSWERED_QUESTION_IDS,
 	hasUnreadContent: false,
 	streamingMetadata: null,
 	turnStartedAt: null,
+	optimisticApprovals: EMPTY_OPTIMISTIC_APPROVALS,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -424,20 +430,9 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 					const pendingRequests = new Map<string, ToolApprovalRequest>();
 
 					for (const approval of event.pendingApprovals) {
-						// Find the matching tool-input-available event in the buffer
-						const toolInputEvent = event.buffer.find(
-							(e) =>
-								e.type === "tool-input-available" &&
-								(e as { toolCallId?: string }).toolCallId ===
-									approval.toolCallId,
-						) as
-							| { toolCallId: string; toolName: string; input: unknown }
-							| undefined;
-
 						pendingRequests.set(approval.toolCallId, {
 							toolCallId: approval.toolCallId,
 							toolName: approval.toolName,
-							input: toolInputEvent?.input ?? {},
 							receivedAt: Date.now(),
 						});
 					}
@@ -484,8 +479,9 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 								activeTurnId: null,
 								turnStartedAt: null,
 								pendingApprovalRequests: new Map(),
-								approvedPlanToolCallIds: new Set(),
 								answeredQuestionToolCallIds: new Set(),
+								optimisticApprovals: new Map(),
+								mode: "build",
 								hasUnreadContent: true,
 							};
 						}
@@ -496,8 +492,9 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 							activeTurnId: null,
 							turnStartedAt: null,
 							pendingApprovalRequests: new Map(),
-							approvedPlanToolCallIds: new Set(),
 							answeredQuestionToolCallIds: new Set(),
+							optimisticApprovals: new Map(),
+							mode: "build",
 							hasUnreadContent: true,
 						};
 					});
@@ -508,8 +505,9 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 						activeTurnId: null,
 						turnStartedAt: null,
 						pendingApprovalRequests: new Map(),
-						approvedPlanToolCallIds: new Set(),
 						answeredQuestionToolCallIds: new Set(),
+						optimisticApprovals: new Map(),
+						mode: "build",
 						hasUnreadContent: true,
 					}));
 				}
@@ -526,7 +524,6 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 					const request: ToolApprovalRequest = {
 						toolCallId: approvalEvent.toolCallId,
 						toolName: approvalEvent.toolName,
-						input: approvalEvent.input,
 						messageId: approvalEvent.messageId,
 						receivedAt: Date.now(),
 					};
@@ -595,6 +592,19 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 						}));
 					}
 					// Continue to pass to accumulator for message finalization
+				}
+
+				// Clear optimistic approval when server confirms the tool output
+				if (streamEvent.type === "tool-output-available") {
+					const outputEvent = event.event as { toolCallId: string };
+					updateSession(sessionId, (prev) => {
+						if (prev.optimisticApprovals.has(outputEvent.toolCallId)) {
+							const newOptimistic = new Map(prev.optimisticApprovals);
+							newOptimistic.delete(outputEvent.toolCallId);
+							return { ...prev, optimisticApprovals: newOptimistic };
+						}
+						return prev;
+					});
 				}
 
 				// Process stream event through accumulator
@@ -902,21 +912,28 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 			sessionId: string,
 			response: ToolApprovalResponse,
 		): Promise<boolean> {
-			// Track approved ExitPlanMode tool calls for inline badge display
-			if (isExitPlanModeTool(response.toolName) && response.approved) {
-				updateSession(sessionId, (prev) => {
-					const newApprovedPlanIds = new Set(prev.approvedPlanToolCallIds);
-					newApprovedPlanIds.add(response.toolCallId);
-					return { ...prev, approvedPlanToolCallIds: newApprovedPlanIds };
-				});
-			}
-
 			// Track answered AskUserQuestion tool calls for inline badge display
 			if (isAskUserQuestionTool(response.toolName)) {
 				updateSession(sessionId, (prev) => {
 					const newAnsweredIds = new Set(prev.answeredQuestionToolCallIds);
 					newAnsweredIds.add(response.toolCallId);
 					return { ...prev, answeredQuestionToolCallIds: newAnsweredIds };
+				});
+			}
+
+			// Track optimistic approval for ExitPlanMode tools (for immediate UI feedback)
+			if (isExitPlanModeTool(response.toolName)) {
+				const feedback =
+					response.payload?.type === "ExitPlanModePayload"
+						? response.payload.feedback
+						: undefined;
+				updateSession(sessionId, (prev) => {
+					const newOptimistic = new Map(prev.optimisticApprovals);
+					newOptimistic.set(response.toolCallId, {
+						approved: response.approved,
+						feedback,
+					});
+					return { ...prev, optimisticApprovals: newOptimistic };
 				});
 			}
 

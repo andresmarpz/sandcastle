@@ -3,28 +3,19 @@ import type { UIMessage } from "ai";
 import { useCallback, useEffect, useMemo } from "react";
 import { useStore } from "zustand";
 import { useShallow } from "zustand/react/shallow";
+import { clearSessionNotification } from "@/features/chat/services/notification-manager";
 import {
 	isAskUserQuestionTool,
 	isExitPlanModeTool,
-} from "@/features/chat/components/group-messages";
-import { clearSessionNotification } from "@/features/chat/services/notification-manager";
+} from "../components/chat-panel/helpers/helpers";
 import {
 	type ChatSessionState,
 	chatStore,
-	type SendResult,
 	type StreamingMetadata,
 	type ToolApprovalRequest,
 } from "./chat-store";
 
 export interface UseChatSessionResult extends ChatSessionState {
-	/** Send a message to the session. Returns when server acknowledges. */
-	sendMessage: (options: {
-		text: string;
-		parts?: UIMessage["parts"];
-		mode?: "plan" | "build";
-	}) => Promise<SendResult>;
-	/** Stop the current stream */
-	stop: () => void;
 	/** Remove a message from the queue */
 	dequeue: (messageId: string) => Promise<boolean>;
 }
@@ -72,26 +63,6 @@ export function useChatSession(sessionId: string): UseChatSessionResult {
 	// Select session state with automatic re-renders
 	const session = useStore(chatStore, (state) => state.getSession(sessionId));
 
-	// Memoized actions
-	const sendMessage = useCallback(
-		({
-			text,
-			parts,
-			mode,
-		}: {
-			text: string;
-			parts?: UIMessage["parts"];
-			mode?: "plan" | "build";
-		}) => {
-			return chatStore.getState().send(sessionId, text, parts, mode);
-		},
-		[sessionId],
-	);
-
-	const stop = useCallback(() => {
-		chatStore.getState().stop(sessionId);
-	}, [sessionId]);
-
 	const dequeue = useCallback(
 		(messageId: string) => {
 			return chatStore.getState().dequeue(sessionId, messageId);
@@ -102,11 +73,9 @@ export function useChatSession(sessionId: string): UseChatSessionResult {
 	return useMemo(
 		() => ({
 			...session,
-			sendMessage,
-			stop,
 			dequeue,
 		}),
-		[session, sendMessage, stop, dequeue],
+		[session, dequeue],
 	);
 }
 
@@ -144,13 +113,10 @@ export function useChatActions(sessionId: string) {
 		chatStore.getState().stop(sessionId);
 	}, [sessionId]);
 
-	return useMemo(
-		() => ({
-			sendMessage,
-			stop,
-		}),
-		[sendMessage, stop],
-	);
+	return {
+		sendMessage,
+		stop,
+	};
 }
 
 /**
@@ -380,35 +346,6 @@ export function usePendingExitPlanApproval(
 }
 
 /**
- * Hook for checking if a plan (ExitPlanMode tool call) has been approved.
- *
- * Used to show "Approved" badge on inline plan components after approval.
- *
- * @example
- * ```tsx
- * function PlanPart({ sessionId, toolCallId }: Props) {
- *   const isApproved = useIsApprovedPlan(sessionId, toolCallId)
- *
- *   return (
- *     <Plan defaultOpen={!isApproved}>
- *       {isApproved && <Badge>Approved</Badge>}
- *       <PlanContent>...</PlanContent>
- *     </Plan>
- *   )
- * }
- * ```
- */
-export function useIsApprovedPlan(
-	sessionId: string,
-	toolCallId: string,
-): boolean {
-	return useStore(chatStore, (state) => {
-		const session = state.getSession(sessionId);
-		return session.approvedPlanToolCallIds.has(toolCallId);
-	});
-}
-
-/**
  * Hook for reading the pending AskUserQuestion approval request for a specific tool call.
  *
  * Returns the matching AskUserQuestion approval request if one exists,
@@ -472,4 +409,37 @@ export function useStreamingMetadata(
 	sessionId: string,
 ): StreamingMetadata | null {
 	return useChatSessionSelector(sessionId, (s) => s.streamingMetadata);
+}
+
+/**
+ * Hook for reading optimistic approval state for a plan (ExitPlanMode tool).
+ *
+ * Returns the optimistic approval if one exists for this toolCallId,
+ * otherwise returns null. This provides immediate UI feedback when
+ * the user approves/rejects a plan, before the server confirms.
+ *
+ * The optimistic state is cleared automatically when:
+ * - The server sends tool-output-available event (confirmation)
+ * - The session ends (SessionStopped event)
+ *
+ * @example
+ * ```tsx
+ * function PlanMessage({ sessionId, toolCallId }: Props) {
+ *   const optimisticApproval = useOptimisticPlanApproval(sessionId, toolCallId)
+ *
+ *   if (optimisticApproval?.approved) {
+ *     return <Badge>Approved</Badge>
+ *   }
+ *   // ... rest of component
+ * }
+ * ```
+ */
+export function useOptimisticPlanApproval(
+	sessionId: string,
+	toolCallId: string,
+): { approved: boolean; feedback?: string } | null {
+	return useStore(chatStore, (state) => {
+		const session = state.getSession(sessionId);
+		return session.optimisticApprovals.get(toolCallId) ?? null;
+	});
 }

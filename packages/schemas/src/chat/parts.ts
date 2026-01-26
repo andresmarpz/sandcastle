@@ -39,6 +39,34 @@ export const ToolCallState = Schema.Literal(
 );
 export type ToolCallState = typeof ToolCallState.Type;
 
+/**
+ * Tool-specific metadata union.
+ * Discriminated by toolName field on the parent ToolCallPart.
+ */
+
+/** Metadata for Skill tool - from SDK tool_use_result */
+export const SkillToolMetadata = Schema.Struct({
+	tool: Schema.Literal("Skill"),
+	commandName: Schema.String,
+	allowedTools: Schema.optional(Schema.Array(Schema.String)),
+});
+export type SkillToolMetadata = typeof SkillToolMetadata.Type;
+
+/** Metadata for ExitPlanMode tool - approval info */
+export const ExitPlanModeToolMetadata = Schema.Struct({
+	tool: Schema.Literal("ExitPlanMode"),
+	approved: Schema.Boolean,
+	reason: Schema.optional(Schema.String),
+});
+export type ExitPlanModeToolMetadata = typeof ExitPlanModeToolMetadata.Type;
+
+/** Union of all tool-specific metadata */
+export const ToolMetadata = Schema.Union(
+	SkillToolMetadata,
+	ExitPlanModeToolMetadata,
+);
+export type ToolMetadata = typeof ToolMetadata.Type;
+
 /** Tool invocation part (AI SDK v6: ToolUIPart/DynamicToolUIPart) */
 export const ToolCallPart = Schema.Struct({
 	type: Schema.String, // 'tool-{name}' or 'dynamic-tool'
@@ -54,6 +82,8 @@ export const ToolCallPart = Schema.Struct({
 	callProviderMetadata: Schema.optional(ProviderMetadata),
 	/** Parent tool call ID - links this tool to its parent subagent (Task tool) */
 	parentToolCallId: Schema.optional(Schema.NullOr(Schema.String)),
+	/** Tool-specific metadata - discriminated by `tool` field */
+	toolMetadata: Schema.optional(ToolMetadata),
 });
 export type ToolCallPart = typeof ToolCallPart.Type;
 

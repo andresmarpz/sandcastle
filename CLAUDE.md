@@ -24,6 +24,11 @@ alwaysApply: false
 - Prefer `Bun.file` over `node:fs`'s readFile/writeFile
 - Bun.$`ls` instead of execa.
 
+## Design Rules
+
+- Only use Phosphor icons with direct imports: `import { CheckIcon } from '@phosphor-icons/react/Check'`
+- Never use other icon libraries
+
 ## Testing
 
 Use `bun test` to run tests.

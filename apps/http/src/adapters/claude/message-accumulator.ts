@@ -36,25 +36,73 @@ function isExitPlanModeTool(toolName: string): boolean {
 /**
  * Parse ExitPlanMode output to extract approval status and feedback.
  * Returns undefined if the output doesn't match expected patterns.
+ *
+ * Handles both string and array formats:
+ * - String: "Plan approved" or "Plan rejected. User feedback: ..."
+ * - Array (MCP content): [{ type: "text", text: "..." }]
  */
-function parseExitPlanModeOutput(output: string):
+function parseExitPlanModeOutput(output: unknown):
 	| {
 			approved: boolean;
 			reason?: string;
 	  }
 	| undefined {
+	// Extract text content from output
+	let text: string | undefined;
+
+	if (typeof output === "string") {
+		text = output;
+	} else if (Array.isArray(output)) {
+		// Handle MCP content array: [{ type: "text", text: "..." }]
+		const textBlock = output.find(
+			(block) =>
+				typeof block === "object" &&
+				block !== null &&
+				"type" in block &&
+				block.type === "text",
+		);
+		if (
+			textBlock &&
+			"text" in textBlock &&
+			typeof textBlock.text === "string"
+		) {
+			text = textBlock.text;
+		}
+	}
+
+	if (!text) return undefined;
+
 	// Check for approval pattern
-	if (output.includes("Plan approved")) {
+	if (text.includes("Plan approved")) {
 		return { approved: true };
 	}
 
 	// Check for rejection pattern
-	if (output.includes("Plan rejected")) {
+	if (text.includes("Plan rejected")) {
 		// Extract feedback if present (format: "Plan rejected. User feedback: ...")
-		const feedbackMatch = output.match(/User feedback:\s*(.+)$/);
+		const feedbackMatch = text.match(/User feedback:\s*(.+)$/);
 		return {
 			approved: false,
 			reason: feedbackMatch?.[1]?.trim() || undefined,
+		};
+	}
+
+	return undefined;
+}
+
+/**
+ * Build tool-specific metadata based on tool name.
+ * Returns a discriminated union with `tool` field as discriminator.
+ */
+function buildToolMetadata(
+	toolName: string,
+	toolUseResult?: SkillToolUseResult,
+): { tool: "Skill"; commandName: string; allowedTools?: string[] } | undefined {
+	if (toolName === "Skill" && toolUseResult?.success) {
+		return {
+			tool: "Skill",
+			commandName: toolUseResult.commandName,
+			allowedTools: toolUseResult.allowedTools,
 		};
 	}
 
@@ -295,11 +343,35 @@ function processAssistantMessage(
 	}
 }
 
+/** Skill tool_use_result metadata from SDK */
+interface SkillToolUseResult {
+	success: boolean;
+	commandName: string;
+	allowedTools?: string[];
+}
+
 function processUserMessage(
 	message: SDKUserMessage,
 	state: AccumulatorState,
 	config: AccumulatorConfig,
 ): void {
+	// Skip synthetic messages (e.g., skill prompts injected by SDK)
+	if ("isSynthetic" in message && message.isSynthetic === true) {
+		return;
+	}
+
+	// Extract parentToolCallId (like we do for assistant messages)
+	const parentToolUseId =
+		"parent_tool_use_id" in message
+			? (message.parent_tool_use_id as string | null | undefined)
+			: undefined;
+
+	// Extract tool_use_result for Skill tool metadata
+	const toolUseResult =
+		"tool_use_result" in message
+			? (message.tool_use_result as SkillToolUseResult | undefined)
+			: undefined;
+
 	const content = message.message.content;
 	const userParts: MessagePart[] = [];
 
@@ -315,7 +387,7 @@ function processUserMessage(
 		// Process array content - first handle tool results (they update assistant messages)
 		for (const block of content) {
 			if (block.type === "tool_result" && "tool_use_id" in block) {
-				applyToolResult(block as ToolResultContentBlock, state);
+				applyToolResult(block as ToolResultContentBlock, state, toolUseResult);
 			}
 		}
 
@@ -343,6 +415,7 @@ function processUserMessage(
 			role: "user" as MessageRole,
 			parts: userParts,
 			createdAt: now,
+			parentToolCallId: parentToolUseId ?? null,
 		};
 		state.messages.push(chatMessage);
 	}
@@ -351,6 +424,7 @@ function processUserMessage(
 function applyToolResult(
 	result: ToolResultContentBlock,
 	state: AccumulatorState,
+	toolUseResult?: SkillToolUseResult,
 ): void {
 	const location = state.pendingToolCalls.get(result.tool_use_id);
 	if (!location) return;
@@ -364,24 +438,31 @@ function applyToolResult(
 	// Type assertion since we know this is a ToolCallPart
 	const toolPart = part as ToolCallPart;
 
-	// Extract output content
-	const outputContent =
+	// Keep native output content for storage (arrays, objects preserved)
+	const output = result.content;
+
+	// For error text and special parsing, we need string form
+	const outputAsString =
 		typeof result.content === "string"
 			? result.content
 			: JSON.stringify(result.content);
 
 	// For ExitPlanMode, extract approval info from parsed output
+	// Pass raw content - parseExitPlanModeOutput handles both string and array formats
 	const approvalInfo =
 		!result.is_error && isExitPlanModeTool(toolPart.toolName)
-			? parseExitPlanModeOutput(outputContent)
+			? parseExitPlanModeOutput(output)
 			: undefined;
+
+	// Build tool-specific metadata (discriminated union by `tool` field)
+	const toolMetadata = buildToolMetadata(toolPart.toolName, toolUseResult);
 
 	// Create updated part with new state
 	const updatedPart: ToolCallPart = {
 		...toolPart,
 		state: result.is_error ? "output-error" : "output-available",
-		output: result.is_error ? undefined : outputContent,
-		errorText: result.is_error ? outputContent : undefined,
+		output: result.is_error ? undefined : output,
+		errorText: result.is_error ? outputAsString : undefined,
 		...(approvalInfo && {
 			approval: {
 				id: result.tool_use_id,
@@ -389,6 +470,7 @@ function applyToolResult(
 				reason: approvalInfo.reason,
 			},
 		}),
+		...(toolMetadata && { toolMetadata }),
 	};
 
 	// Replace the part in the message
