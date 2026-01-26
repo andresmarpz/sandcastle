@@ -41,7 +41,7 @@ export function ChatPanelContent({
 										messages={messages}
 										sessionId={sessionId}
 									/>*/}
-						<ChatPanelMessages messages={messages} />
+						<ChatPanelMessages messages={messages} sessionId={session.id} />
 
 						{turnStartedAt && (
 							<Message from="assistant">

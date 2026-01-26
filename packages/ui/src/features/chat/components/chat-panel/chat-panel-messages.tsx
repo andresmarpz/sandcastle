@@ -7,16 +7,19 @@ import {
 	MessageResponse,
 } from "@/components/ai-elements/message";
 import { type GroupedItem, groupMessages } from "./helpers/group-messages";
+import { PlanMessage } from "./messages/plan-message";
 import { SubagentMessage } from "./messages/subagent";
 import { TasksMessage, TodoTraceMessage } from "./messages/tasks";
 import { WorkUnit } from "./messages/work-unit";
 
 interface ChatPanelMessagesProps {
 	messages: readonly UIMessage[];
+	sessionId: string;
 }
 
 export const ChatPanelMessages = memo(function ChatPanelMessages({
 	messages,
+	sessionId,
 }: ChatPanelMessagesProps) {
 	const groupedItems = useMemo(() => groupMessages(messages), [messages]);
 
@@ -30,16 +33,18 @@ export const ChatPanelMessages = memo(function ChatPanelMessages({
 	}
 
 	return groupedItems.map((item) => (
-		<GroupedItemRenderer key={item.id} item={item} />
+		<GroupedItemRenderer key={item.id} item={item} sessionId={sessionId} />
 	));
 });
 
 interface GroupedItemRendererProps {
 	item: GroupedItem;
+	sessionId: string;
 }
 
 const GroupedItemRenderer = memo(function GroupedItemRenderer({
 	item,
+	sessionId,
 }: GroupedItemRendererProps) {
 	switch (item.type) {
 		case "user-message":
@@ -101,6 +106,15 @@ const GroupedItemRenderer = memo(function GroupedItemRenderer({
 				<Message from="assistant">
 					<MessageContent>
 						<TodoTraceMessage item={item} />
+					</MessageContent>
+				</Message>
+			);
+
+		case "plan":
+			return (
+				<Message from="assistant">
+					<MessageContent>
+						<PlanMessage part={item.part} sessionId={sessionId} />
 					</MessageContent>
 				</Message>
 			);
