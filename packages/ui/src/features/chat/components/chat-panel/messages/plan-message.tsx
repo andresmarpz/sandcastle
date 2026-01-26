@@ -5,7 +5,8 @@ import { CheckIcon } from "@phosphor-icons/react/Check";
 import { ClockIcon } from "@phosphor-icons/react/Clock";
 import { WarningIcon } from "@phosphor-icons/react/Warning";
 import { XIcon } from "@phosphor-icons/react/X";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useStickToBottomContext } from "use-stick-to-bottom";
 import { NativeMarkdownResponse } from "@/components/ai-elements/native-markdown";
 import { Shimmer } from "@/components/ai-elements/shimmer";
 import { Badge } from "@/components/badge";
@@ -155,6 +156,18 @@ export function PlanMessage({ part, sessionId }: PlanMessageProps) {
 		planStatus.status === "pending" || planStatus.status === "streaming";
 	const [isOpen, setIsOpen] = useState(shouldBeOpen);
 
+	// Get stopScroll to prevent auto-scrolling when user opens the collapsible
+	const { stopScroll } = useStickToBottomContext();
+
+	// Handle open state change - stop scroll when user manually opens/closes to avoid unexpected scrolling
+	const handleOpenChange = useCallback(
+		(open: boolean) => {
+			stopScroll();
+			setIsOpen(open);
+		},
+		[stopScroll],
+	);
+
 	// Sync open state when status changes (e.g., auto-collapse when approved)
 	useEffect(() => {
 		setIsOpen(shouldBeOpen);
@@ -163,7 +176,7 @@ export function PlanMessage({ part, sessionId }: PlanMessageProps) {
 	const hasFeedback = planStatus.status === "rejected" && planStatus.feedback;
 
 	return (
-		<Collapsible open={isOpen} onOpenChange={setIsOpen}>
+		<Collapsible open={isOpen} onOpenChange={handleOpenChange}>
 			<Card
 				className={cn(
 					"border border-border shadow-none ring-0 py-0",
