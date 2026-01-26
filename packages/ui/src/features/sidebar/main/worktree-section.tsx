@@ -178,26 +178,28 @@ function WorktreeSubItem({ worktree }: WorktreeSubItemProps) {
 			>
 				<SidebarMenuSubItem>
 					<ContextMenu>
-						<ContextMenuTrigger>
-							<SidebarMenuSubButton
-								onClick={handleSelect}
-								isActive={isActive}
-								className="h-auto flex-col items-start gap-0.5 py-1.5"
-							>
-								<span className="flex w-full items-center justify-between gap-1.5">
-									<span className="flex items-center gap-1.5 text-sm font-medium min-w-0">
-										<GitBranchIcon className="size-3 shrink-0" />
-										<span className="truncate">{worktree.branch}</span>
+						<ContextMenuTrigger
+							render={
+								<SidebarMenuSubButton
+									onClick={handleSelect}
+									isActive={isActive}
+									className="h-auto flex-col items-start gap-0.5 py-1.5"
+								>
+									<span className="flex w-full items-center justify-between gap-1.5">
+										<span className="flex items-center gap-1.5 text-sm font-medium min-w-0">
+											<GitBranchIcon className="size-3 shrink-0" />
+											<span className="truncate">{worktree.branch}</span>
+										</span>
+										{isDeleting && (
+											<Spinner className="size-3 text-muted-foreground shrink-0" />
+										)}
 									</span>
-									{isDeleting && (
-										<Spinner className="size-3 text-muted-foreground shrink-0" />
-									)}
-								</span>
-								<span className="text-muted-foreground text-xs">
-									{worktree.name} · {createdAtLabel}
-								</span>
-							</SidebarMenuSubButton>
-						</ContextMenuTrigger>
+									<span className="text-muted-foreground text-xs">
+										{worktree.name} · {createdAtLabel}
+									</span>
+								</SidebarMenuSubButton>
+							}
+						/>
 						<ContextMenuContent className="min-w-[160px]">
 							<ContextMenuItem
 								variant="destructive"
