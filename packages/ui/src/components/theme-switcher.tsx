@@ -20,8 +20,8 @@ export function ThemeSwitcher() {
 		<SidebarMenuItem>
 			<DropdownMenu>
 				<DropdownMenuTrigger render={<SidebarMenuButton />}>
-					<SunIcon className="size-4 dark:hidden" />
-					<MoonIcon className="hidden size-4 dark:block" />
+					<SunIcon className="size-5 dark:hidden" />
+					<MoonIcon className="hidden size-5 dark:block" />
 					<span className="sr-only">Toggle theme</span>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" side="top" sideOffset={4}>
