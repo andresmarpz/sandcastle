@@ -73,7 +73,7 @@ export default function Rail() {
 				<SidebarMenu>
 					<SidebarMenuItem>
 						<SidebarMenuButton onClick={() => setSettingsOpen(true)}>
-							<GearIcon className="size-4" />
+							<GearIcon className="size-5" />
 						</SidebarMenuButton>
 					</SidebarMenuItem>
 					<ThemeSwitcher />

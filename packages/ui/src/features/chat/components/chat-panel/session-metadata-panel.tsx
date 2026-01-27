@@ -122,7 +122,7 @@ export const SessionMetadataPanel = memo(function SessionMetadataPanel({
 	const isStreaming = indicatorStatus === "streaming";
 
 	return (
-		<div className="min-w-[250px] max-w-[300px] p-2.5 backdrop-blur-sm space-y-2.5 text-xs prose">
+		<div className="min-w-[250px] max-w-[300px] p-2.5 space-y-2.5 text-xs prose">
 			{/* Model */}
 			{modelDisplayName && (
 				<div className="flex items-center gap-1.5 text-muted-foreground">
