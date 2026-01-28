@@ -2,6 +2,7 @@
 
 import { Result, useAtom, useAtomValue } from "@effect-atom/atom-react";
 import { ArchiveIcon } from "@phosphor-icons/react/Archive";
+import { CopyIcon } from "@phosphor-icons/react/Copy";
 import { PencilIcon } from "@phosphor-icons/react/Pencil";
 import { TrashIcon } from "@phosphor-icons/react/Trash";
 import type { Session } from "@sandcastle/schemas";
@@ -88,6 +89,10 @@ export const SessionItem = memo(function SessionItem({
 		// TODO: implement archive
 	}
 
+	async function handleCopyWorkingPath() {
+		await navigator.clipboard.writeText(session.workingPath);
+	}
+
 	function handleDelete() {
 		setIsDeleteDialogOpen(false);
 		setIsDeleting(true);
@@ -153,6 +158,10 @@ export const SessionItem = memo(function SessionItem({
 							<ContextMenuItem onClick={handleArchive}>
 								<ArchiveIcon className="size-4" />
 								Archive
+							</ContextMenuItem>
+							<ContextMenuItem onClick={handleCopyWorkingPath}>
+								<CopyIcon className="size-4" />
+								Copy working path
 							</ContextMenuItem>
 							<ContextMenuSeparator />
 							<ContextMenuItem
