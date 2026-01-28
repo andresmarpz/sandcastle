@@ -1,5 +1,6 @@
 import type { UIMessage } from "ai";
-import { memo, useMemo } from "react";
+import { memo, useCallback, useMemo } from "react";
+import { useStickToBottomContext } from "use-stick-to-bottom";
 import { ConversationEmptyState } from "@/components/ai-elements/conversation";
 import {
 	Message,
@@ -47,9 +48,21 @@ const GroupedItemRenderer = memo(function GroupedItemRenderer({
 	item,
 	sessionId,
 }: GroupedItemRendererProps) {
+	const { stopScroll } = useStickToBottomContext();
+
+	const handleClick = useCallback(() => {
+		stopScroll();
+	}, [stopScroll]);
+
+	// Wrap all items with a click handler to stop auto-scroll when user interacts
+	// This prevents being "teleported" to the bottom when expanding collapsible content
+	const wrapWithStopScroll = (content: React.ReactNode) => (
+		<div onClickCapture={handleClick}>{content}</div>
+	);
+
 	switch (item.type) {
 		case "user-message":
-			return (
+			return wrapWithStopScroll(
 				<Message from="user">
 					<MessageContent>
 						{item.message.parts.map((part, index) => {
@@ -63,56 +76,58 @@ const GroupedItemRenderer = memo(function GroupedItemRenderer({
 							return null;
 						})}
 					</MessageContent>
-				</Message>
+				</Message>,
 			);
 
 		case "assistant-text":
-			return (
+			return wrapWithStopScroll(
 				<Message from="assistant">
 					<MessageContent>
 						<MessageResponse>{item.text}</MessageResponse>
 					</MessageContent>
-				</Message>
+				</Message>,
 			);
 
 		case "work-unit":
-			return (
+			return wrapWithStopScroll(
 				<Message from="assistant">
 					<MessageContent>
 						<WorkUnit steps={item.steps} />
 					</MessageContent>
-				</Message>
+				</Message>,
 			);
 
 		case "subagent":
-			return (
+			return wrapWithStopScroll(
 				<Message from="assistant">
 					<MessageContent>
 						<SubagentMessage item={item} />
 					</MessageContent>
-				</Message>
+				</Message>,
 			);
 
 		case "todo-trace":
-			return (
+			return wrapWithStopScroll(
 				<Message from="assistant">
 					<MessageContent>
 						<TodoTraceMessage item={item} />
 					</MessageContent>
-				</Message>
+				</Message>,
 			);
 
 		case "plan":
 			// PlanMessage renders full-width, outside Message wrapper
-			return <PlanMessage part={item.part} sessionId={sessionId} />;
+			return wrapWithStopScroll(
+				<PlanMessage part={item.part} sessionId={sessionId} />,
+			);
 
 		case "questions":
-			return (
+			return wrapWithStopScroll(
 				<Message from="assistant">
 					<MessageContent>
 						<Questions part={item.part} sessionId={sessionId} />
 					</MessageContent>
-				</Message>
+				</Message>,
 			);
 
 		default:

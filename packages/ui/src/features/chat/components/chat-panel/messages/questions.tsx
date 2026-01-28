@@ -13,7 +13,6 @@ import {
 	parseAskUserQuestionOutput,
 } from "@sandcastle/schemas";
 import { memo, useCallback } from "react";
-import { useStickToBottomContext } from "use-stick-to-bottom";
 import {
 	Collapsible,
 	CollapsiblePanel,
@@ -235,20 +234,9 @@ export const Questions = memo(function Questions({
 		questionsStatus.status === "answered" ||
 		questionsStatus.status === "skipped";
 
-	// Stop auto-scroll when user interacts with the component
-	const { stopScroll } = useStickToBottomContext();
-
-	const handleClick = useCallback(() => {
-		stopScroll();
-	}, [stopScroll]);
-
 	return (
-		<Collapsible defaultOpen={!isCompleted} onOpenChange={handleClick}>
-			{/* Stop scrolling on any interaction within this component */}
-			<div
-				className="border-border rounded-lg border"
-				onClickCapture={handleClick}
-			>
+		<Collapsible defaultOpen={!isCompleted}>
+			<div className="border-border rounded-lg border">
 				<CollapsibleTrigger className="hover:bg-muted/50 flex w-full items-center justify-between rounded-t-lg p-3 transition-colors">
 					<QuestionsHeader
 						status={questionsStatus}
