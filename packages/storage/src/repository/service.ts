@@ -1,5 +1,5 @@
 import { Repository } from "@sandcastle/schemas";
-import { Effect } from "effect";
+import { Effect, Option } from "effect";
 import {
 	type DatabaseError,
 	RepositoryNotFoundError,
@@ -20,6 +20,9 @@ const rowToRepository = (row: Record<string, unknown>): Repository =>
 		directoryPath: row.directoryPath as string,
 		defaultBranch: row.defaultBranch as string,
 		pinned: Boolean(row.pinned),
+		worktreeInitScript: row.worktreeInitScript
+			? Option.some(row.worktreeInitScript as string)
+			: Option.none(),
 		createdAt: row.createdAt as string,
 		updatedAt: row.updatedAt as string,
 	});
@@ -107,6 +110,7 @@ export const createRepositoriesService = (db: DbInstance) => ({
 				directoryPath: input.directoryPath,
 				defaultBranch,
 				pinned: false,
+				worktreeInitScript: Option.none(),
 				createdAt: now,
 				updatedAt: now,
 			});
@@ -114,7 +118,12 @@ export const createRepositoriesService = (db: DbInstance) => ({
 
 	update: (
 		id: string,
-		input: { label?: string; defaultBranch?: string; pinned?: boolean },
+		input: {
+			label?: string;
+			defaultBranch?: string;
+			pinned?: boolean;
+			worktreeInitScript?: string;
+		},
 		getRepository: (
 			id: string,
 		) => Effect.Effect<Repository, RepositoryNotFoundError | DatabaseError>,
@@ -138,6 +147,10 @@ export const createRepositoriesService = (db: DbInstance) => ({
 				updates.push("pinned = ?");
 				values.push(input.pinned ? 1 : 0);
 			}
+			if (input.worktreeInitScript !== undefined) {
+				updates.push("worktreeInitScript = ?");
+				values.push(input.worktreeInitScript);
+			}
 
 			values.push(id);
 
@@ -153,6 +166,10 @@ export const createRepositoriesService = (db: DbInstance) => ({
 				label: input.label ?? existing.label,
 				defaultBranch: input.defaultBranch ?? existing.defaultBranch,
 				pinned: input.pinned ?? existing.pinned,
+				worktreeInitScript:
+					input.worktreeInitScript !== undefined
+						? Option.some(input.worktreeInitScript)
+						: existing.worktreeInitScript,
 				updatedAt: now,
 			});
 		}),
