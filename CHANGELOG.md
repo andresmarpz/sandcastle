@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.2.7](https://github.com/andresmarpz/sandcastle/compare/v0.2.6...v0.2.7) (2026-01-28)
+
+
+### Features
+
+* add worktreeInitScript repository setting ([#124](https://github.com/andresmarpz/sandcastle/issues/124)) ([8945bf7](https://github.com/andresmarpz/sandcastle/commit/8945bf7a2237657bb979f6247db403c3f68b08d8))
+* include usage metadata in InitialState for late subscribers ([#127](https://github.com/andresmarpz/sandcastle/issues/127)) ([0ae8b17](https://github.com/andresmarpz/sandcastle/commit/0ae8b172c60dec91c6d84d36814d968d6a0e3ebd))
+* make icons larger on sidebar rail ([b2a3998](https://github.com/andresmarpz/sandcastle/commit/b2a399837eb5aa82b9322e46c135b759e0355288))
+* **ui:** add copy working path to session context menu ([#128](https://github.com/andresmarpz/sandcastle/issues/128)) ([80cea90](https://github.com/andresmarpz/sandcastle/commit/80cea903916fcb5d08cf6642f6e627e1de9a75df))
+* **ui:** real-time metadata streaming for session panel ([#123](https://github.com/andresmarpz/sandcastle/issues/123)) ([8be05c9](https://github.com/andresmarpz/sandcastle/commit/8be05c9e6ee06b1ad085fd7d0ca22f4d242a3c70))
+
+
+### Bug Fixes
+
+* prevent sidebar list blinking while refetching ([1585b92](https://github.com/andresmarpz/sandcastle/commit/1585b926b7838487cee14fdf09116d6e03da85bc))
+* **ui:** centralize stopScroll handling in ChatPanelMessages ([#125](https://github.com/andresmarpz/sandcastle/issues/125)) ([828c899](https://github.com/andresmarpz/sandcastle/commit/828c8994b93a58fd261aa4a2fbaff0582cb6b41a))
+
 ## [0.2.6](https://github.com/andresmarpz/sandcastle/compare/v0.2.5...v0.2.6) (2026-01-26)
 
 
