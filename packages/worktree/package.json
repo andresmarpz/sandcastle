@@ -1,6 +1,6 @@
 {
 	"name": "@sandcastle/worktree",
-	"version": "0.2.6",
+	"version": "0.2.7",
 	"description": "Effect-based Git worktree management for concurrent development workflows",
 	"module": "index.ts",
 	"type": "module",
