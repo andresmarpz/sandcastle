@@ -6,6 +6,7 @@ import type {
 	SessionEvent,
 	StreamingStatus,
 	ToolApprovalResponse,
+	UsageMetadata,
 } from "@sandcastle/schemas";
 import type { Fiber, PubSub, Ref } from "effect";
 import type {
@@ -46,19 +47,8 @@ export interface ActiveTurnContext {
 	readonly startedAt: string;
 }
 
-/**
- * Token usage and context metadata for streaming sessions.
- * Matches the UsageMetadata schema from @sandcastle/schemas.
- */
-export interface UsageMetadata {
-	readonly model?: string;
-	readonly inputTokens?: number;
-	readonly outputTokens?: number;
-	readonly cacheReadInputTokens?: number;
-	readonly cacheCreationInputTokens?: number;
-	readonly contextWindow?: number;
-	readonly costUsd?: number;
-}
+// UsageMetadata is imported from @sandcastle/schemas
+export type { UsageMetadata };
 
 /**
  * History cursor for tracking last persisted message.
