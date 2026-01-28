@@ -488,18 +488,13 @@ export const makeSessionHub = Effect.gen(function* () {
 									costUsd: event.costUsd,
 								});
 							} else if (event.type === "finish" && event.metadata) {
-								// Also capture finish metadata (includes costUsd)
+								// Only update costUsd and contextWindow from finish event.
+								// Token counts in finish event are CUMULATIVE across all messages
+								// in the turn, but we want the LAST assistant message's tokens
+								// for accurate context window percentage calculation.
+								// The metadata-update event already captured the correct tokens.
 								yield* Ref.update(session.usageMetadataRef, (prev) => ({
 									...prev,
-									inputTokens: event.metadata?.inputTokens ?? prev?.inputTokens,
-									outputTokens:
-										event.metadata?.outputTokens ?? prev?.outputTokens,
-									cacheReadInputTokens:
-										event.metadata?.cacheReadInputTokens ??
-										prev?.cacheReadInputTokens,
-									cacheCreationInputTokens:
-										event.metadata?.cacheCreationInputTokens ??
-										prev?.cacheCreationInputTokens,
 									contextWindow:
 										event.metadata?.contextWindow ?? prev?.contextWindow,
 									costUsd: event.metadata?.costUsd ?? prev?.costUsd,
