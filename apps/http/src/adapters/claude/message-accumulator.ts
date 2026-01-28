@@ -145,7 +145,7 @@ interface ToolCallLocation {
 }
 
 /** Token usage from a single API call */
-interface MessageUsage {
+export interface MessageUsage {
 	inputTokens: number;
 	outputTokens: number;
 	cacheReadInputTokens: number;
@@ -172,6 +172,8 @@ export interface MessageAccumulator {
 	getSessionMetadata(): SessionMetadata | null;
 	/** Get the Claude session ID (for resume capability) */
 	getClaudeSessionId(): string | null;
+	/** Get the last assistant message's token usage (for context window calculation on interrupt) */
+	getLastAssistantUsage(): MessageUsage | null;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -253,6 +255,10 @@ export function createMessageAccumulator(
 
 		getClaudeSessionId(): string | null {
 			return state.claudeSessionId;
+		},
+
+		getLastAssistantUsage(): MessageUsage | null {
+			return state.lastAssistantUsage;
 		},
 	};
 }

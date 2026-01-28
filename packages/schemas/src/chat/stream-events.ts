@@ -253,6 +253,19 @@ export const StreamEventFinish = Schema.Struct({
 });
 export type StreamEventFinish = typeof StreamEventFinish.Type;
 
+/** Incremental metadata update emitted after each assistant message with usage data */
+export const StreamEventMetadataUpdate = Schema.Struct({
+	type: Schema.Literal("metadata-update"),
+	model: Schema.optional(Schema.String),
+	inputTokens: Schema.optional(Schema.Number),
+	outputTokens: Schema.optional(Schema.Number),
+	cacheReadInputTokens: Schema.optional(Schema.Number),
+	cacheCreationInputTokens: Schema.optional(Schema.Number),
+	contextWindow: Schema.optional(Schema.Number),
+	costUsd: Schema.optional(Schema.Number),
+});
+export type StreamEventMetadataUpdate = typeof StreamEventMetadataUpdate.Type;
+
 export const StreamEventAbort = Schema.Struct({
 	type: Schema.Literal("abort"),
 	reason: Schema.optional(Schema.String),
@@ -317,6 +330,7 @@ export const ChatStreamEvent = Schema.Union(
 	// Lifecycle events
 	StreamEventStart,
 	StreamEventFinish,
+	StreamEventMetadataUpdate,
 	StreamEventAbort,
 	StreamEventMessageMetadata,
 	StreamEventError,
