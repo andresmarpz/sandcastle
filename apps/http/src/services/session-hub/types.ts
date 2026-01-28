@@ -47,6 +47,20 @@ export interface ActiveTurnContext {
 }
 
 /**
+ * Token usage and context metadata for streaming sessions.
+ * Matches the UsageMetadata schema from @sandcastle/schemas.
+ */
+export interface UsageMetadata {
+	readonly model?: string;
+	readonly inputTokens?: number;
+	readonly outputTokens?: number;
+	readonly cacheReadInputTokens?: number;
+	readonly cacheCreationInputTokens?: number;
+	readonly contextWindow?: number;
+	readonly costUsd?: number;
+}
+
+/**
  * History cursor for tracking last persisted message.
  * Used for gap detection when loading history.
  */
@@ -105,6 +119,9 @@ export interface SessionState {
 
 	/** Pending tool requests awaiting user response (for plan mode) */
 	readonly pendingToolRequestsRef: Ref.Ref<Map<string, PendingToolRequest>>;
+
+	/** Current usage metadata for streaming (for late subscriber catch-up) */
+	readonly usageMetadataRef: Ref.Ref<UsageMetadata | null>;
 }
 
 /**

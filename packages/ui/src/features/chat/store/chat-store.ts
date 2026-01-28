@@ -396,6 +396,8 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 						: null,
 					// Capture turn start time for late subscribers
 					turnStartedAt: event.turnContext?.startedAt ?? null,
+					// Restore usage metadata for context percentage display
+					streamingMetadata: event.usageMetadata ?? prev.streamingMetadata,
 				}));
 
 				// If there's an active turn, create accumulator and process buffer
