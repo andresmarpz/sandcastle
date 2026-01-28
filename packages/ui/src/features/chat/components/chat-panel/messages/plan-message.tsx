@@ -8,8 +8,7 @@ import { ListChecksIcon } from "@phosphor-icons/react/ListChecks";
 import { SpinnerIcon } from "@phosphor-icons/react/Spinner";
 import { XIcon } from "@phosphor-icons/react/X";
 import type { ToolCallPart } from "@sandcastle/schemas";
-import { useCallback, useEffect, useState } from "react";
-import { useStickToBottomContext } from "use-stick-to-bottom";
+import { useEffect, useState } from "react";
 import { NativeMarkdownResponse } from "@/components/ai-elements/native-markdown";
 import {
 	Collapsible,
@@ -129,16 +128,6 @@ export function PlanMessage({ part, sessionId }: PlanMessageProps) {
 		planStatus.status === "pending" || planStatus.status === "streaming";
 	const [isOpen, setIsOpen] = useState(shouldBeOpen);
 
-	const { stopScroll } = useStickToBottomContext();
-
-	const handleOpenChange = useCallback(
-		(open: boolean) => {
-			stopScroll();
-			setIsOpen(open);
-		},
-		[stopScroll],
-	);
-
 	useEffect(() => {
 		setIsOpen(shouldBeOpen);
 	}, [shouldBeOpen]);
@@ -148,7 +137,7 @@ export function PlanMessage({ part, sessionId }: PlanMessageProps) {
 	return (
 		<div className="w-full rounded-md border border-border bg-background overflow-hidden">
 			{/* Collapsible section: trigger + plan content */}
-			<Collapsible open={isOpen} onOpenChange={handleOpenChange}>
+			<Collapsible open={isOpen} onOpenChange={setIsOpen}>
 				<CollapsibleTrigger
 					className={cn(
 						"flex items-center gap-3 px-4 py-3 w-full",
