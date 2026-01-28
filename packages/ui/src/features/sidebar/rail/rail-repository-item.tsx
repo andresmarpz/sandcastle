@@ -1,7 +1,7 @@
 "use client";
 
 import { useAtom } from "@effect-atom/atom-react";
-import { TrashIcon } from "@phosphor-icons/react/dist/ssr";
+import { GearIcon, TrashIcon } from "@phosphor-icons/react/dist/ssr";
 import type { Repository } from "@sandcastle/schemas";
 import * as React from "react";
 import { useLocation, useNavigate } from "react-router";
@@ -28,6 +28,7 @@ import {
 import { SidebarMenuButton, SidebarMenuItem } from "@/components/sidebar";
 import { Spinner } from "@/components/spinner";
 import { cn } from "@/lib/utils";
+import { RepositorySettingsModal } from "./repository-settings-modal";
 
 interface RailRepositoryItemProps {
 	repository: Repository;
@@ -46,6 +47,7 @@ export function RailRepositoryItem({ repository }: RailRepositoryItemProps) {
 	const navigate = useNavigate();
 
 	const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
+	const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
 	const [deleteResult, deleteRepository] = useAtom(deleteRepositoryMutation);
 	const isDeleting = deleteResult.waiting;
 
@@ -86,6 +88,10 @@ export function RailRepositoryItem({ repository }: RailRepositoryItemProps) {
 					/>
 
 					<ContextMenuContent className="min-w-[160px]">
+						<ContextMenuItem onClick={() => setIsSettingsOpen(true)}>
+							<GearIcon className="size-4" />
+							Settings
+						</ContextMenuItem>
 						<ContextMenuItem
 							variant="destructive"
 							onClick={() => setIsDeleteDialogOpen(true)}
@@ -128,6 +134,12 @@ export function RailRepositoryItem({ repository }: RailRepositoryItemProps) {
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>
+
+			<RepositorySettingsModal
+				repository={repository}
+				open={isSettingsOpen}
+				onOpenChange={setIsSettingsOpen}
+			/>
 		</>
 	);
 }

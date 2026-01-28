@@ -129,6 +129,13 @@ const migrations: Migration[] = [
 			ALTER TABLE chat_messages ADD COLUMN parentToolCallId TEXT;
 		`,
 	},
+	{
+		version: 6,
+		name: "add_worktree_init_script",
+		up: `
+			ALTER TABLE repositories ADD COLUMN worktreeInitScript TEXT;
+		`,
+	},
 ];
 
 const ensureMigrationsTable = (db: Database): void => {

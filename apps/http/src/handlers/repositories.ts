@@ -12,7 +12,7 @@ import {
 	StorageService,
 	StorageServiceDefault,
 } from "@sandcastle/storage";
-import { Effect, Layer } from "effect";
+import { Effect, Layer, type Option } from "effect";
 
 const mapDatabaseError = (error: DatabaseError): DatabaseRpcError =>
 	new DatabaseRpcError({ operation: error.operation, message: error.message });
@@ -47,6 +47,7 @@ const toRepository = (repo: {
 	directoryPath: string;
 	defaultBranch: string;
 	pinned: boolean;
+	worktreeInitScript: Option.Option<string>;
 	createdAt: string;
 	updatedAt: string;
 }): Repository =>
@@ -56,6 +57,7 @@ const toRepository = (repo: {
 		directoryPath: repo.directoryPath,
 		defaultBranch: repo.defaultBranch,
 		pinned: repo.pinned,
+		worktreeInitScript: repo.worktreeInitScript,
 		createdAt: repo.createdAt,
 		updatedAt: repo.updatedAt,
 	});
@@ -95,6 +97,7 @@ export const RepositoryRpcHandlers = RepositoryRpc.toLayer(
 					.update(params.id, {
 						label: params.input.label,
 						defaultBranch: params.input.defaultBranch,
+						worktreeInitScript: params.input.worktreeInitScript,
 					})
 					.pipe(Effect.map(toRepository), Effect.mapError(mapNotFoundError)),
 
