@@ -329,6 +329,22 @@ export const makeSessionHub = Effect.gen(function* () {
 							contextWindow: metadata.contextWindow,
 						})
 						.pipe(Effect.catchAll(() => Effect.void));
+				} else {
+					// On interrupt, we may not have received the result message.
+					// Fall back to lastAssistantUsage for context window calculation.
+					const lastUsage = (
+						accumulator as ClaudeMessageAccumulator
+					).getLastAssistantUsage();
+					if (lastUsage) {
+						yield* storage.sessions
+							.update(sessionId, {
+								inputTokens: lastUsage.inputTokens,
+								outputTokens: lastUsage.outputTokens,
+								cacheReadInputTokens: lastUsage.cacheReadInputTokens,
+								cacheCreationInputTokens: lastUsage.cacheCreationInputTokens,
+							})
+							.pipe(Effect.catchAll(() => Effect.void));
+					}
 				}
 
 				// Update in-memory ref if we have a session ID from metadata

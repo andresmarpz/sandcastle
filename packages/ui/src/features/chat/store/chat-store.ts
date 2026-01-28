@@ -92,8 +92,9 @@ export interface ChatSessionState {
 	optimisticApprovals: Map<string, { approved: boolean; feedback?: string }>;
 }
 
-/** Metadata from StreamEventFinish for real-time UI updates */
+/** Metadata from streaming events for real-time UI updates */
 export interface StreamingMetadata {
+	model?: string;
 	costUsd?: number;
 	inputTokens?: number;
 	outputTokens?: number;
@@ -582,25 +583,51 @@ export const chatStore = createStore<ChatStore>((set, get) => {
 					return;
 				}
 
-				// Handle finish event - store metadata for real-time UI updates
+				// Handle metadata-update event - incremental token/usage updates
+				if (streamEvent.type === "metadata-update") {
+					const metadataEvent = event.event as {
+						type: "metadata-update";
+						model?: string;
+						inputTokens?: number;
+						outputTokens?: number;
+						cacheReadInputTokens?: number;
+						cacheCreationInputTokens?: number;
+						contextWindow?: number;
+						costUsd?: number;
+					};
+					updateSession(sessionId, (prev) => ({
+						...prev,
+						streamingMetadata: {
+							...prev.streamingMetadata,
+							model: metadataEvent.model,
+							inputTokens: metadataEvent.inputTokens,
+							outputTokens: metadataEvent.outputTokens,
+							cacheReadInputTokens: metadataEvent.cacheReadInputTokens,
+							cacheCreationInputTokens: metadataEvent.cacheCreationInputTokens,
+							contextWindow: metadataEvent.contextWindow,
+							costUsd: metadataEvent.costUsd,
+						},
+					}));
+				}
+
+				// Handle finish event - only extract cost (token totals would overwrite
+				// the latest assistant message's context view with cumulative turn totals)
 				if (streamEvent.type === "finish") {
 					const finishEvent = event.event as {
 						type: "finish";
 						metadata?: {
 							costUsd?: number;
-							inputTokens?: number;
-							outputTokens?: number;
-							cacheReadInputTokens?: number;
-							cacheCreationInputTokens?: number;
-							contextWindow?: number;
 						};
 					};
-					// Store metadata in chat store for immediate UI updates
-					const metadata = finishEvent.metadata;
-					if (metadata) {
+					// Store cost for immediate UI updates
+					const costUsd = finishEvent.metadata?.costUsd;
+					if (costUsd != null) {
 						updateSession(sessionId, (prev) => ({
 							...prev,
-							streamingMetadata: metadata,
+							streamingMetadata: {
+								...prev.streamingMetadata,
+								costUsd,
+							},
 						}));
 					}
 					// Continue to pass to accumulator for message finalization

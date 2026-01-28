@@ -8,7 +8,7 @@ import type { UIMessage } from "ai";
 import { memo, useMemo } from "react";
 import { ClaudeAI } from "@/components/icons/anthropic.icon";
 import { useSessionStatusIndicator } from "@/features/sidebar/main/session-status-indicator";
-import { getModelDisplayName } from "@/lib/models";
+import { getModelContextWindow, getModelDisplayName } from "@/lib/models";
 import { cn } from "@/lib/utils";
 import { useChatSession } from "../../store";
 import { StreamingIndicator } from "./streaming-indicator";
@@ -86,9 +86,19 @@ export const SessionMetadataPanel = memo(function SessionMetadataPanel({
 		status: session.status,
 	});
 
+	// Get model from streaming metadata, session, or extract from latest message metadata
+	const modelId = useMemo(
+		() =>
+			streamingMetadata?.model ??
+			session.model ??
+			extractModelFromMessages(messages),
+		[streamingMetadata?.model, session.model, messages],
+	);
+	const modelDisplayName = getModelDisplayName(modelId);
+
 	// Calculate context usage percentage
 	// Context = inputTokens + cacheReadInputTokens + cacheCreationInputTokens
-	// This represents everything Claude sees on its final message
+	// This represents everything Claude sees on its latest assistant message
 	// Use streaming metadata if available (real-time), otherwise fall back to session data
 	const inputTokens = streamingMetadata?.inputTokens ?? session.inputTokens;
 	const cacheReadTokens =
@@ -96,8 +106,12 @@ export const SessionMetadataPanel = memo(function SessionMetadataPanel({
 	const cacheCreationTokens =
 		streamingMetadata?.cacheCreationInputTokens ??
 		session.cacheCreationInputTokens;
+
+	// Use model-based context window if available, fall back to streaming/session data
 	const contextWindow =
-		streamingMetadata?.contextWindow ?? session.contextWindow;
+		getModelContextWindow(modelId) ??
+		streamingMetadata?.contextWindow ??
+		session.contextWindow;
 
 	const totalContextTokens =
 		inputTokens + cacheReadTokens + cacheCreationTokens;
@@ -106,18 +120,11 @@ export const SessionMetadataPanel = memo(function SessionMetadataPanel({
 			? Math.min((totalContextTokens / contextWindow) * 100, 100)
 			: 0;
 
-	// Use streaming metadata cost if available (real-time), otherwise fall back to session data
-	const totalCost = streamingMetadata?.costUsd ?? session.totalCostUsd;
+	// Use real cost from streaming metadata or session data (no calculation)
+	const totalCost = streamingMetadata?.costUsd ?? session.totalCostUsd ?? 0;
 
 	// Extract latest todos from messages
 	const todos = useMemo(() => extractLatestTodos(messages), [messages]);
-
-	// Get model from session or extract from latest message metadata
-	const modelId = useMemo(
-		() => session.model ?? extractModelFromMessages(messages),
-		[session.model, messages],
-	);
-	const modelDisplayName = getModelDisplayName(modelId);
 
 	const isStreaming = indicatorStatus === "streaming";
 
@@ -143,14 +150,14 @@ export const SessionMetadataPanel = memo(function SessionMetadataPanel({
 			</div>
 
 			{/* Cost */}
-			{totalCost > 0 && (
+			{
 				<div className="flex items-center justify-between">
 					<span className="text-muted-foreground">Cost</span>
 					<span className="tabular-nums text-muted-foreground">
 						{formatCost(totalCost)}
 					</span>
 				</div>
-			)}
+			}
 
 			{/* Tasks */}
 			{todos.length > 0 && <SessionMetadataTasks todos={todos} />}
@@ -243,6 +250,7 @@ function TodoStatusIcon({ status }: { status: TodoItem["status"] }) {
  * Formats cost in USD.
  */
 function formatCost(cost: number): string {
+	if (cost === 0) return "$0";
 	if (cost < 0.01) return "<$0.01";
 	return `$${cost.toFixed(2)}`;
 }

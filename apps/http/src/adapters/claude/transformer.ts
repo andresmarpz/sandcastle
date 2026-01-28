@@ -8,6 +8,7 @@ import type {
 	ChatStreamEvent,
 	FinishReason,
 	StreamEventFinish,
+	StreamEventMetadataUpdate,
 	StreamEventReasoningDelta,
 	StreamEventReasoningEnd,
 	StreamEventReasoningStart,
@@ -288,6 +289,19 @@ function processAssistantMessage(
 				id: reasoningId,
 			} satisfies StreamEventReasoningEnd);
 		}
+	}
+
+	// Emit metadata-update if usage data is available
+	const usage = message.message.usage;
+	if (usage) {
+		events.push({
+			type: "metadata-update",
+			model: message.message.model,
+			inputTokens: usage.input_tokens,
+			outputTokens: usage.output_tokens,
+			cacheReadInputTokens: usage.cache_read_input_tokens ?? undefined,
+			cacheCreationInputTokens: usage.cache_creation_input_tokens ?? undefined,
+		} satisfies StreamEventMetadataUpdate);
 	}
 
 	return { events, newState };

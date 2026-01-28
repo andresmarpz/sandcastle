@@ -374,6 +374,10 @@ export class MessageAccumulator {
 				// session-renamed is handled at the store level, not message level
 				break;
 
+			case "metadata-update":
+				// Metadata updates are handled by the chat store, not the message accumulator
+				break;
+
 			default: {
 				// Handle data-* events or unknown events
 				// These can be stored in metadata if needed
