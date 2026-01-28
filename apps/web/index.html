@@ -2,11 +2,40 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>desktop-new</title>
+
+    <title>Sandcastle</title>
+    <meta name="description" content="The loop manager for your agents. A developer tool for managing and orchestrating AI agent workflows." />
+    <meta name="author" content="Andres Martinez" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="128x128" href="/icon-128x128.png" />
+    <link rel="apple-touch-icon" sizes="256x256" href="/apple-touch-icon.png" />
+
+    <!-- Open Graph / Social -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Sandcastle" />
+    <meta property="og:description" content="The loop manager for your agents. A developer tool for managing and orchestrating AI agent workflows." />
+    <meta property="og:image" content="/icon.png" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Sandcastle" />
+    <meta name="twitter:description" content="The loop manager for your agents." />
+    <meta name="twitter:image" content="/icon.png" />
+
+    <!-- Theme -->
+    <meta name="theme-color" content="#1c1917" />
+
+    <script>
+      const t = localStorage.getItem("theme") ?? "system";
+      const isDark =
+        t === "dark" || (t === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
+      if (isDark) document.documentElement.classList.add("dark");
+    </script>
   </head>
-  <body>
+  <body class="antialiased">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
