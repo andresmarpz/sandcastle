@@ -39,6 +39,7 @@ import type {
 	HistoryCursor as HistoryCursorType,
 	PendingToolRequest,
 	SessionState,
+	UsageMetadata,
 } from "./types";
 
 type LogLevel = "INFO" | "WARN" | "ERROR";
@@ -101,6 +102,7 @@ const createSessionState = (
 		const pendingToolRequestsRef = yield* Ref.make<
 			Map<string, PendingToolRequest>
 		>(new Map());
+		const usageMetadataRef = yield* Ref.make<UsageMetadata | null>(null);
 
 		return {
 			pubsub,
@@ -116,6 +118,7 @@ const createSessionState = (
 			claudeSessionIdRef,
 			activeTurnContextRef,
 			pendingToolRequestsRef,
+			usageMetadataRef,
 		} satisfies SessionState;
 	});
 
@@ -472,6 +475,36 @@ export const makeSessionHub = Effect.gen(function* () {
 								turnId,
 								event,
 							});
+
+							// Capture usage metadata for late subscriber catch-up
+							if (event.type === "metadata-update") {
+								yield* Ref.set(session.usageMetadataRef, {
+									model: event.model,
+									inputTokens: event.inputTokens,
+									outputTokens: event.outputTokens,
+									cacheReadInputTokens: event.cacheReadInputTokens,
+									cacheCreationInputTokens: event.cacheCreationInputTokens,
+									contextWindow: event.contextWindow,
+									costUsd: event.costUsd,
+								});
+							} else if (event.type === "finish" && event.metadata) {
+								// Also capture finish metadata (includes costUsd)
+								yield* Ref.update(session.usageMetadataRef, (prev) => ({
+									...prev,
+									inputTokens: event.metadata?.inputTokens ?? prev?.inputTokens,
+									outputTokens:
+										event.metadata?.outputTokens ?? prev?.outputTokens,
+									cacheReadInputTokens:
+										event.metadata?.cacheReadInputTokens ??
+										prev?.cacheReadInputTokens,
+									cacheCreationInputTokens:
+										event.metadata?.cacheCreationInputTokens ??
+										prev?.cacheCreationInputTokens,
+									contextWindow:
+										event.metadata?.contextWindow ?? prev?.contextWindow,
+									costUsd: event.metadata?.costUsd ?? prev?.costUsd,
+								}));
+							}
 						}
 					}),
 				),
@@ -831,6 +864,7 @@ export const makeSessionHub = Effect.gen(function* () {
 				const buffer = yield* Ref.get(session.bufferRef);
 				const turnContext = yield* Ref.get(session.activeTurnContextRef);
 				const pendingRequests = yield* Ref.get(session.pendingToolRequestsRef);
+				const usageMetadata = yield* Ref.get(session.usageMetadataRef);
 
 				// Convert pending requests to approval references (just toolCallId + toolName)
 				const pendingApprovals = Array.from(pendingRequests.values()).map(
@@ -851,6 +885,7 @@ export const makeSessionHub = Effect.gen(function* () {
 					buffer: [...buffer],
 					...(turnContext ? { turnContext } : {}),
 					...(pendingApprovals.length > 0 ? { pendingApprovals } : {}),
+					...(usageMetadata ? { usageMetadata } : {}),
 				};
 
 				structuredLog("INFO", "subscribe_initial_state", {

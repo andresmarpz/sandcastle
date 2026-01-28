@@ -52,6 +52,18 @@ export const PendingApproval = Schema.Struct({
 });
 export type PendingApproval = typeof PendingApproval.Type;
 
+/** Token usage and context metadata for streaming sessions */
+export const UsageMetadata = Schema.Struct({
+	model: Schema.optional(Schema.String),
+	inputTokens: Schema.optional(Schema.Number),
+	outputTokens: Schema.optional(Schema.Number),
+	cacheReadInputTokens: Schema.optional(Schema.Number),
+	cacheCreationInputTokens: Schema.optional(Schema.Number),
+	contextWindow: Schema.optional(Schema.Number),
+	costUsd: Schema.optional(Schema.Number),
+});
+export type UsageMetadata = typeof UsageMetadata.Type;
+
 /** Session events streamed to subscribers */
 export const SessionEvent = Schema.Union(
 	Schema.Struct({
@@ -61,6 +73,8 @@ export const SessionEvent = Schema.Union(
 		turnContext: Schema.optional(TurnContext),
 		/** Pending tool approvals that need user response (for reconnection) */
 		pendingApprovals: Schema.optional(Schema.Array(PendingApproval)),
+		/** Current usage metadata (for context percentage display on reconnect) */
+		usageMetadata: Schema.optional(UsageMetadata),
 	}),
 	Schema.Struct({
 		_tag: Schema.Literal("SessionStarted"),
