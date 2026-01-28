@@ -18,6 +18,7 @@ import type {
 	SessionEvent,
 	StreamEventToolApprovalRequest,
 	ToolApprovalResponse,
+	UsageMetadata,
 } from "@sandcastle/schemas";
 import type { UIMessage } from "ai";
 import { Cause, Effect, Exit, Fiber, Stream } from "effect";
@@ -84,24 +85,15 @@ export interface ChatSessionState {
 	answeredQuestionToolCallIds: Set<string>;
 	/** Whether session has unread content (set on SessionStopped, cleared on visit) */
 	hasUnreadContent: boolean;
-	/** Real-time metadata from finish events (token usage, cost) */
-	streamingMetadata: StreamingMetadata | null;
+	/** Real-time metadata from streaming events (token usage, cost) */
+	streamingMetadata: UsageMetadata | null;
 	/** Server timestamp when current turn started (ISO 8601), for streaming duration */
 	turnStartedAt: string | null;
 	/** Optimistic approval responses (cleared when server confirms or session ends) */
 	optimisticApprovals: Map<string, { approved: boolean; feedback?: string }>;
 }
 
-/** Metadata from streaming events for real-time UI updates */
-export interface StreamingMetadata {
-	model?: string;
-	costUsd?: number;
-	inputTokens?: number;
-	outputTokens?: number;
-	cacheReadInputTokens?: number;
-	cacheCreationInputTokens?: number;
-	contextWindow?: number;
-}
+// UsageMetadata is imported from @sandcastle/schemas and used for streaming metadata
 
 interface SubscriptionState {
 	fiber: Fiber.RuntimeFiber<void, unknown> | null;
