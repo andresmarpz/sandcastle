@@ -29,7 +29,7 @@ import {
 	WorktreeService,
 	WorktreeServiceLive,
 } from "@sandcastle/worktree";
-import { Data, Effect, Layer } from "effect";
+import { Data, Effect, Layer, Option } from "effect";
 
 class FileSystemError extends Data.TaggedError("FileSystemError")<{
 	message: string;
@@ -307,7 +307,27 @@ export const WorktreeRpcHandlers = WorktreeRpc.toLayer(
 						fromRef: baseBranch,
 					});
 
-					// 3. Create storage record
+					// 3. Run worktreeInitScript if configured
+					if (Option.isSome(repository.worktreeInitScript)) {
+						const initScript = repository.worktreeInitScript.value;
+						yield* Effect.tryPromise({
+							try: async () => {
+								const result = await Bun.$`sh -c ${initScript}`
+									.cwd(worktreePath)
+									.quiet();
+								return result;
+							},
+							catch: (error) => {
+								const message =
+									error instanceof Error ? error.message : String(error);
+								return new FileSystemError({
+									message: `Init script failed: ${message}`,
+								});
+							},
+						});
+					}
+
+					// 4. Create storage record
 					const worktree = yield* storage.worktrees.create({
 						repositoryId: params.repositoryId,
 						path: worktreePath,
@@ -316,7 +336,7 @@ export const WorktreeRpcHandlers = WorktreeRpc.toLayer(
 						baseBranch,
 					});
 
-					// 4. Create default session so user can start working immediately
+					// 5. Create default session so user can start working immediately
 					const session = yield* storage.sessions.create({
 						repositoryId: params.repositoryId,
 						worktreeId: worktree.id,
