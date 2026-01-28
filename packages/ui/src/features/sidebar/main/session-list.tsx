@@ -35,10 +35,9 @@ export const SessionList = memo(
 			repository: repositoryResult,
 		});
 
-		return Result.matchWithWaiting(combinedResult, {
-			onWaiting: () => <SessionListSkeleton />,
-			onError: () => <SessionListError />,
-			onDefect: () => <SessionListError />,
+		return Result.match(combinedResult, {
+			onInitial: () => <SessionListSkeleton />,
+			onFailure: () => <SessionListError />,
 			onSuccess: ({ value: { sessions, repository } }) => (
 				<SessionListContent
 					sessions={sortByLastActivity(sessions)}
