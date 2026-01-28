@@ -12,7 +12,6 @@ export type {
 	ChatStoreState,
 	HistoryCursor,
 	SendResult,
-	StreamingMetadata,
 	ToolApprovalRequest,
 } from "./chat-store";
 // Store and types
@@ -47,4 +46,5 @@ export {
 	useSetChatHistory,
 	useSetChatMode,
 	useStreamingMetadata,
+	useUsageMetadata,
 } from "./use-chat-session";

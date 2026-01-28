@@ -10,7 +10,7 @@ import { ClaudeAI } from "@/components/icons/anthropic.icon";
 import { useSessionStatusIndicator } from "@/features/sidebar/main/session-status-indicator";
 import { getModelContextWindow, getModelDisplayName } from "@/lib/models";
 import { cn } from "@/lib/utils";
-import { useChatSession } from "../../store";
+import { useChatSession, useUsageMetadata } from "../../store";
 import { StreamingIndicator } from "./streaming-indicator";
 
 export interface SessionMetadataPanelProps {
@@ -78,7 +78,8 @@ export const SessionMetadataPanel = memo(function SessionMetadataPanel({
 	sessionId,
 	messages,
 }: SessionMetadataPanelProps) {
-	const { turnStartedAt, streamingMetadata } = useChatSession(sessionId);
+	const { turnStartedAt } = useChatSession(sessionId);
+	const usageMetadata = useUsageMetadata(sessionId, session);
 
 	// Use the same status indicator hook as the sidebar
 	const indicatorStatus = useSessionStatusIndicator({
@@ -86,32 +87,23 @@ export const SessionMetadataPanel = memo(function SessionMetadataPanel({
 		status: session.status,
 	});
 
-	// Get model from streaming metadata, session, or extract from latest message metadata
+	// Get model from unified metadata, or extract from latest message metadata
 	const modelId = useMemo(
-		() =>
-			streamingMetadata?.model ??
-			session.model ??
-			extractModelFromMessages(messages),
-		[streamingMetadata?.model, session.model, messages],
+		() => usageMetadata.model ?? extractModelFromMessages(messages),
+		[usageMetadata.model, messages],
 	);
 	const modelDisplayName = getModelDisplayName(modelId);
 
-	// Calculate context usage percentage
+	// Calculate context usage percentage using unified metadata
 	// Context = inputTokens + cacheReadInputTokens + cacheCreationInputTokens
 	// This represents everything Claude sees on its latest assistant message
-	// Use streaming metadata if available (real-time), otherwise fall back to session data
-	const inputTokens = streamingMetadata?.inputTokens ?? session.inputTokens;
-	const cacheReadTokens =
-		streamingMetadata?.cacheReadInputTokens ?? session.cacheReadInputTokens;
-	const cacheCreationTokens =
-		streamingMetadata?.cacheCreationInputTokens ??
-		session.cacheCreationInputTokens;
+	const inputTokens = usageMetadata.inputTokens ?? 0;
+	const cacheReadTokens = usageMetadata.cacheReadInputTokens ?? 0;
+	const cacheCreationTokens = usageMetadata.cacheCreationInputTokens ?? 0;
 
-	// Use model-based context window if available, fall back to streaming/session data
+	// Use model-based context window if available, fall back to metadata
 	const contextWindow =
-		getModelContextWindow(modelId) ??
-		streamingMetadata?.contextWindow ??
-		session.contextWindow;
+		getModelContextWindow(modelId) ?? usageMetadata.contextWindow ?? 0;
 
 	const totalContextTokens =
 		inputTokens + cacheReadTokens + cacheCreationTokens;
@@ -120,8 +112,8 @@ export const SessionMetadataPanel = memo(function SessionMetadataPanel({
 			? Math.min((totalContextTokens / contextWindow) * 100, 100)
 			: 0;
 
-	// Use real cost from streaming metadata or session data (no calculation)
-	const totalCost = streamingMetadata?.costUsd ?? session.totalCostUsd ?? 0;
+	// Use unified cost from metadata
+	const totalCost = usageMetadata.costUsd ?? 0;
 
 	// Extract latest todos from messages
 	const todos = useMemo(() => extractLatestTodos(messages), [messages]);

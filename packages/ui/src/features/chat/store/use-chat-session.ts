@@ -1,4 +1,8 @@
-import type { ToolApprovalResponse } from "@sandcastle/schemas";
+import type {
+	Session,
+	ToolApprovalResponse,
+	UsageMetadata,
+} from "@sandcastle/schemas";
 import type { UIMessage } from "ai";
 import { useCallback, useEffect, useMemo } from "react";
 import { useStore } from "zustand";
@@ -11,7 +15,6 @@ import {
 import {
 	type ChatSessionState,
 	chatStore,
-	type StreamingMetadata,
 	type ToolApprovalRequest,
 } from "./chat-store";
 
@@ -411,9 +414,7 @@ export function useIsAnsweredQuestion(
  * }
  * ```
  */
-export function useStreamingMetadata(
-	sessionId: string,
-): StreamingMetadata | null {
+export function useStreamingMetadata(sessionId: string): UsageMetadata | null {
 	return useChatSessionSelector(sessionId, (s) => s.streamingMetadata);
 }
 
@@ -448,4 +449,51 @@ export function useOptimisticPlanApproval(
 		const session = state.getSession(sessionId);
 		return session.optimisticApprovals.get(toolCallId) ?? null;
 	});
+}
+
+/**
+ * Hook for reading computed usage metadata with fallback to session entity.
+ *
+ * Priority:
+ * 1. Streaming metadata from real-time events
+ * 2. Session entity fields (persisted data)
+ *
+ * This hook consolidates the fallback logic for usage metadata, making it
+ * easier for components to get the correct values without duplicating logic.
+ *
+ * @example
+ * ```tsx
+ * function MetadataDisplay({ sessionId, session }: Props) {
+ *   const usageMetadata = useUsageMetadata(sessionId, session)
+ *   return <div>Cost: ${usageMetadata.costUsd ?? 0}</div>
+ * }
+ * ```
+ */
+export function useUsageMetadata(
+	sessionId: string,
+	session: Session | null,
+): UsageMetadata {
+	const streamingMetadata = useStreamingMetadata(sessionId);
+
+	return useMemo(
+		() => ({
+			model: streamingMetadata?.model ?? session?.model ?? undefined,
+			inputTokens:
+				streamingMetadata?.inputTokens ?? session?.inputTokens ?? undefined,
+			outputTokens:
+				streamingMetadata?.outputTokens ?? session?.outputTokens ?? undefined,
+			cacheReadInputTokens:
+				streamingMetadata?.cacheReadInputTokens ??
+				session?.cacheReadInputTokens ??
+				undefined,
+			cacheCreationInputTokens:
+				streamingMetadata?.cacheCreationInputTokens ??
+				session?.cacheCreationInputTokens ??
+				undefined,
+			contextWindow:
+				streamingMetadata?.contextWindow ?? session?.contextWindow ?? undefined,
+			costUsd: streamingMetadata?.costUsd ?? session?.totalCostUsd ?? undefined,
+		}),
+		[streamingMetadata, session],
+	);
 }
