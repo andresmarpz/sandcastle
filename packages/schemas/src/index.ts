@@ -11,3 +11,5 @@ export * from "./errors";
 // Git schemas
 export * from "./git";
 export * from "./primitives";
+// Tool schemas
+export * from "./tools";

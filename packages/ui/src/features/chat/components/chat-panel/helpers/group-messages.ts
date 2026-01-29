@@ -1,15 +1,18 @@
 import type { ToolCallPart } from "@sandcastle/schemas";
 import type { UIMessage } from "ai";
-import type { TodoItem } from "../messages/tasks";
 import type { ToolMetadata, ToolStep } from "../messages/work-unit";
-import { computeTodoDiff, getToolName, normalizeState } from "./helpers";
-import type { GroupedItem } from "./types";
+import { getTaskMgmtToolType, getToolName, normalizeState } from "./helpers";
+import type { GroupedItem, TaskStatus } from "./types";
 
 export type { SubagentItem } from "../messages/subagent";
-export type { TodoItem, TodoTraceItem } from "../messages/tasks";
 export type { ToolMetadata, ToolStep } from "../messages/work-unit";
 // Re-export types for consumers
-export type { GroupedItem, PlanItem, QuestionsItem } from "./types";
+export type {
+	GroupedItem,
+	PlanItem,
+	QuestionsItem,
+	TaskTraceItem,
+} from "./types";
 
 /**
  * Checks if a tool name is the ExitPlanMode tool.
@@ -25,6 +28,16 @@ function isExitPlanModeTool(toolName: string): boolean {
  */
 function isAskUserQuestionTool(toolName: string): boolean {
 	return toolName === "AskUserQuestion" || toolName.includes("AskUserQuestion");
+}
+
+/**
+ * Extracts task ID from tool output string.
+ * Handles formats like "Task #1 created successfully: ..." or "Updated task #1 status"
+ */
+function extractTaskIdFromOutput(output: unknown): string | null {
+	if (typeof output !== "string") return null;
+	const match = output.match(/[Tt]ask #(\d+)/);
+	return match?.[1] ?? null;
 }
 
 /**
@@ -64,10 +77,11 @@ function collectToolSteps(messages: readonly UIMessage[]): CollectedSteps {
 
 			if (toolPart.toolName?.includes("RenameSession")) continue;
 
-			// Skip ExitPlanMode and AskUserQuestion - they're handled separately
+			// Skip ExitPlanMode, AskUserQuestion, and Task management tools - they're handled separately
 			const toolName = getToolName(toolPart);
 			if (isExitPlanModeTool(toolName)) continue;
 			if (isAskUserQuestionTool(toolName)) continue;
+			if (getTaskMgmtToolType(toolName)) continue;
 
 			const toolCallId =
 				toolPart.toolCallId ?? `${message.id}-tool-${allSteps.length}`;
@@ -107,6 +121,23 @@ function collectToolSteps(messages: readonly UIMessage[]): CollectedSteps {
 }
 
 /**
+ * Tracked task state for computing status transitions.
+ */
+interface TrackedTask {
+	id: string;
+	subject: string;
+	status: TaskStatus;
+}
+
+interface TaskListOutputShape {
+	tasks?: Array<{
+		id: string;
+		subject: string;
+		status: TaskStatus;
+	}>;
+}
+
+/**
  * Result of processing messages into grouped items.
  */
 interface ProcessResult {
@@ -125,8 +156,8 @@ function processMessages(
 	let pendingSteps: ToolStep[] = [];
 	let stepIndex = 0;
 
-	// Todo state tracking for computing diffs between TodoWrite calls
-	let previousTodos: TodoItem[] = [];
+	// Task state tracking for computing status transitions
+	const taskState = new Map<string, TrackedTask>();
 
 	const flushWorkUnit = () => {
 		const firstStep = pendingSteps[0];
@@ -173,8 +204,9 @@ function processMessages(
 				const toolPart = part as ToolCallPart;
 				if (toolPart.toolName?.includes("RenameSession")) continue;
 
-				// ExitPlanMode → emit plan item (not in allSteps)
 				const partToolName = getToolName(toolPart);
+
+				// ExitPlanMode → emit plan item
 				if (isExitPlanModeTool(partToolName)) {
 					flushWorkUnit();
 					items.push({
@@ -186,7 +218,7 @@ function processMessages(
 					continue;
 				}
 
-				// AskUserQuestion → emit questions item (not in allSteps)
+				// AskUserQuestion → emit questions item
 				if (isAskUserQuestionTool(partToolName)) {
 					flushWorkUnit();
 					items.push({
@@ -196,6 +228,114 @@ function processMessages(
 						part: toolPart,
 					});
 					continue;
+				}
+
+				// Task management tools → emit task-trace items
+				const taskToolType = getTaskMgmtToolType(partToolName);
+				if (taskToolType) {
+					const input = toolPart.input as Record<string, unknown> | undefined;
+
+					// TaskList - use output to populate task state (authoritative source)
+					if (taskToolType === "TaskList") {
+						const output = toolPart.output as TaskListOutputShape | undefined;
+						if (output?.tasks) {
+							for (const task of output.tasks) {
+								taskState.set(task.id, {
+									id: task.id,
+									subject: task.subject,
+									status: task.status,
+								});
+							}
+						}
+						continue;
+					}
+
+					// TaskGet - skip (read-only)
+					if (taskToolType === "TaskGet") {
+						continue;
+					}
+
+					if (taskToolType === "TaskCreate" && input) {
+						flushWorkUnit();
+
+						// Parse task ID from output string or use structured output
+						const output = toolPart.output;
+						let taskId: string;
+						if (typeof output === "string") {
+							const extractedId = extractTaskIdFromOutput(output);
+							taskId = extractedId ?? toolPart.toolCallId ?? "unknown";
+						} else {
+							const structuredOutput = output as
+								| { taskId?: string }
+								| undefined;
+							taskId =
+								structuredOutput?.taskId ?? toolPart.toolCallId ?? "unknown";
+						}
+
+						const subject = (input.subject as string) ?? "Untitled task";
+						const status: TaskStatus = "pending";
+
+						taskState.set(taskId, { id: taskId, subject, status });
+
+						items.push({
+							type: "task-trace",
+							id: `task-trace-${toolPart.toolCallId}`,
+							operation: "create",
+							taskId,
+							subject,
+							status,
+						});
+						continue;
+					}
+
+					if (taskToolType === "TaskUpdate" && input) {
+						flushWorkUnit();
+						const taskId = input.taskId as string;
+						const newStatus = input.status as
+							| TaskStatus
+							| "deleted"
+							| undefined;
+						const newSubject = input.subject as string | undefined;
+
+						// Look up task - if not found by ID, it may be because TaskCreate output
+						// wasn't available when we processed it
+						let prevTask = taskState.get(taskId);
+
+						// If not found, check if we stored it with a different key (toolCallId fallback)
+						if (!prevTask) {
+							for (const task of taskState.values()) {
+								if (task.id === taskId) {
+									prevTask = task;
+									break;
+								}
+							}
+						}
+
+						const previousStatus = prevTask?.status;
+						const subject = newSubject ?? prevTask?.subject ?? `Task ${taskId}`;
+						const status: TaskStatus =
+							newStatus === "deleted"
+								? "completed"
+								: (newStatus ?? previousStatus ?? "pending");
+
+						// Update tracked state
+						if (newStatus === "deleted") {
+							taskState.delete(taskId);
+						} else {
+							taskState.set(taskId, { id: taskId, subject, status });
+						}
+
+						items.push({
+							type: "task-trace",
+							id: `task-trace-${toolPart.toolCallId}`,
+							operation: "update",
+							taskId,
+							subject,
+							status,
+							previousStatus,
+						});
+						continue;
+					}
 				}
 
 				const step = allSteps[stepIndex++];
@@ -218,26 +358,6 @@ function processMessages(
 						nestedSteps,
 						responseText: null,
 					});
-					continue;
-				}
-
-				// TodoWrite → emit trace, track latest
-				if (step.toolName === "TodoWrite") {
-					flushWorkUnit();
-
-					const input = step.input as { todos?: TodoItem[] };
-					const currentTodos = input.todos ?? [];
-					const diff = computeTodoDiff(previousTodos, currentTodos);
-
-					items.push({
-						type: "todo-trace",
-						id: `todo-trace-${step.id}`,
-						added: diff.added,
-						completed: diff.completed,
-						started: diff.started,
-					});
-
-					previousTodos = currentTodos;
 					continue;
 				}
 

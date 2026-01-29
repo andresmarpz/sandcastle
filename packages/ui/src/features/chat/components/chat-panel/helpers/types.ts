@@ -1,7 +1,6 @@
 import type { ToolCallPart } from "@sandcastle/schemas";
 import type { UIMessage } from "ai";
 import type { SubagentItem } from "../messages/subagent";
-import type { TodoTraceItem } from "../messages/tasks";
 import type { ToolStep } from "../messages/work-unit";
 
 // Re-export from canonical source
@@ -36,6 +35,18 @@ export type QuestionsItem = {
 	part: ToolCallPart;
 };
 
+export type TaskStatus = "pending" | "in_progress" | "completed";
+
+export type TaskTraceItem = {
+	type: "task-trace";
+	id: string;
+	operation: "create" | "update";
+	taskId: string;
+	subject: string;
+	status: TaskStatus;
+	previousStatus?: TaskStatus;
+};
+
 /**
  * Union of all grouped item types for rendering.
  */
@@ -44,6 +55,6 @@ export type GroupedItem =
 	| AssistantMessageItem
 	| WorkUnitItem
 	| SubagentItem
-	| TodoTraceItem
+	| TaskTraceItem
 	| PlanItem
 	| QuestionsItem;

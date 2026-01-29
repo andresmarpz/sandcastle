@@ -1,8 +1,5 @@
 "use client";
 
-import { CheckCircleIcon } from "@phosphor-icons/react/CheckCircle";
-import { CircleIcon } from "@phosphor-icons/react/Circle";
-import { CircleHalfIcon } from "@phosphor-icons/react/CircleHalf";
 import type { Session } from "@sandcastle/schemas";
 import type { UIMessage } from "ai";
 import { memo, useMemo } from "react";
@@ -11,6 +8,9 @@ import { useSessionStatusIndicator } from "@/features/sidebar/main/session-statu
 import { getModelContextWindow, getModelDisplayName } from "@/lib/models";
 import { cn } from "@/lib/utils";
 import { useChatSession, useUsageMetadata } from "../../store";
+import { getTaskMgmtToolType } from "./helpers/helpers";
+import type { Task } from "./messages/tasks";
+import { Tasks } from "./messages/tasks";
 import { StreamingIndicator } from "./streaming-indicator";
 
 export interface SessionMetadataPanelProps {
@@ -19,16 +19,28 @@ export interface SessionMetadataPanelProps {
 	messages: readonly UIMessage[];
 }
 
-interface TodoItem {
-	content: string;
-	status: "pending" | "in_progress" | "completed";
-	activeForm: string;
+type TaskStatus = "pending" | "in_progress" | "completed";
+
+interface TaskListOutputShape {
+	tasks?: Array<{
+		id: string;
+		subject: string;
+		status: TaskStatus;
+		owner?: string;
+		blockedBy?: string[];
+	}>;
+}
+
+interface TaskCreateOutputShape {
+	taskId?: string;
 }
 
 /**
- * Extracts the latest todos from messages by finding the last TodoWrite tool call.
+ * Builds task state by finding the latest TaskList output, or accumulating
+ * TaskCreate/TaskUpdate calls if no TaskList exists.
  */
-function extractLatestTodos(messages: readonly UIMessage[]): TodoItem[] {
+function buildTaskState(messages: readonly UIMessage[]): Task[] {
+	// First pass: find the latest TaskList output (most authoritative)
 	for (let i = messages.length - 1; i >= 0; i--) {
 		const msg = messages[i];
 		if (!msg || msg.role !== "assistant") continue;
@@ -37,18 +49,111 @@ function extractLatestTodos(messages: readonly UIMessage[]): TodoItem[] {
 			const part = msg.parts[j] as {
 				type: string;
 				toolName?: string;
-				input?: { todos?: TodoItem[] };
+				output?: TaskListOutputShape;
 			};
-			if (
-				part?.type?.startsWith("tool-") &&
-				part.toolName === "TodoWrite" &&
-				part.input?.todos
-			) {
-				return part.input.todos;
+
+			if (!part.type?.startsWith("tool-") && part.type !== "dynamic-tool") {
+				continue;
+			}
+
+			const toolType = getTaskMgmtToolType(part.toolName ?? "");
+			if (toolType === "TaskList" && part.output?.tasks) {
+				return part.output.tasks.map((t) => ({
+					id: t.id,
+					subject: t.subject,
+					description: "",
+					status: t.status,
+					owner: t.owner,
+					blockedBy: t.blockedBy,
+				}));
 			}
 		}
 	}
-	return [];
+
+	// Fallback: accumulate from TaskCreate/TaskUpdate calls
+	const taskMap = new Map<string, Task>();
+
+	for (const msg of messages) {
+		if (msg.role !== "assistant") continue;
+
+		for (const part of msg.parts) {
+			const toolPart = part as {
+				type: string;
+				toolName?: string;
+				toolCallId?: string;
+				input?: Record<string, unknown>;
+				output?: unknown;
+			};
+
+			if (
+				!toolPart.type?.startsWith("tool-") &&
+				toolPart.type !== "dynamic-tool"
+			) {
+				continue;
+			}
+
+			const toolType = getTaskMgmtToolType(toolPart.toolName ?? "");
+
+			if (toolType === "TaskCreate" && toolPart.input) {
+				// Parse task ID from output string or use structured output
+				const output = toolPart.output;
+				let taskId: string;
+				if (typeof output === "string") {
+					const match = output.match(/[Tt]ask #(\d+)/);
+					taskId = match?.[1] ?? toolPart.toolCallId ?? "unknown";
+				} else {
+					const structuredOutput = output as TaskCreateOutputShape | undefined;
+					taskId = structuredOutput?.taskId ?? toolPart.toolCallId ?? "unknown";
+				}
+
+				const task: Task = {
+					id: taskId,
+					subject: (toolPart.input.subject as string) ?? "Untitled task",
+					description: (toolPart.input.description as string) ?? "",
+					status: "pending",
+					activeForm: toolPart.input.activeForm as string | undefined,
+					owner: toolPart.input.owner as string | undefined,
+					blockedBy: toolPart.input.blockedBy as string[] | undefined,
+					blocks: toolPart.input.blocks as string[] | undefined,
+				};
+				taskMap.set(taskId, task);
+			}
+
+			if (toolType === "TaskUpdate" && toolPart.input) {
+				const taskId = toolPart.input.taskId as string;
+				const existingTask = taskMap.get(taskId);
+
+				if (existingTask) {
+					const newStatus = toolPart.input.status as
+						| TaskStatus
+						| "deleted"
+						| undefined;
+
+					if (newStatus === "deleted") {
+						taskMap.delete(taskId);
+					} else {
+						taskMap.set(taskId, {
+							...existingTask,
+							subject:
+								(toolPart.input.subject as string) ?? existingTask.subject,
+							description:
+								(toolPart.input.description as string) ??
+								existingTask.description,
+							status: newStatus ?? existingTask.status,
+							activeForm:
+								(toolPart.input.activeForm as string | undefined) ??
+								existingTask.activeForm,
+							owner:
+								(toolPart.input.owner as string | undefined) ??
+								existingTask.owner,
+						});
+					}
+				}
+			}
+		}
+	}
+
+	return Array.from(taskMap.values());
 }
 
 /**
@@ -115,8 +220,8 @@ export const SessionMetadataPanel = memo(function SessionMetadataPanel({
 	// Use unified cost from metadata
 	const totalCost = usageMetadata.costUsd ?? 0;
 
-	// Extract latest todos from messages
-	const todos = useMemo(() => extractLatestTodos(messages), [messages]);
+	// Build task state from messages
+	const tasks = useMemo(() => buildTaskState(messages), [messages]);
 
 	const isStreaming = indicatorStatus === "streaming";
 
@@ -152,7 +257,7 @@ export const SessionMetadataPanel = memo(function SessionMetadataPanel({
 			}
 
 			{/* Tasks */}
-			{todos.length > 0 && <SessionMetadataTasks todos={todos} />}
+			{tasks.length > 0 && <Tasks tasks={tasks} />}
 
 			{isStreaming && turnStartedAt && (
 				<StreamingIndicator className="text-xsm!" startTime={turnStartedAt} />
@@ -180,61 +285,6 @@ function ContextBar({ percentage }: { percentage: number }) {
 				/>
 			))}
 		</div>
-	);
-}
-
-/**
- * Minimal tasks display for the metadata panel.
- */
-function SessionMetadataTasks({ todos }: { todos: TodoItem[] }) {
-	const completed = todos.filter((t) => t.status === "completed").length;
-
-	return (
-		<div className="space-y-2 pt-2">
-			<div className="flex items-center justify-between">
-				<span className="text-muted-foreground">Tasks</span>
-				<span className="tabular-nums text-muted-foreground">
-					{completed}/{todos.length}
-				</span>
-			</div>
-			<div className="space-y-1">
-				{todos.map((todo) => (
-					<div
-						key={todo.content}
-						className="flex items-start gap-2 py-0.5 text-xsm"
-					>
-						<TodoStatusIcon status={todo.status} />
-						<span
-							className={cn(
-								todo.status === "completed" &&
-									"text-muted-foreground line-through",
-								todo.status === "in_progress" && "font-medium text-foreground",
-								todo.status === "pending" && "text-muted-foreground",
-							)}
-						>
-							{todo.status === "in_progress" ? todo.activeForm : todo.content}
-						</span>
-					</div>
-				))}
-			</div>
-		</div>
-	);
-}
-
-/**
- * Status icon for todo items.
- */
-function TodoStatusIcon({ status }: { status: TodoItem["status"] }) {
-	if (status === "completed") {
-		return (
-			<CheckCircleIcon className="mt-0.5 size-4 shrink-0 text-green-600" />
-		);
-	}
-	if (status === "in_progress") {
-		return <CircleHalfIcon className="mt-0.5 size-4 shrink-0 text-blue-500" />;
-	}
-	return (
-		<CircleIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
 	);
 }
 
