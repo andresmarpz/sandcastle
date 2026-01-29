@@ -11,7 +11,7 @@ import { type GroupedItem, groupMessages } from "./helpers/group-messages";
 import { PlanMessage } from "./messages/plan-message";
 import { Questions } from "./messages/questions";
 import { SubagentMessage } from "./messages/subagent";
-import { TodoTraceMessage } from "./messages/tasks";
+import { TaskTraceMessage } from "./messages/task-trace";
 import { WorkUnit } from "./messages/work-unit";
 
 interface ChatPanelMessagesProps {
@@ -106,11 +106,11 @@ const GroupedItemRenderer = memo(function GroupedItemRenderer({
 				</Message>,
 			);
 
-		case "todo-trace":
+		case "task-trace":
 			return wrapWithStopScroll(
 				<Message from="assistant">
 					<MessageContent>
-						<TodoTraceMessage item={item} />
+						<TaskTraceMessage item={item} />
 					</MessageContent>
 				</Message>,
 			);

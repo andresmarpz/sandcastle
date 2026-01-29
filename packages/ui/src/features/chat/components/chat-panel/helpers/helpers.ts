@@ -1,4 +1,3 @@
-import type { TodoItem } from "../messages/tasks";
 import type { ToolStep } from "../messages/work-unit";
 
 /**
@@ -34,37 +33,36 @@ export function normalizeState(state: string | undefined): ToolStep["state"] {
 }
 
 /**
- * Computes the diff between two todo lists.
+ * Task management tool names
  */
-export function computeTodoDiff(
-	prev: TodoItem[],
-	curr: TodoItem[],
-): { added: string[]; completed: string[]; started: string[] } {
-	// Build a map of previous todos by content for comparison
-	const prevByContent = new Map<string, TodoItem>();
-	for (const todo of prev) {
-		prevByContent.set(todo.content, todo);
-	}
+const TASK_MGMT_TOOLS = [
+	"TaskCreate",
+	"TaskUpdate",
+	"TaskList",
+	"TaskGet",
+] as const;
 
-	const added: string[] = [];
-	const completed: string[] = [];
-	const started: string[] = [];
+export type TaskMgmtToolName = (typeof TASK_MGMT_TOOLS)[number];
 
-	for (const todo of curr) {
-		const prevTodo = prevByContent.get(todo.content);
-		if (!prevTodo) {
-			added.push(todo.content);
-		} else {
-			if (todo.status === "completed" && prevTodo.status !== "completed") {
-				completed.push(todo.content);
-			}
-			if (todo.status === "in_progress" && prevTodo.status === "pending") {
-				started.push(todo.content);
-			}
+/**
+ * Checks if a tool name is a task management tool.
+ */
+export function isTaskMgmtTool(toolName: string): boolean {
+	return TASK_MGMT_TOOLS.some(
+		(t) => toolName === t || toolName.endsWith(`__${t}`),
+	);
+}
+
+/**
+ * Gets the base task management tool name from a possibly prefixed tool name.
+ */
+export function getTaskMgmtToolType(toolName: string): TaskMgmtToolName | null {
+	for (const t of TASK_MGMT_TOOLS) {
+		if (toolName === t || toolName.endsWith(`__${t}`)) {
+			return t;
 		}
 	}
-
-	return { added, completed, started };
+	return null;
 }
 
 /**
