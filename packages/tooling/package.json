@@ -1,6 +1,6 @@
 {
 	"name": "@sandcastle/tooling",
-	"version": "0.2.7",
+	"version": "0.2.8",
 	"description": "Shared tooling configurations for Sandcastle packages",
 	"type": "module",
 	"private": true,
