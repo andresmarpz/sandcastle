@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.9](https://github.com/andresmarpz/sandcastle/compare/v0.2.8...v0.2.9) (2026-01-29)
+
+
+### Features
+
+* enable devtools on build ([5fff953](https://github.com/andresmarpz/sandcastle/commit/5fff9532a69ec06aee32a68a5dc73d3f74a50759))
+
 ## [0.2.8](https://github.com/andresmarpz/sandcastle/compare/v0.2.7...v0.2.8) (2026-01-29)
 
 
