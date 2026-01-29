@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.2.8](https://github.com/andresmarpz/sandcastle/compare/v0.2.7...v0.2.8) (2026-01-29)
+
+
+### Features
+
+* migrate the Todo feature to the new Tasks ([fb8bd35](https://github.com/andresmarpz/sandcastle/commit/fb8bd359cf94de1b1b84ef5ba24ceea3c5fbaf0e))
+* update claude agent sdk ([63ab23d](https://github.com/andresmarpz/sandcastle/commit/63ab23df33aab08ee22ef4a8e6fe334921b11973))
+
+
+### Bug Fixes
+
+* preserve last assistant message tokens in usageMetadataRef ([#130](https://github.com/andresmarpz/sandcastle/issues/130)) ([2a01387](https://github.com/andresmarpz/sandcastle/commit/2a01387cc490353436e3615f4760f007af8d21ae))
+
 ## [0.2.7](https://github.com/andresmarpz/sandcastle/compare/v0.2.6...v0.2.7) (2026-01-28)
 
 
