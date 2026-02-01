@@ -13,6 +13,18 @@ const copyToClipboard = async (text: string): Promise<void> => {
 	}
 };
 
+function pathToFileUrl(path: string): string {
+	return path.replace(/\\/g, "/");
+}
+
+const openInEditor = async (path: string): Promise<void> => {
+	window.open(`cursor://file/${pathToFileUrl(path)}`, "_blank", "noopener");
+};
+
+const openInVSCode = async (path: string): Promise<void> => {
+	window.open(`vscode://file/${pathToFileUrl(path)}`, "_blank", "noopener");
+};
+
 export function App() {
 	return (
 		<PlatformProvider
@@ -20,6 +32,8 @@ export function App() {
 				return "";
 			}}
 			copyToClipboard={copyToClipboard}
+			openInEditor={openInEditor}
+			openInVSCode={openInVSCode}
 		>
 			<Layout />
 		</PlatformProvider>

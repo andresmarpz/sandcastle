@@ -90,7 +90,11 @@ export const SessionItem = memo(function SessionItem({
 	}
 
 	async function handleCopyWorkingPath() {
-		await navigator.clipboard.writeText(session.workingPath);
+		const text =
+			session.workingPaths.length > 1
+				? session.workingPaths.join("\n")
+				: session.workingPath;
+		await navigator.clipboard.writeText(text);
 	}
 
 	function handleDelete() {

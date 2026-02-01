@@ -42,6 +42,12 @@ const openDirectory = async () => {
 	return Array.isArray(selection) ? (selection[0] ?? null) : selection;
 };
 
+const openDirectories = async () => {
+	const selection = await open({ directory: true, multiple: true });
+	if (!selection) return null;
+	return Array.isArray(selection) ? selection : [selection];
+};
+
 const openInFileManager = async (path: string) => {
 	// Open -R reveals the item in Finder on macOS
 	const command = Command.create("open", ["-R", path]);
@@ -49,8 +55,12 @@ const openInFileManager = async (path: string) => {
 };
 
 const openInEditor = async (path: string) => {
-	// Open the path with Cursor using macOS open command
 	const command = Command.create("open", ["-a", "Cursor", path]);
+	await command.execute();
+};
+
+const openInVSCode = async (path: string) => {
+	const command = Command.create("open", ["-a", "Visual Studio Code", path]);
 	await command.execute();
 };
 
@@ -83,8 +93,10 @@ function App() {
 	return (
 		<PlatformProvider
 			openDirectory={openDirectory}
+			openDirectories={openDirectories}
 			openInFileManager={openInFileManager}
 			openInEditor={openInEditor}
+			openInVSCode={openInVSCode}
 			copyToClipboard={copyToClipboard}
 			parseMarkdown={parseMarkdown}
 			openExternalUrl={openExternalUrl}

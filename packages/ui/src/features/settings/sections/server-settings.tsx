@@ -36,7 +36,7 @@ export function ServerSettings() {
 						type="url"
 						value={url}
 						onChange={(e) => setUrl(e.target.value)}
-						placeholder="http://localhost:3000"
+						placeholder="http://localhost:31822"
 					/>
 					<p className="text-muted-foreground text-xs">
 						Changing the backend URL requires a restart.

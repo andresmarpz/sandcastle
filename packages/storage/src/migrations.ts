@@ -136,6 +136,14 @@ const migrations: Migration[] = [
 			ALTER TABLE repositories ADD COLUMN worktreeInitScript TEXT;
 		`,
 	},
+	{
+		version: 7,
+		name: "add_sessions_working_paths",
+		up: `
+			ALTER TABLE sessions ADD COLUMN workingPaths TEXT;
+			UPDATE sessions SET workingPaths = json_array(workingPath) WHERE workingPaths IS NULL;
+		`,
+	},
 ];
 
 const ensureMigrationsTable = (db: Database): void => {

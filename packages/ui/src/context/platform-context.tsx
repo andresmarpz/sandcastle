@@ -4,10 +4,13 @@ import * as React from "react";
 
 interface PlatformContextValue {
 	openDirectory: () => Promise<string | null>;
+	openDirectories?: () => Promise<string[] | null>;
 	/** Open a path in the system file manager (Finder on macOS). Null if not supported. */
 	openInFileManager?: ((path: string) => Promise<void>) | null;
 	/** Open a path in an external editor (e.g., Cursor). Null if not supported. */
 	openInEditor?: ((path: string) => Promise<void>) | null;
+	/** Open a path in VS Code. Null if not supported. */
+	openInVSCode?: ((path: string) => Promise<void>) | null;
 	/** Copy a path to the clipboard. Null if not supported (falls back to navigator.clipboard). */
 	copyToClipboard?: ((text: string) => Promise<void>) | null;
 	/** Parse markdown to HTML using native Rust comrak parser (Tauri only). Null if not supported. */
@@ -24,8 +27,10 @@ const PlatformContext = React.createContext<PlatformContextValue | undefined>(
 
 export interface PlatformProviderProps {
 	openDirectory: PlatformContextValue["openDirectory"];
+	openDirectories?: PlatformContextValue["openDirectories"];
 	openInFileManager?: PlatformContextValue["openInFileManager"];
 	openInEditor?: PlatformContextValue["openInEditor"];
+	openInVSCode?: PlatformContextValue["openInVSCode"];
 	copyToClipboard?: PlatformContextValue["copyToClipboard"];
 	parseMarkdown?: PlatformContextValue["parseMarkdown"];
 	openExternalUrl?: PlatformContextValue["openExternalUrl"];
@@ -35,8 +40,10 @@ export interface PlatformProviderProps {
 
 export function PlatformProvider({
 	openDirectory,
+	openDirectories,
 	openInFileManager,
 	openInEditor,
+	openInVSCode,
 	copyToClipboard,
 	parseMarkdown,
 	openExternalUrl,
@@ -46,8 +53,10 @@ export function PlatformProvider({
 	const value = React.useMemo(
 		() => ({
 			openDirectory,
+			openDirectories,
 			openInFileManager,
 			openInEditor,
+			openInVSCode,
 			copyToClipboard,
 			parseMarkdown,
 			openExternalUrl,
@@ -55,8 +64,10 @@ export function PlatformProvider({
 		}),
 		[
 			openDirectory,
+			openDirectories,
 			openInFileManager,
 			openInEditor,
+			openInVSCode,
 			copyToClipboard,
 			parseMarkdown,
 			openExternalUrl,

@@ -146,4 +146,10 @@ export const ServerLive = Layer.mergeAll(makeServerLayer(), StartupTasksLive);
 // Log the port that will be used (for Tauri sidecar to parse)
 console.log(`SANDCASTLE_SERVER_PORT=${port}`);
 console.log("Server starting...");
-BunRuntime.runMain(Layer.launch(ServerLive));
+BunRuntime.runMain(
+	Layer.launch(ServerLive).pipe(Effect.asVoid) as Effect.Effect<
+		void,
+		unknown,
+		never
+	>,
+);
