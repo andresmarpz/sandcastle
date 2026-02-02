@@ -61,11 +61,22 @@ impl SidecarState {
             ));
         }
 
+        // Ensure the sidecar inherits a complete PATH so the Claude Agent SDK
+        // can locate the `claude` executable.  On Linux/WSL, GUI-launched processes
+        // often get a minimal PATH that excludes ~/.local/bin and similar dirs.
+        let path_env = Self::resolve_shell_path();
+
         // Spawn the sidecar (uses default port 31822 from server.ts)
-        let (mut rx, child) = app
+        let mut cmd = app
             .shell()
             .sidecar("bun")
-            .map_err(|e| format!("Failed to create sidecar command: {}", e))?
+            .map_err(|e| format!("Failed to create sidecar command: {}", e))?;
+
+        if let Some(ref path) = path_env {
+            cmd = cmd.env("PATH", path);
+        }
+
+        let (mut rx, child) = cmd
             .args([
                 "run",
                 resource_path
@@ -148,6 +159,25 @@ impl SidecarState {
         }
 
         Ok(())
+    }
+
+    /// Resolve the full PATH by sourcing the user's login shell.
+    /// Falls back to the current process PATH if the shell invocation fails.
+    fn resolve_shell_path() -> Option<String> {
+        // Try to get PATH from a login shell so ~/.local/bin, nvm, etc. are included
+        let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string());
+        if let Ok(output) = std::process::Command::new(&shell)
+            .args(["-lc", "echo $PATH"])
+            .output()
+        {
+            let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            if !path.is_empty() {
+                return Some(path);
+            }
+        }
+
+        // Fallback: use the current process PATH
+        std::env::var("PATH").ok()
     }
 
     /// Wait for server health endpoint to respond

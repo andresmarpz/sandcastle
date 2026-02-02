@@ -12,6 +12,7 @@ import {
 	useRef,
 	useState,
 } from "react";
+import { toast } from "sonner";
 import {
 	PromptInput,
 	PromptInputActions,
@@ -146,6 +147,9 @@ export const ChatPanelInput = memo(function ChatPanelInput({
 			try {
 				await sendMessage({ text, mode });
 				setInputValue("");
+			} catch (err) {
+				const message = err instanceof Error ? err.message : String(err);
+				toast.error(message);
 			} finally {
 				setIsSending(false);
 			}
@@ -205,7 +209,7 @@ export const ChatPanelInput = memo(function ChatPanelInput({
 	);
 
 	return (
-		<div ref={containerRef} className="relative p-2 pt-0">
+		<div ref={containerRef} className="relative p-2 pt-0 ml-2">
 			{workingPath && (
 				<FilePickerPopover
 					workingPath={workingPath}

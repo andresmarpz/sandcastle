@@ -13,9 +13,10 @@ interface ChatPanelProps {
 }
 
 export const ChatPanel = memo(function ChatPanel({ session }: ChatPanelProps) {
-	const historyResult = useAtomValue(chatHistoryQuery(session.id), (result) => {
-		return result;
-	});
+	const historyResult = useAtomValue(
+		chatHistoryQuery(session.id),
+		(result) => result,
+	);
 	const cachedHistory = useMemo(() => {
 		return Option.getOrElse(Result.value(historyResult), () => null);
 	}, [historyResult]);

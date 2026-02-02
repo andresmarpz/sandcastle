@@ -7,7 +7,7 @@ import {
 import {
 	type DatabaseError,
 	type ForeignKeyViolationError,
-	Session,
+	type Session,
 	type SessionNotFoundError,
 	StorageService,
 	StorageServiceDefault,
@@ -41,44 +41,7 @@ const mapCreateError = (
 	return mapDatabaseError(error);
 };
 
-const toSession = (session: {
-	id: string;
-	repositoryId: string;
-	worktreeId: string | null;
-	workingPath: string;
-	title: string;
-	description: string | null;
-	status: "created" | "active" | "paused" | "completed" | "failed";
-	claudeSessionId: string | null;
-	model: string | null;
-	totalCostUsd: number;
-	inputTokens: number;
-	outputTokens: number;
-	cacheReadInputTokens: number;
-	cacheCreationInputTokens: number;
-	contextWindow: number;
-	lastActivityAt: string;
-	createdAt: string;
-}): Session =>
-	new Session({
-		id: session.id,
-		repositoryId: session.repositoryId,
-		worktreeId: session.worktreeId,
-		workingPath: session.workingPath,
-		title: session.title,
-		description: session.description,
-		status: session.status,
-		claudeSessionId: session.claudeSessionId,
-		model: session.model,
-		totalCostUsd: session.totalCostUsd,
-		inputTokens: session.inputTokens,
-		outputTokens: session.outputTokens,
-		cacheReadInputTokens: session.cacheReadInputTokens,
-		cacheCreationInputTokens: session.cacheCreationInputTokens,
-		contextWindow: session.contextWindow,
-		lastActivityAt: session.lastActivityAt,
-		createdAt: session.createdAt,
-	});
+const toSession = (session: Session): Session => session;
 
 const toTurn = (turn: {
 	id: string;
@@ -126,16 +89,23 @@ export const SessionRpcHandlers = SessionRpc.toLayer(
 					.get(params.id)
 					.pipe(Effect.map(toSession), Effect.mapError(mapNotFoundError)),
 
-			"session.create": (params) =>
-				storage.sessions
+			"session.create": (params) => {
+				const workingPaths =
+					params.workingPaths && params.workingPaths.length > 0
+						? params.workingPaths
+						: [params.workingPath];
+				const workingPath = workingPaths[0] ?? params.workingPath;
+				return storage.sessions
 					.create({
 						repositoryId: params.repositoryId,
 						worktreeId: params.worktreeId,
-						workingPath: params.workingPath,
+						workingPath,
+						workingPaths,
 						title: params.title,
 						description: params.description,
 					})
-					.pipe(Effect.map(toSession), Effect.mapError(mapCreateError)),
+					.pipe(Effect.map(toSession), Effect.mapError(mapCreateError));
+			},
 
 			"session.update": (params) =>
 				storage.sessions

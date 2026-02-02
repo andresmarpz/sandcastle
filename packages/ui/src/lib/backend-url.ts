@@ -7,7 +7,7 @@
  */
 
 export const BACKEND_URL_STORAGE_KEY = "sandcastle-backend-url";
-export const DEFAULT_BACKEND_URL = "http://localhost:3000";
+export const DEFAULT_BACKEND_URL = "http://localhost:31822";
 
 // Default port for embedded sidecar server (must match apps/http/src/server.ts)
 export const DEFAULT_SIDECAR_PORT = 31822;
