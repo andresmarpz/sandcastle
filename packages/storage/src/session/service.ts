@@ -1,3 +1,4 @@
+import type { CreateSessionInput } from "@sandcastle/schemas";
 import { Session } from "@sandcastle/schemas";
 import { Effect } from "effect";
 import {
@@ -13,12 +14,26 @@ import {
 	tryDb,
 } from "../utils";
 
+const parseWorkingPaths = (row: Record<string, unknown>): string[] => {
+	const raw = row.workingPaths;
+	if (raw == null || raw === "") return [row.workingPath as string];
+	try {
+		const arr = JSON.parse(raw as string) as string[];
+		return Array.isArray(arr) && arr.length > 0
+			? arr
+			: [row.workingPath as string];
+	} catch {
+		return [row.workingPath as string];
+	}
+};
+
 const rowToSession = (row: Record<string, unknown>): Session =>
 	new Session({
 		id: row.id as string,
 		repositoryId: row.repositoryId as string,
 		worktreeId: (row.worktreeId as string) ?? null,
 		workingPath: row.workingPath as string,
+		workingPaths: parseWorkingPaths(row),
 		title: row.title as string,
 		description: (row.description as string) ?? null,
 		status: row.status as
@@ -85,20 +100,18 @@ export const createSessionsService = (db: DbInstance) => ({
 			return rowToSession(row);
 		}),
 
-	create: (input: {
-		repositoryId: string;
-		worktreeId?: string | null;
-		workingPath: string;
-		title: string;
-		description?: string | null;
-		status?: "created" | "active" | "paused" | "completed" | "failed";
-	}) =>
+	create: (input: CreateSessionInput) =>
 		Effect.gen(function* () {
 			const now = nowIso();
 			const id = generateId();
 			const status = input.status ?? "created";
 			const description = input.description ?? null;
 			const worktreeId = input.worktreeId ?? null;
+			const workingPaths: string[] =
+				input.workingPaths && input.workingPaths.length > 0
+					? [...input.workingPaths]
+					: [input.workingPath];
+			const workingPath = workingPaths[0] ?? input.workingPath;
 
 			// Validate repository exists
 			const existingRepository = yield* tryDb(
@@ -146,13 +159,14 @@ export const createSessionsService = (db: DbInstance) => ({
 
 			yield* tryDb("sessions.create", () =>
 				db.run(
-					`INSERT INTO sessions (id, repositoryId, worktreeId, workingPath, title, description, status, claudeSessionId, model, totalCostUsd, inputTokens, outputTokens, cacheReadInputTokens, cacheCreationInputTokens, contextWindow, createdAt, lastActivityAt)
-					 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+					`INSERT INTO sessions (id, repositoryId, worktreeId, workingPath, workingPaths, title, description, status, claudeSessionId, model, totalCostUsd, inputTokens, outputTokens, cacheReadInputTokens, cacheCreationInputTokens, contextWindow, createdAt, lastActivityAt)
+					 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 					[
 						id,
 						input.repositoryId,
 						worktreeId,
-						input.workingPath,
+						workingPath,
+						JSON.stringify(workingPaths),
 						input.title,
 						description,
 						status,
@@ -174,7 +188,8 @@ export const createSessionsService = (db: DbInstance) => ({
 				id,
 				repositoryId: input.repositoryId,
 				worktreeId,
-				workingPath: input.workingPath,
+				workingPath,
+				workingPaths,
 				title: input.title,
 				description,
 				status,

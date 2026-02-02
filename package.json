@@ -4,7 +4,7 @@
 	"scripts": {
 		"prepare": "lefthook install",
 		"build": "turbo build",
-		"dev": "turbo dev",
+		"dev": "turbo dev --filter=@sandcastle/web --filter=@sandcastle/http",
 		"typecheck": "turbo typecheck",
 		"biome": "turbo biome",
 		"biome:check": "turbo biome:check",

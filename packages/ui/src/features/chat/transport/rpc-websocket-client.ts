@@ -39,7 +39,7 @@ import { RpcClient, RpcSerialization } from "@effect/rpc";
 import type { RpcClientError } from "@effect/rpc/RpcClientError";
 import { ChatRpc } from "@sandcastle/rpc";
 import { Context, Effect, Layer, ManagedRuntime } from "effect";
-import { getBackendUrl } from "../../../lib/backend-url";
+import { getBackendUrlOrDefault } from "../../../lib/backend-url";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // URL Utilities
@@ -52,7 +52,7 @@ import { getBackendUrl } from "../../../lib/backend-url";
  * - Appends /ws path
  */
 function getWebSocketUrl(): string {
-	const httpUrl = getBackendUrl() ?? "http://localhost:3000";
+	const httpUrl = getBackendUrlOrDefault();
 
 	// Convert protocol
 	let wsUrl = httpUrl.replace(/^http:\/\//, "ws://");

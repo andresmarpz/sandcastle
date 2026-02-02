@@ -75,7 +75,7 @@ function SidebarMainContent() {
 				"data-[state=collapsed]:rounded-tl-md",
 			)}
 		>
-			<div className="flex-1 min-h-0 overflow-hidden">
+			<div className="flex min-h-0 flex-1 flex-col overflow-hidden">
 				<Routes>
 					<Route path="/" element={<HomePage />} />
 					{/* <Route path="/worktree/:worktreeId" element={<WorktreePage />} /> */}

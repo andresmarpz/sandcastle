@@ -693,6 +693,9 @@ export const makeSessionHub = Effect.gen(function* () {
 			const queryHandle = yield* claudeSDK
 				.query(content, {
 					cwd: dbSession.workingPath,
+					...(dbSession.workingPaths.length > 1 && {
+						additionalDirectories: dbSession.workingPaths.slice(1),
+					}),
 					...(claudeSessionId && {
 						resume: claudeSessionId,
 					}),
