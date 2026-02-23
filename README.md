@@ -27,6 +27,9 @@
 
 > [!WARNING]
 > **Early Development** — This project is under active development. Real usage is not recommended at this time. Expect breaking changes and potential data loss until we reach a stable release.
+>
+
+<img width="4054" height="2462" alt="image" src="https://github.com/user-attachments/assets/849a39da-46ea-4c44-a075-e15d2f8ac28d" />
 
 ## About
 
