@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.2.9](https://github.com/andresmarpz/sandcastle/compare/v0.2.8...v0.2.9) (2026-04-02)
+
+
+### Features
+
+* enable devtools on build ([5fff953](https://github.com/andresmarpz/sandcastle/commit/5fff9532a69ec06aee32a68a5dc73d3f74a50759))
+* ui improvements ([9f87b2c](https://github.com/andresmarpz/sandcastle/commit/9f87b2ced3effba39d47c032a9ba96720106a81d))
+* **ui:** replace floating metadata panel with context usage button ([#135](https://github.com/andresmarpz/sandcastle/issues/135)) ([c7d9e8a](https://github.com/andresmarpz/sandcastle/commit/c7d9e8ad066098ab60c86b11a659f40c831b082c))
+
 ## [0.2.8](https://github.com/andresmarpz/sandcastle/compare/v0.2.7...v0.2.8) (2026-01-29)
 
 
