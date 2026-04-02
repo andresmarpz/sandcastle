@@ -7,6 +7,7 @@ import type { ToolApprovalResponse } from "@sandcastle/schemas";
 import {
 	type ChangeEvent,
 	memo,
+	type ReactNode,
 	useCallback,
 	useEffect,
 	useRef,
@@ -44,12 +45,14 @@ interface ChatPanelInputProps {
 	sessionId: string;
 	workingPath: string;
 	autoFocus?: boolean;
+	contextUsageButton?: ReactNode;
 }
 
 export const ChatPanelInput = memo(function ChatPanelInput({
 	sessionId,
 	workingPath,
 	autoFocus = true,
+	contextUsageButton,
 }: ChatPanelInputProps) {
 	// Store hooks for state and actions
 	const { sendMessage, stop } = useChatActions(sessionId);
@@ -244,6 +247,7 @@ export const ChatPanelInput = memo(function ChatPanelInput({
 						/>
 					</PromptInputTools>
 					<PromptInputActions>
+						{contextUsageButton}
 						{hasPendingPlan ? (
 							<>
 								<Button variant="ghost" size="sm" onClick={handleCancelPlan}>
