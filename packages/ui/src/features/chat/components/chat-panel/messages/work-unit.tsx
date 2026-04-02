@@ -55,7 +55,7 @@ interface WorkUnitProps {
 }
 
 export const WorkUnit = memo(function WorkUnit({ steps }: WorkUnitProps) {
-	const [isExpanded, setIsExpanded] = useState(true);
+	const [isExpanded, setIsExpanded] = useState(false);
 
 	const stepCount = steps.length;
 	const hasMultipleSteps = stepCount > 1;

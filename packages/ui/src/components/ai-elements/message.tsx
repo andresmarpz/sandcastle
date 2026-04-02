@@ -37,7 +37,7 @@ export const Message = memo(function Message({
 	return (
 		<div
 			className={cn(
-				"group flex w-full max-w-3xl flex-col gap-2",
+				"group flex w-full max-w-[var(--chat-content-max-width,48rem)] flex-col gap-2",
 				from === "user" ? "is-user ml-auto justify-end" : "is-assistant",
 				className,
 			)}
@@ -56,10 +56,8 @@ export const MessageContent = memo(function MessageContent({
 	return (
 		<div
 			className={cn(
-				"flex max-w-full flex-col gap-4 overflow-hidden text-sm",
-				"w-[85%]",
-				"group-[.is-user]:ml-auto group-[.is-user]:w-fit group-[.is-user]:rounded-lg group-[.is-user]:bg-secondary group-[.is-user]:px-4 group-[.is-user]:py-3 group-[.is-user]:text-foreground",
-				"group-[.is-assistant]:prose group-[.is-assistant]:prose-sm group-[.is-assistant]:dark:prose-invert",
+				"flex max-w-full flex-col gap-4 overflow-hidden text-sm group-[.is-assistant]:leading-[1.8] group-[.is-user]:leading-normal! group-[.is-user]:mb-6",
+				"group-[.is-user]:ml-auto group-[.is-user]:max-w-[60%] group-[.is-user]:rounded-lg group-[.is-user]:border group-[.is-user]:border-border group-[.is-user]:bg-secondary/30 group-[.is-user]:px-3 group-[.is-user]:py-2 group-[.is-user]:text-foreground",
 				className,
 			)}
 			{...props}

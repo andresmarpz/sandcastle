@@ -32,7 +32,7 @@ export default function Layout() {
 		<ThemeProvider>
 			<RegistryProvider defaultIdleTTL={5 * 60 * 1000}>
 				<BrowserRouter>
-					<div className="[--header-height:calc(--spacing(10))]">
+					<div className="[--header-height:calc(--spacing(10))] [--layout-top-left-radius:var(--radius-xl)]">
 						<SidebarProvider className="flex flex-col">
 							<header
 								data-tauri-drag-region
@@ -71,8 +71,8 @@ function SidebarMainContent() {
 			data-tauri-drag-region
 			data-state={open ? "expanded" : "collapsed"}
 			className={cn(
-				"relative h-[calc(100vh-var(--header-height))] overflow-hidden sm:border-l sm:border-t",
-				"data-[state=collapsed]:rounded-tl-xl",
+				"relative h-[calc(100vh-var(--header-height))] overflow-hidden sm:border-t",
+				"data-[state=collapsed]:rounded-tl-[var(--layout-top-left-radius)] data-[state=collapsed]:sm:border-l",
 			)}
 		>
 			<div className="flex min-h-0 flex-1 flex-col overflow-hidden">

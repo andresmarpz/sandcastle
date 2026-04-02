@@ -17,7 +17,7 @@ export function Sidebar() {
 			data-open={open}
 			collapsible="icon"
 			className={cn(
-				"overflow-hidden *:data-[sidebar=sidebar]:flex-row data-[open=false]:[border-right:none]",
+				"overflow-hidden *:data-[sidebar=sidebar]:flex-row *:data-[sidebar=sidebar]:bg-transparent data-[open=false]:[border-right:none]",
 				"top-(--header-height) h-[calc(100svh-var(--header-height))]!",
 			)}
 		>
