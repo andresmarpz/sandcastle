@@ -212,6 +212,7 @@ export const SessionMetadataPanel = memo(function SessionMetadataPanel({
 
 	const totalContextTokens =
 		inputTokens + cacheReadTokens + cacheCreationTokens;
+	const [tokenNum, tokenSuffix] = formatTokenCount(totalContextTokens);
 	const contextPercentage =
 		contextWindow > 0
 			? Math.min((totalContextTokens / contextWindow) * 100, 100)
@@ -226,7 +227,7 @@ export const SessionMetadataPanel = memo(function SessionMetadataPanel({
 	const isStreaming = indicatorStatus === "streaming";
 
 	return (
-		<div className="min-w-[250px] max-w-[300px] p-2.5 space-y-2.5 text-xs prose">
+		<div className="min-w-[250px] max-w-[300px] py-2.5 pl-2.5 pr-4 space-y-2.5 text-xs prose select-none">
 			{/* Model */}
 			{modelDisplayName && (
 				<div className="flex items-center gap-1.5 text-muted-foreground">
@@ -239,8 +240,13 @@ export const SessionMetadataPanel = memo(function SessionMetadataPanel({
 			<div className="space-y-[2px]">
 				<div className="flex items-center justify-between">
 					<span className="text-muted-foreground">Context</span>
-					<span className="tabular-nums text-muted-foreground">
-						{Math.round(contextPercentage)}%
+					<span className="text-muted-foreground">
+						<span className="tabular-nums">{tokenNum}</span>
+						{tokenSuffix} &middot;{" "}
+						<span className="tabular-nums">
+							{Math.round(contextPercentage)}
+						</span>
+						%
 					</span>
 				</div>
 				<ContextBar percentage={contextPercentage} />
@@ -286,6 +292,17 @@ function ContextBar({ percentage }: { percentage: number }) {
 			))}
 		</div>
 	);
+}
+
+/**
+ * Formats a token count as a human-readable string (e.g., "91.2k", "1.3M").
+ * Returns [number, suffix] for tabular-nums styling on the numeric part.
+ */
+function formatTokenCount(tokens: number): [string, string] {
+	if (tokens === 0) return ["0", ""];
+	if (tokens >= 1_000_000) return [(tokens / 1_000_000).toFixed(1), "M"];
+	if (tokens >= 1_000) return [(tokens / 1_000).toFixed(1), "k"];
+	return [`${tokens}`, ""];
 }
 
 /**

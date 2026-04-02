@@ -43,6 +43,39 @@ const MODEL_MAP: Record<string, ModelInfo> = {
 			cacheReadPerMTok: 0.5,
 		},
 	},
+	"claude-opus-4-6[1m]": {
+		displayName: "Claude Opus 4.6 (1M)",
+		shortName: "Opus 4.6 (1M)",
+		contextWindow: 1_000_000,
+		pricing: {
+			inputPerMTok: 5,
+			outputPerMTok: 25,
+			cacheWritePerMTok: 6.25,
+			cacheReadPerMTok: 0.5,
+		},
+	},
+	"claude-opus-4-6": {
+		displayName: "Claude Opus 4.6",
+		shortName: "Opus 4.6",
+		contextWindow: 200_000,
+		pricing: {
+			inputPerMTok: 5,
+			outputPerMTok: 25,
+			cacheWritePerMTok: 6.25,
+			cacheReadPerMTok: 0.5,
+		},
+	},
+	"claude-sonnet-4-6": {
+		displayName: "Claude Sonnet 4.6",
+		shortName: "Sonnet 4.6",
+		contextWindow: 200_000,
+		pricing: {
+			inputPerMTok: 3,
+			outputPerMTok: 15,
+			cacheWritePerMTok: 3.75,
+			cacheReadPerMTok: 0.3,
+		},
+	},
 	"claude-sonnet-4-5": {
 		displayName: "Claude Sonnet 4.5",
 		shortName: "Sonnet 4.5",
@@ -54,12 +87,23 @@ const MODEL_MAP: Record<string, ModelInfo> = {
 			cacheReadPerMTok: 0.3,
 		},
 	},
+	"claude-haiku-4-5": {
+		displayName: "Claude Haiku 4.5",
+		shortName: "Haiku 4.5",
+		contextWindow: 200_000,
+		pricing: {
+			inputPerMTok: 0.8,
+			outputPerMTok: 4,
+			cacheWritePerMTok: 1,
+			cacheReadPerMTok: 0.08,
+		},
+	},
 };
 
 /**
  * Get display info for a model ID.
  *
- * @param modelId - The full model ID (e.g., "claude-opus-4-5-20251101")
+ * @param modelId - The full model ID (e.g., "claude-opus-4-6-20260301")
  * @returns Model info with display name, or null if unknown
  */
 export function getModelInfo(modelId: string | null): ModelInfo | null {
