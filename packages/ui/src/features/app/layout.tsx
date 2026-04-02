@@ -72,7 +72,7 @@ function SidebarMainContent() {
 			data-state={open ? "expanded" : "collapsed"}
 			className={cn(
 				"relative h-[calc(100vh-var(--header-height))] overflow-hidden sm:border-l sm:border-t",
-				"data-[state=collapsed]:rounded-tl-md",
+				"data-[state=collapsed]:rounded-tl-xl",
 			)}
 		>
 			<div className="flex min-h-0 flex-1 flex-col overflow-hidden">
