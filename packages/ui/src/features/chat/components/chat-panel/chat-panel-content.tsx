@@ -33,11 +33,11 @@ export function ChatPanelContent({
 	const messages = stateMessages.length ? stateMessages : initialMessages;
 
 	return (
-		<div className="flex h-full w-full flex-col">
-			<div className="flex min-h-0 flex-1 flex-col items-center">
-				<div className="relative flex min-h-0 w-full max-w-3xl flex-col overflow-hidden">
+		<div className="flex h-full w-full flex-col overflow-hidden [--chat-content-max-width:62rem]">
+			<div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+				<div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
 					<Conversation className="min-h-0 flex-1">
-						<ConversationContent className="relative flex min-h-full flex-col gap-8 p-4 pb-20">
+						<ConversationContent className="relative mx-auto flex min-h-full w-full max-w-[var(--chat-content-max-width)] flex-col gap-8 px-4 pt-12 pb-20">
 							<ChatPanelMessages messages={messages} sessionId={session.id} />
 
 							{turnStartedAt && (
@@ -53,36 +53,38 @@ export function ChatPanelContent({
 						</ConversationContent>
 						<ConversationScrollButton />
 					</Conversation>
-					<div className="pointer-events-none absolute bottom-0 left-0 right-0 z-50 h-24 bg-linear-to-b from-transparent to-sidebar" />
+					<div className="pointer-events-none absolute left-0 right-0 top-0 z-50 h-16 bg-linear-to-b from-sidebar to-transparent" />
 				</div>
 			</div>
-			<div className="z-10 mx-auto w-full max-w-3xl bg-sidebar py-2 flex flex-col justify-end">
-				<ChatPanelMessageQueue sessionId={session.id} />
-				{session.workingPaths.length > 1 && (
-					<ul className="flex flex-wrap text-muted-foreground text-xs items-center w-fit">
-						{session.workingPaths.map((path) => (
-							<li
-								key={path}
-								title={path}
-								className="flex gap-2 border border-border rounded-xl m-2 p-2 py-1 ml-4"
-							>
-								<FolderIcon className="size-4 text-muted-foreground" />
-								{path.split("/").pop() ?? path}
-							</li>
-						))}
-					</ul>
-				)}
-				<ChatPanelInput
-					sessionId={session.id}
-					workingPath={session.workingPath}
-					contextUsageButton={
-						<ContextUsageButton
-							session={session}
-							sessionId={session.id}
-							messages={messages}
-						/>
-					}
-				/>
+			<div className="z-10 flex w-full flex-col justify-end bg-sidebar py-2">
+				<div className="mx-auto flex w-full max-w-[calc(var(--chat-content-max-width)+1rem)] flex-col justify-end">
+					<ChatPanelMessageQueue sessionId={session.id} />
+					{session.workingPaths.length > 1 && (
+						<ul className="flex w-fit flex-wrap items-center text-xs text-muted-foreground">
+							{session.workingPaths.map((path) => (
+								<li
+									key={path}
+									title={path}
+									className="m-2 ml-4 flex gap-2 rounded-xl border border-border p-2 py-1"
+								>
+									<FolderIcon className="size-4 text-muted-foreground" />
+									{path.split("/").pop() ?? path}
+								</li>
+							))}
+						</ul>
+					)}
+					<ChatPanelInput
+						sessionId={session.id}
+						workingPath={session.workingPath}
+						contextUsageButton={
+							<ContextUsageButton
+								session={session}
+								sessionId={session.id}
+								messages={messages}
+							/>
+						}
+					/>
+				</div>
 			</div>
 		</div>
 	);

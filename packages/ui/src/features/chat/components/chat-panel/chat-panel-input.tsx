@@ -225,7 +225,7 @@ export const ChatPanelInput = memo(function ChatPanelInput({
 
 			<PromptInput
 				onSubmit={hasPendingPlan ? () => {} : handleSubmit}
-				className={cn(hasPendingPlan && "border-dashed")}
+				className={cn("rounded-2xl p-2", hasPendingPlan && "border-dashed")}
 			>
 				<PromptInputTextarea
 					ref={textareaRef}

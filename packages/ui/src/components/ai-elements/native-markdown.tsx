@@ -253,7 +253,7 @@ export const NativeMarkdown = memo(function NativeMarkdown({
 			<div
 				className={cn(
 					// Base prose styling
-					"prose prose-sm dark:prose-invert max-w-none",
+					"prose prose-sm dark:prose-invert max-w-none leading-[1.8]",
 					// Match Streamdown styling
 					"size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
 					"[&_ul]:pl-4 [&_ol]:pl-4 [&_li]:wrap-break-word",
@@ -276,7 +276,7 @@ export const NativeMarkdown = memo(function NativeMarkdown({
 	return (
 		<Streamdown
 			className={cn(
-				"size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
+				"size-full leading-[1.8] [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
 				"[&_ul]:pl-4 [&_ol]:pl-4 [&_li]:wrap-break-word",
 				"[&_code]:font-normal! [&_code]:before:content-none! [&_code]:after:content-none!",
 				className,

@@ -16,7 +16,7 @@ export default function MainSidebar() {
 		<SidebarPrimitive
 			data-open={open}
 			collapsible="none"
-			className="flex flex-1 min-w-0 flex-col data-[open=true]:border-l border-t md:rounded-tl-md"
+			className="flex min-w-0 flex-1 flex-col border-t data-[open=true]:border-l md:rounded-tl-(--layout-top-left-radius)"
 		>
 			<SidebarContent className="flex-1 overflow-y-auto pt-2 px-2">
 				{repositoryId ? <SessionList repositoryId={repositoryId} /> : null}
