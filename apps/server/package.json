@@ -1,0 +1,23 @@
+{
+  "name": "@sandcastle/server",
+  "module": "src/main.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "bun --hot ./src/main.ts",
+    "start": "bun ./src/main.ts",
+    "smoke": "bun ./scripts/smoke.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@effect/platform-bun": "^4.0.0-beta.57",
+    "@sandcastle/contracts": "workspace:*",
+    "@sandcastle/db": "workspace:*",
+    "@sandcastle/entities": "workspace:*",
+    "effect": "^4.0.0-beta.57"
+  }
+}
