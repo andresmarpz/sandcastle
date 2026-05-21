@@ -25,7 +25,6 @@ const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 const SIDEBAR_WIDTH = "16rem";
 const SIDEBAR_WIDTH_MOBILE = "18rem";
 const SIDEBAR_WIDTH_ICON = "3rem";
-const SIDEBAR_KEYBOARD_SHORTCUT = "b";
 
 type SidebarContextProps = {
 	state: "expanded" | "collapsed";
@@ -88,19 +87,6 @@ function SidebarProvider({
 		return isMobile ? setOpenMobile((open) => !open) : setOpen((open) => !open);
 	}, [isMobile, setOpen]);
 
-	// Adds a keyboard shortcut to toggle the sidebar.
-	React.useEffect(() => {
-		const handleKeyDown = (event: KeyboardEvent) => {
-			if (event.key === SIDEBAR_KEYBOARD_SHORTCUT && (event.metaKey || event.ctrlKey)) {
-				event.preventDefault();
-				toggleSidebar();
-			}
-		};
-
-		window.addEventListener("keydown", handleKeyDown);
-		return () => window.removeEventListener("keydown", handleKeyDown);
-	}, [toggleSidebar]);
-
 	// We add a state so that we can do data-state="expanded" or "collapsed".
 	// This makes it easier to style the sidebar with Tailwind classes.
 	const state = open ? "expanded" : "collapsed";
@@ -129,10 +115,7 @@ function SidebarProvider({
 						...style,
 					} as React.CSSProperties
 				}
-				className={cn(
-					"group/sidebar-wrapper flex min-h-svh w-full has-data-[variant=inset]:bg-sidebar",
-					className,
-				)}
+				className={cn("group/sidebar-wrapper flex min-h-svh w-full", className)}
 				{...props}
 			>
 				{children}
@@ -228,7 +211,7 @@ function Sidebar({
 				<div
 					data-sidebar="sidebar"
 					data-slot="sidebar-inner"
-					className="flex size-full flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-[0_8px_24px_-8px_rgb(0_0_0_/_0.08)] group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-sidebar-border group-data-[variant=inset]:rounded-xl group-data-[variant=inset]:bg-card group-data-[variant=inset]:border group-data-[variant=inset]:shadow-[0_8px_24px_-8px_rgb(0_0_0_/_0.08)]"
+					className="flex size-full flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-[0_8px_24px_-8px_rgb(0_0_0_/_0.08)] group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-sidebar-border group-data-[variant=inset]:rounded-xl group-data-[variant=inset]:border group-data-[variant=inset]:shadow-[0_8px_24px_-8px_rgb(0_0_0_/_0.08)]"
 				>
 					{children}
 				</div>

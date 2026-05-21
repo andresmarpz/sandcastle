@@ -1,6 +1,6 @@
 import type { Hotkey } from "@tanstack/react-hotkeys";
 
-export type KeybindingGroup = "tabs" | "panes";
+export type KeybindingGroup = "tabs" | "panes" | "projects" | "sidebar";
 
 export type KeybindingId =
 	| "tab.switch.1"
@@ -12,6 +12,15 @@ export type KeybindingId =
 	| "tab.switch.7"
 	| "tab.switch.8"
 	| "tab.switch.9"
+	| "project.switch.1"
+	| "project.switch.2"
+	| "project.switch.3"
+	| "project.switch.4"
+	| "project.switch.5"
+	| "project.switch.6"
+	| "project.switch.7"
+	| "project.switch.8"
+	| "project.switch.9"
 	| "pane.nav.up"
 	| "pane.nav.down"
 	| "pane.nav.left"
@@ -19,7 +28,8 @@ export type KeybindingId =
 	| "pane.resize.up"
 	| "pane.resize.down"
 	| "pane.resize.left"
-	| "pane.resize.right";
+	| "pane.resize.right"
+	| "sidebar.toggle";
 
 export type KeybindingDef = {
 	id: KeybindingId;
@@ -29,12 +39,23 @@ export type KeybindingDef = {
 	group: KeybindingGroup;
 };
 
+const ordinalSuffix = (n: number): string =>
+	n === 1 ? "st" : n === 2 ? "nd" : n === 3 ? "rd" : "th";
+
 const tabSwitch = (n: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9): KeybindingDef => ({
 	id: `tab.switch.${n}` as KeybindingId,
 	hotkey: `Mod+${n}` as Hotkey,
 	name: `Switch to tab ${n}`,
-	description: `Activate the ${n}${n === 1 ? "st" : n === 2 ? "nd" : n === 3 ? "rd" : "th"} tab in the workspace`,
+	description: `Activate the ${n}${ordinalSuffix(n)} tab in the workspace`,
 	group: "tabs",
+});
+
+const projectSwitch = (n: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9): KeybindingDef => ({
+	id: `project.switch.${n}` as KeybindingId,
+	hotkey: `Control+${n}` as Hotkey,
+	name: `Switch to project ${n}`,
+	description: `Open the ${n}${ordinalSuffix(n)} project's first workspace`,
+	group: "projects",
 });
 
 export const KEYBINDINGS = {
@@ -47,6 +68,16 @@ export const KEYBINDINGS = {
 	"tab.switch.7": tabSwitch(7),
 	"tab.switch.8": tabSwitch(8),
 	"tab.switch.9": tabSwitch(9),
+
+	"project.switch.1": projectSwitch(1),
+	"project.switch.2": projectSwitch(2),
+	"project.switch.3": projectSwitch(3),
+	"project.switch.4": projectSwitch(4),
+	"project.switch.5": projectSwitch(5),
+	"project.switch.6": projectSwitch(6),
+	"project.switch.7": projectSwitch(7),
+	"project.switch.8": projectSwitch(8),
+	"project.switch.9": projectSwitch(9),
 
 	"pane.nav.up": {
 		id: "pane.nav.up",
@@ -104,6 +135,14 @@ export const KEYBINDINGS = {
 		name: "Resize pane right",
 		description: "Move the active pane's right edge rightward (grow horizontally)",
 		group: "panes",
+	},
+
+	"sidebar.toggle": {
+		id: "sidebar.toggle",
+		hotkey: "Mod+b",
+		name: "Toggle sidebar",
+		description: "Show or hide the application sidebar",
+		group: "sidebar",
 	},
 } as const satisfies Record<KeybindingId, KeybindingDef>;
 

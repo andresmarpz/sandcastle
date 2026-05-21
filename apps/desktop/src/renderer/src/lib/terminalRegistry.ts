@@ -33,11 +33,11 @@ const FONT_FAMILY =
 
 export type TerminalThemeMode = "light" | "dark";
 
-const DARK_THEME: ITheme = {
-	background: "#0a0a0a",
+type ThemePalette = Omit<ITheme, "background" | "cursorAccent">;
+
+const DARK_PALETTE: ThemePalette = {
 	foreground: "#e6e6e6",
 	cursor: "#e6e6e6",
-	cursorAccent: "#0a0a0a",
 	selectionBackground: "#3a3a3a",
 	black: "#1a1a1a",
 	red: "#f97583",
@@ -57,11 +57,9 @@ const DARK_THEME: ITheme = {
 	brightWhite: "#fafbfc",
 };
 
-const LIGHT_THEME: ITheme = {
-	background: "#ffffff",
+const LIGHT_PALETTE: ThemePalette = {
 	foreground: "#1a1a1a",
 	cursor: "#1a1a1a",
-	cursorAccent: "#ffffff",
 	selectionBackground: "#c8d4e3",
 	black: "#24292e",
 	red: "#d73a49",
@@ -81,16 +79,30 @@ const LIGHT_THEME: ITheme = {
 	brightWhite: "#d1d5da",
 };
 
-let currentTheme: ITheme = DARK_THEME;
+// xterm needs concrete colors, so resolve the sidebar token off the document.
+// Light/dark are toggled via the `.dark` class on <html>, so getPropertyValue
+// reads whichever value is currently active.
+const readSidebarBg = (fallback: string): string => {
+	if (typeof document === "undefined") return fallback;
+	const value = getComputedStyle(document.documentElement).getPropertyValue("--sidebar").trim();
+	return value || fallback;
+};
+
+const buildTheme = (mode: TerminalThemeMode): ITheme => {
+	const fallback = mode === "light" ? "#ffffff" : "#161616";
+	const bg = readSidebarBg(fallback);
+	const palette = mode === "light" ? LIGHT_PALETTE : DARK_PALETTE;
+	return { ...palette, background: bg, cursorAccent: bg };
+};
+
+let currentTheme: ITheme = buildTheme("dark");
 
 const instances = new Map<string, Instance>();
 
 export const setTerminalTheme = (mode: TerminalThemeMode): void => {
-	const next = mode === "light" ? LIGHT_THEME : DARK_THEME;
-	if (next === currentTheme) return;
-	currentTheme = next;
+	currentTheme = buildTheme(mode);
 	for (const inst of instances.values()) {
-		inst.xterm.options.theme = next;
+		inst.xterm.options.theme = currentTheme;
 	}
 };
 

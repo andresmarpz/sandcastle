@@ -38,7 +38,7 @@ function TopBar(): React.JSX.Element {
 				isMac ? "pl-19.5" : "pl-2",
 			)}
 		>
-			<SidebarTrigger className="no-drag" />
+			<SidebarTrigger className="no-drag text-foreground-tertiary" />
 			{params.wsId ? (
 				<TopBarTabs wsId={params.wsId} tabId={params.tabId} />
 			) : (

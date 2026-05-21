@@ -10,6 +10,7 @@ export type Tab = {
 	id: TabId;
 	title: string;
 	tree: Pane;
+	activeLeafId: string | null;
 };
 
 export type WorkspaceTabsState = {
@@ -27,6 +28,7 @@ type Actions = {
 	createTab: (wsId: WorkspaceId, cwd: string) => TabId;
 	closeTab: (wsId: WorkspaceId, tabId: TabId) => TabId | null;
 	setActiveTab: (wsId: WorkspaceId, tabId: TabId) => void;
+	setActiveLeaf: (wsId: WorkspaceId, tabId: TabId, leafId: string) => void;
 	renameTab: (wsId: WorkspaceId, tabId: TabId, title: string) => void;
 	updateTree: (wsId: WorkspaceId, tabId: TabId, updater: (tree: Pane) => Pane) => void;
 };
@@ -59,10 +61,12 @@ export const useTabsStore = create<State & Actions>()(
 			createTab: (wsId, cwd) => {
 				const key = wsId as string;
 				const id = nextTabId();
+				const rootLeaf = makeLeaf(cwd);
 				const tab: Tab = {
 					id,
 					title: defaultTitle(cwd),
-					tree: makeLeaf(cwd),
+					tree: rootLeaf,
+					activeLeafId: rootLeaf.id,
 				};
 				set((s) => {
 					const existing = s.byWorkspace[key] ?? { tabs: [], activeTabId: null };
@@ -110,10 +114,33 @@ export const useTabsStore = create<State & Actions>()(
 					const existing = s.byWorkspace[key];
 					if (!existing) return s;
 					if (!existing.tabs.some((t) => t.id === tabId)) return s;
+					if (existing.activeTabId === tabId) return s;
 					return {
 						byWorkspace: {
 							...s.byWorkspace,
 							[key]: { ...existing, activeTabId: tabId },
+						},
+					};
+				});
+			},
+
+			setActiveLeaf: (wsId, tabId, leafId) => {
+				const key = wsId as string;
+				set((s) => {
+					const existing = s.byWorkspace[key];
+					if (!existing) return s;
+					const tab = existing.tabs.find((t) => t.id === tabId);
+					if (!tab) return s;
+					if (tab.activeLeafId === leafId) return s;
+					return {
+						byWorkspace: {
+							...s.byWorkspace,
+							[key]: {
+								...existing,
+								tabs: existing.tabs.map((t) =>
+									t.id === tabId ? { ...t, activeLeafId: leafId } : t,
+								),
+							},
 						},
 					};
 				});

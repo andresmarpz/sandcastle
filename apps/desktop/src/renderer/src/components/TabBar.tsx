@@ -70,7 +70,7 @@ function TabBar({ workspaceId, activeTabId, defaultCwd }: Props): React.JSX.Elem
 						<div
 							key={tab.id}
 							className={cn(
-								"no-drag group flex h-6 max-w-[180px] min-w-0 shrink-0 items-center gap-1 rounded-md border px-2 text-xs transition-colors",
+								"no-drag group flex h-6 max-w-[180px] min-w-0 shrink-0 items-center gap-1 rounded-md border px-2 text-xs",
 								isActive
 									? "border-border bg-card text-foreground"
 									: "border-transparent text-muted-foreground hover:bg-card/60",
@@ -88,7 +88,7 @@ function TabBar({ workspaceId, activeTabId, defaultCwd }: Props): React.JSX.Elem
 								type="button"
 								onClick={() => handleClose(tab.id)}
 								aria-label="Close tab"
-								className="rounded p-0.5 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-muted hover:text-foreground"
+								className="rounded p-0.5 opacity-0 group-hover:opacity-100 hover:bg-muted hover:text-foreground"
 							>
 								<XIcon size={10} />
 							</button>

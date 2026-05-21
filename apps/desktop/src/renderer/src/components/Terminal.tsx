@@ -58,8 +58,8 @@ function Terminal({
 
 	const borderColorClass = focused
 		? mode === "light"
-			? "border-neutral-400/70"
-			: "border-neutral-500/70"
+			? "border-blue-500/80"
+			: "border-blue-400/80"
 		: "border-border";
 
 	const e = edges ?? { t: true, r: true, b: true, l: true };
@@ -72,8 +72,7 @@ function Terminal({
 		.filter(Boolean)
 		.join(" ");
 
-	const bgColor = mode === "light" ? "#ffffff" : "#0a0a0a";
-	const focusShadowColor = mode === "light" ? "rgb(163 163 163 / 0.7)" : "rgb(115 115 115 / 0.7)";
+	const focusShadowColor = mode === "light" ? "rgb(59 130 246 / 0.8)" : "rgb(96 165 250 / 0.8)";
 	const c = corners ?? { tl: true, tr: true, bl: true, br: true };
 
 	return (
@@ -84,9 +83,8 @@ function Terminal({
 			data-corner-tr={c.tr ? "" : undefined}
 			data-corner-bl={c.bl ? "" : undefined}
 			data-corner-br={c.br ? "" : undefined}
-			className={`relative ${className ?? "h-full w-full"} ${edgeWidths} ${borderColorClass} overflow-hidden data-[corner-tl]:rounded-tl-xl data-[corner-tr]:rounded-tr-xl data-[corner-bl]:rounded-bl-xl data-[corner-br]:rounded-br-xl`}
+			className={`relative bg-sidebar ${className ?? "h-full w-full"} ${edgeWidths} ${borderColorClass} overflow-hidden data-[corner-tl]:rounded-tl-xl data-[corner-tr]:rounded-tr-xl data-[corner-bl]:rounded-bl-xl data-[corner-br]:rounded-br-xl`}
 			style={{
-				backgroundColor: bgColor,
 				boxShadow: focused ? `0 0 0 1px ${focusShadowColor}` : undefined,
 				zIndex: focused ? 2 : undefined,
 			}}
