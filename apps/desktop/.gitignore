@@ -4,3 +4,18 @@ out
 .DS_Store
 .eslintcache
 *.log*
+*.tsbuildinfo
+
+# Belt-and-suspenders: TS shouldn't emit next to sources (tsconfigs use noEmit),
+# but ignore likely emit targets so a stray `tsc -b` doesn't leak generated
+# files into the tree. Hand-written *.d.ts files in src/ live at non-colliding
+# paths (e.g. src/preload/global.d.ts) so they're not ignored.
+electron.vite.config.js
+electron.vite.config.d.ts
+src/main/*.js
+src/main/index.d.ts
+src/main/pty.d.ts
+src/main/caffeinate.d.ts
+src/main/userEnv.d.ts
+src/preload/*.js
+src/preload/index.d.ts

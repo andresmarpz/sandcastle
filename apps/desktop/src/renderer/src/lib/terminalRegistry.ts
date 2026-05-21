@@ -23,6 +23,8 @@ type Instance = {
 	resizeTimer: ReturnType<typeof setTimeout> | null;
 	ipcUnsubs: Array<() => void>;
 	disposed: boolean;
+	lastSentCols: number;
+	lastSentRows: number;
 };
 
 const FONT_FAMILY =
@@ -103,6 +105,8 @@ const createXterm = (): { xterm: XTerm; fit: FitAddon; search: SearchAddon } => 
 		allowProposedApi: true,
 		customGlyphs: true,
 		scrollback: 10000,
+		scrollSensitivity: 3,
+		fastScrollSensitivity: 6,
 		macOptionIsMeta: true,
 		rightClickSelectsWord: true,
 		theme: currentTheme,
@@ -129,9 +133,16 @@ const scheduleResize = (inst: Instance): void => {
 	inst.resizeTimer = setTimeout(() => {
 		inst.resizeTimer = null;
 		safeFit(inst);
-		if (!inst.disposed) {
-			window.api.terminal.resize(inst.sessionId, inst.xterm.cols, inst.xterm.rows);
-		}
+		if (inst.disposed) return;
+		const { cols, rows } = inst.xterm;
+		// During pane-tree restructures the slot can momentarily be ~0px; a 1×1
+		// SIGWINCH makes most TUIs (Claude Code, fzf, less, htop) bail out, so
+		// drop obviously-bogus dims and let the next observer tick send real ones.
+		if (cols < 2 || rows < 2) return;
+		if (cols === inst.lastSentCols && rows === inst.lastSentRows) return;
+		inst.lastSentCols = cols;
+		inst.lastSentRows = rows;
+		window.api.terminal.resize(inst.sessionId, cols, rows);
 	}, 50);
 };
 
@@ -146,6 +157,17 @@ const createInstance = (leafId: string, container: HTMLElement, opts: CreateOpti
 		rendererType = "canvas";
 	} catch {
 		// fall back to DOM renderer
+	}
+
+	// Fit before spawning so the pty starts at the real container size. If we
+	// spawn at the default 80×24 and resize on the next frame, zsh's first
+	// prompt is queued at the old width — its PROMPT_SP partial-line marker
+	// (`%` + spaces + CR + ED) then doesn't fill the real terminal width, so
+	// the `%` line survives instead of being overwritten by the prompt.
+	try {
+		fit.fit();
+	} catch {
+		// container not yet sized — rAF below will retry
 	}
 
 	// macOS line-editing shortcuts that xterm.js doesn't bind by default.
@@ -194,6 +216,8 @@ const createInstance = (leafId: string, container: HTMLElement, opts: CreateOpti
 		resizeTimer: null,
 		ipcUnsubs: [],
 		disposed: false,
+		lastSentCols: xterm.cols,
+		lastSentRows: xterm.rows,
 	};
 
 	requestAnimationFrame(() => safeFit(inst));
@@ -267,12 +291,27 @@ export const disposeTerminal = (leafId: string): void => {
 	if (!inst) return;
 	inst.disposed = true;
 	instances.delete(leafId);
+	// Each cleanup step is best-effort: a throw anywhere here used to abort the
+	// caller (handleClose) before the tree could be updated, leaving the pane
+	// visually alive after the shell had already been killed.
 	if (inst.resizeTimer) clearTimeout(inst.resizeTimer);
-	inst.resizeObserver.disconnect();
-	for (const off of inst.ipcUnsubs) off();
-	window.api.terminal.dispose(inst.sessionId);
-	inst.xterm.dispose();
-	notifyStats();
+	try {
+		inst.resizeObserver.disconnect();
+	} catch {}
+	for (const off of inst.ipcUnsubs) {
+		try {
+			off();
+		} catch {}
+	}
+	try {
+		window.api.terminal.dispose(inst.sessionId);
+	} catch {}
+	try {
+		inst.xterm.dispose();
+	} catch {}
+	try {
+		notifyStats();
+	} catch {}
 };
 
 export const focusTerminal = (leafId: string): void => {
