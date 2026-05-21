@@ -21,14 +21,11 @@ import Terminal from "./Terminal";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "./ui/resizable";
 
 export type Corners = { tl: boolean; tr: boolean; bl: boolean; br: boolean };
-export type Edges = { t: boolean; r: boolean; b: boolean; l: boolean };
 const ALL_CORNERS: Corners = { tl: true, tr: true, bl: true, br: true };
-const ALL_EDGES: Edges = { t: true, r: true, b: true, l: true };
 
 type LeafProps = {
 	leaf: Leaf;
 	corners: Corners;
-	edges: Edges;
 	onSplit: (id: string, orientation: Orientation) => void;
 	onClose: (id: string) => void;
 	onFocus: (id: string) => void;
@@ -38,7 +35,6 @@ type LeafProps = {
 function LeafPane({
 	leaf,
 	corners,
-	edges,
 	onSplit,
 	onClose,
 	onFocus,
@@ -76,7 +72,6 @@ function LeafPane({
 				leafId={leaf.id}
 				cwd={leaf.cwd}
 				corners={corners}
-				edges={edges}
 				className="h-full w-full"
 			/>
 			<div className="pointer-events-none absolute top-1.5 right-1.5 z-10 flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
@@ -122,10 +117,9 @@ type SplitProps = {
 	node: Extract<Pane, { kind: "split" }>;
 	ctx: RenderCtx;
 	corners: Corners;
-	edges: Edges;
 };
 
-function SplitPane({ node, ctx, corners, edges }: SplitProps): React.JSX.Element {
+function SplitPane({ node, ctx, corners }: SplitProps): React.JSX.Element {
 	const isHorizontal = node.orientation === "horizontal";
 	const lastIdx = node.children.length - 1;
 	const groupRef = useRef<GroupImperativeHandle | null>(null);
@@ -160,19 +154,6 @@ function SplitPane({ node, ctx, corners, edges }: SplitProps): React.JSX.Element
 							bl: corners.bl && isLast,
 							br: corners.br && isLast,
 						};
-				const childEdges: Edges = isHorizontal
-					? {
-							t: edges.t,
-							b: edges.b,
-							l: edges.l && isFirst,
-							r: edges.r && isLast,
-						}
-					: {
-							t: edges.t && isFirst,
-							b: edges.b && isLast,
-							l: edges.l,
-							r: edges.r,
-						};
 				return (
 					<Fragment key={child.id}>
 						{i > 0 && <ResizableHandle />}
@@ -182,7 +163,7 @@ function SplitPane({ node, ctx, corners, edges }: SplitProps): React.JSX.Element
 							minSize={10}
 							className="overflow-visible!"
 						>
-							{renderPane(child, ctx, childCorners, childEdges)}
+							{renderPane(child, ctx, childCorners)}
 						</ResizablePanel>
 					</Fragment>
 				);
@@ -191,13 +172,12 @@ function SplitPane({ node, ctx, corners, edges }: SplitProps): React.JSX.Element
 	);
 }
 
-function renderPane(node: Pane, ctx: RenderCtx, corners: Corners, edges: Edges): React.ReactNode {
+function renderPane(node: Pane, ctx: RenderCtx, corners: Corners): React.ReactNode {
 	if (node.kind === "leaf") {
 		return (
 			<LeafPane
 				leaf={node}
 				corners={corners}
-				edges={edges}
 				onSplit={ctx.onSplit}
 				onClose={ctx.onClose}
 				onFocus={ctx.onFocus}
@@ -205,7 +185,7 @@ function renderPane(node: Pane, ctx: RenderCtx, corners: Corners, edges: Edges):
 			/>
 		);
 	}
-	return <SplitPane node={node} ctx={ctx} corners={corners} edges={edges} />;
+	return <SplitPane node={node} ctx={ctx} corners={corners} />;
 }
 
 type Props = {
@@ -295,7 +275,7 @@ function PaneTree({ workspaceId, tabId, defaultCwd }: Props): React.JSX.Element 
 		rootIsLeaf: tree.kind === "leaf",
 	};
 
-	return <div className="h-full w-full">{renderPane(tree, ctx, ALL_CORNERS, ALL_EDGES)}</div>;
+	return <div className="h-full w-full">{renderPane(tree, ctx, ALL_CORNERS)}</div>;
 }
 
 export default PaneTree;

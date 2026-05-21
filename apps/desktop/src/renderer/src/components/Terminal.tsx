@@ -10,7 +10,6 @@ import {
 } from "../lib/terminalRegistry";
 
 type Corners = { tl: boolean; tr: boolean; bl: boolean; br: boolean };
-type Edges = { t: boolean; r: boolean; b: boolean; l: boolean };
 
 type TerminalProps = {
 	leafId: string;
@@ -18,7 +17,6 @@ type TerminalProps = {
 	shell?: string;
 	className?: string;
 	corners?: Corners;
-	edges?: Edges;
 };
 
 function Terminal({
@@ -27,7 +25,6 @@ function Terminal({
 	shell,
 	className,
 	corners,
-	edges,
 }: TerminalProps): React.JSX.Element {
 	const slotRef = useRef<HTMLDivElement>(null);
 	const [focused, setFocused] = useState(false);
@@ -56,36 +53,26 @@ function Terminal({
 
 	const onMouseDown = (): void => focusTerminal(leafId);
 
-	const borderColorClass = focused
-		? mode === "light"
-			? "border-blue-500/80"
-			: "border-blue-400/80"
-		: "border-border";
-
-	const e = edges ?? { t: true, r: true, b: true, l: true };
-	const edgeWidths = [
-		e.t ? "border-t" : "",
-		e.r ? "border-r" : "",
-		e.b ? "border-b" : "",
-		e.l ? "border-l" : "",
-	]
-		.filter(Boolean)
-		.join(" ");
-
-	const focusShadowColor = mode === "light" ? "rgb(59 130 246 / 0.8)" : "rgb(96 165 250 / 0.8)";
+	const focusRingColor = mode === "light" ? "rgb(59 130 246 / 0.8)" : "rgb(96 165 250 / 0.8)";
 	const c = corners ?? { tl: true, tr: true, bl: true, br: true };
+	// Match SidebarInset's inner curve (outer radius minus its 1px border) so
+	// the focus ring traces the inset edge cleanly. Only round corners that
+	// actually touch the inset; inner pane edges stay square.
+	const outerR = "calc(var(--radius-xl) - 1px)";
+	const cornerRadii: React.CSSProperties = {
+		borderTopLeftRadius: c.tl ? outerR : "0px",
+		borderTopRightRadius: c.tr ? outerR : "0px",
+		borderBottomLeftRadius: c.bl ? outerR : "0px",
+		borderBottomRightRadius: c.br ? outerR : "0px",
+	};
 
 	return (
 		// biome-ignore lint/a11y/noStaticElementInteractions: focus state wrapper for an xterm terminal
 		<div
 			data-focused={focused ? "true" : undefined}
-			data-corner-tl={c.tl ? "" : undefined}
-			data-corner-tr={c.tr ? "" : undefined}
-			data-corner-bl={c.bl ? "" : undefined}
-			data-corner-br={c.br ? "" : undefined}
-			className={`relative bg-sidebar ${className ?? "h-full w-full"} ${edgeWidths} ${borderColorClass} overflow-hidden data-[corner-tl]:rounded-tl-xl data-[corner-tr]:rounded-tr-xl data-[corner-bl]:rounded-bl-xl data-[corner-br]:rounded-br-xl`}
+			className={`relative bg-sidebar ${className ?? "h-full w-full"}`}
 			style={{
-				boxShadow: focused ? `0 0 0 1px ${focusShadowColor}` : undefined,
+				...cornerRadii,
 				zIndex: focused ? 2 : undefined,
 			}}
 			onFocus={() => setFocused(true)}
@@ -100,6 +87,13 @@ function Terminal({
 				onKeyDown={onKeyDown}
 				onMouseDown={onMouseDown}
 			/>
+			{focused ? (
+				<div
+					aria-hidden
+					className="pointer-events-none absolute inset-0 box-border border-[1.5px]"
+					style={{ ...cornerRadii, borderColor: focusRingColor }}
+				/>
+			) : null}
 		</div>
 	);
 }
