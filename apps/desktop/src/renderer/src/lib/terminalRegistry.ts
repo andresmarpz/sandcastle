@@ -99,11 +99,30 @@ let currentTheme: ITheme = buildTheme("dark");
 
 const instances = new Map<string, Instance>();
 
-export const setTerminalTheme = (mode: TerminalThemeMode): void => {
+const applyCurrentTheme = (mode: TerminalThemeMode): void => {
 	currentTheme = buildTheme(mode);
 	for (const inst of instances.values()) {
 		inst.xterm.options.theme = currentTheme;
+		// The WebGL/Canvas renderers cache cells; without a refresh, painted
+		// regions keep the old bg until something else forces a redraw.
+		try {
+			inst.xterm.refresh(0, Math.max(0, inst.xterm.rows - 1));
+		} catch {
+			// terminal not yet measured
+		}
 	}
+};
+
+export const setTerminalTheme = (mode: TerminalThemeMode): void => {
+	// next-themes toggles the `.dark` class on <html> in an effect during the
+	// same commit our caller fires in. Reading --sidebar synchronously races
+	// that toggle (we see the previous mode's value). Defer to a rAF so the
+	// class change has landed and getComputedStyle returns the new color.
+	if (typeof requestAnimationFrame === "undefined") {
+		applyCurrentTheme(mode);
+		return;
+	}
+	requestAnimationFrame(() => applyCurrentTheme(mode));
 };
 
 const createXterm = (): { xterm: XTerm; fit: FitAddon; search: SearchAddon } => {
