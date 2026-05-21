@@ -22,8 +22,7 @@ const terminal = {
 	dispose: (id: string): void => {
 		ipcRenderer.send("terminal:dispose", id);
 	},
-	getCwd: (id: string): Promise<string | null> =>
-		ipcRenderer.invoke("terminal:get-cwd", id),
+	getCwd: (id: string): Promise<string | null> => ipcRenderer.invoke("terminal:get-cwd", id),
 	onData: (id: string, listener: (data: string) => void): (() => void) => {
 		const channel = `terminal:data:${id}`;
 		const handler = (_: unknown, data: string): void => listener(data);
@@ -57,7 +56,20 @@ const menu = {
 		ipcRenderer.invoke("menu:popup", items),
 };
 
-const api = { terminal, menu };
+type CaffeinateStatus = { enabled: boolean; supported: boolean };
+
+const caffeinate = {
+	get: (): Promise<CaffeinateStatus> => ipcRenderer.invoke("caffeinate:get"),
+	set: (enabled: boolean): Promise<CaffeinateStatus> =>
+		ipcRenderer.invoke("caffeinate:set", enabled),
+	onChange: (listener: (enabled: boolean) => void): (() => void) => {
+		const handler = (_: unknown, enabled: boolean): void => listener(enabled);
+		ipcRenderer.on("caffeinate:state", handler);
+		return () => ipcRenderer.removeListener("caffeinate:state", handler);
+	},
+};
+
+const api = { terminal, menu, caffeinate };
 
 if (process.contextIsolated) {
 	try {
@@ -67,8 +79,7 @@ if (process.contextIsolated) {
 		console.error(error);
 	}
 } else {
-	(globalThis as unknown as { electron: typeof electronAPI; api: Api }).electron =
-		electronAPI;
+	(globalThis as unknown as { electron: typeof electronAPI; api: Api }).electron = electronAPI;
 	(globalThis as unknown as { electron: typeof electronAPI; api: Api }).api = api;
 }
 

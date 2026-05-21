@@ -1,145 +1,259 @@
-import { Context, Effect, Layer } from "effect"
-
+import { join } from "node:path";
 import {
-  AbsolutePath,
-  InternalError,
-  IsoDateTime,
-  type Workspace as WorkspaceWire,
-  WorkspaceId,
-  WorkspaceNotFound,
-  WorkspacePathConflict,
-  WorkspacePathInvalid,
-  WorkspacePathNotFound,
-} from "@sandcastle/contracts"
+	AbsolutePath,
+	InternalError,
+	IsoDateTime,
+	ProjectId,
+	ProjectNotFound,
+	type WorkspaceCreateConfig,
+	WorkspaceId,
+	WorkspaceLocalConflict,
+	WorkspaceNotFound,
+	WorkspaceNotGit,
+	type Workspace as WorkspaceWire,
+	WorktreeCreateFailed,
+} from "@sandcastle/contracts";
 import {
-  Workspaces as WorkspacesRepo,
-  WorkspacePathConflict as WorkspacePathConflictDb,
-  type SqliteError,
-} from "@sandcastle/db"
-import type { Workspace as WorkspaceEntity } from "@sandcastle/entities"
+	Projects as ProjectsRepo,
+	type SqliteError,
+	type WorkspacePathConflict as WorkspacePathConflictDb,
+	Workspaces as WorkspacesRepo,
+} from "@sandcastle/db";
+import type { Workspace as WorkspaceEntity } from "@sandcastle/entities";
+import { Context, Effect, Layer } from "effect";
 
-import { newWorkspaceId } from "../lib/ids.ts"
-import { isAbsolutePath, pathStat } from "../lib/paths.ts"
+import { ServerConfig } from "../config/ConfigService.ts";
+import { newWorkspaceId, shortId } from "../lib/ids.ts";
 
 const toInternal = (cause: unknown): InternalError =>
-  new InternalError({ message: cause instanceof Error ? cause.message : String(cause) })
+	new InternalError({ message: cause instanceof Error ? cause.message : String(cause) });
 
 const toWire = (w: WorkspaceEntity): WorkspaceWire => ({
-  id: WorkspaceId.make(w.id),
-  label: w.label,
-  path: AbsolutePath.make(w.path),
-  isGit: w.isGit,
-  createdAt: IsoDateTime.make(w.createdAt),
-  updatedAt: IsoDateTime.make(w.updatedAt),
-})
+	id: WorkspaceId.make(w.id),
+	projectId: ProjectId.make(w.projectId),
+	name: w.name,
+	kind: w.kind,
+	path: AbsolutePath.make(w.path),
+	branch: w.branch,
+	baseBranch: w.baseBranch,
+	createdAt: IsoDateTime.make(w.createdAt),
+	updatedAt: IsoDateTime.make(w.updatedAt),
+});
 
-const probeIsGit = (path: string): Effect.Effect<boolean> =>
-  Effect.tryPromise({
-    try: async () => {
-      const proc = Bun.spawn(["git", "-C", path, "rev-parse", "--is-inside-work-tree"], {
-        stdout: "pipe",
-        stderr: "pipe",
-      })
-      const code = await proc.exited
-      return code === 0
-    },
-    catch: () => false,
-  }).pipe(Effect.catch(() => Effect.succeed(false)))
+interface ProcOutput {
+	readonly code: number;
+	readonly stdout: string;
+	readonly stderr: string;
+}
+
+const runGit = (
+	cwd: string,
+	args: ReadonlyArray<string>,
+): Effect.Effect<ProcOutput, InternalError> =>
+	Effect.tryPromise({
+		try: async () => {
+			const proc = Bun.spawn(["git", "-C", cwd, ...args], {
+				stdout: "pipe",
+				stderr: "pipe",
+			});
+			const [stdout, stderr, code] = await Promise.all([
+				new Response(proc.stdout).text(),
+				new Response(proc.stderr).text(),
+				proc.exited,
+			]);
+			return { code, stdout, stderr } satisfies ProcOutput;
+		},
+		catch: (cause) => toInternal(cause),
+	});
+
+const removeWorktreeBestEffort = (projectRoot: string, worktreePath: string): Effect.Effect<void> =>
+	Effect.promise(async () => {
+		try {
+			const proc = Bun.spawn(
+				["git", "-C", projectRoot, "worktree", "remove", "--force", worktreePath],
+				{ stdout: "pipe", stderr: "pipe" },
+			);
+			await proc.exited;
+		} catch {
+			// best-effort
+		}
+	});
 
 export interface WorkspaceServiceShape {
-  readonly create: (input: {
-    readonly label: string
-    readonly path: string
-  }) => Effect.Effect<
-    WorkspaceWire,
-    WorkspacePathInvalid | WorkspacePathNotFound | WorkspacePathConflict | InternalError
-  >
-  readonly list: () => Effect.Effect<ReadonlyArray<WorkspaceWire>, InternalError>
-  readonly get: (
-    workspaceId: WorkspaceId,
-  ) => Effect.Effect<WorkspaceWire, WorkspaceNotFound | InternalError>
-  readonly delete: (
-    workspaceId: WorkspaceId,
-  ) => Effect.Effect<void, WorkspaceNotFound | InternalError>
+	readonly list: (
+		projectId: ProjectId,
+	) => Effect.Effect<ReadonlyArray<WorkspaceWire>, ProjectNotFound | InternalError>;
+	readonly create: (input: {
+		readonly projectId: ProjectId;
+		readonly name: string;
+		readonly config: WorkspaceCreateConfig;
+	}) => Effect.Effect<
+		WorkspaceWire,
+		| ProjectNotFound
+		| WorkspaceNotGit
+		| WorkspaceLocalConflict
+		| WorktreeCreateFailed
+		| InternalError
+	>;
+	readonly delete: (
+		workspaceId: WorkspaceId,
+	) => Effect.Effect<void, WorkspaceNotFound | InternalError>;
 }
 
 export class WorkspaceService extends Context.Service<WorkspaceService, WorkspaceServiceShape>()(
-  "@sandcastle/server/WorkspaceService",
+	"@sandcastle/server/WorkspaceService",
 ) {}
 
-export const layer: Layer.Layer<WorkspaceService, never, WorkspacesRepo> = Layer.effect(
-  WorkspaceService,
-)(
-  Effect.gen(function* () {
-    const repo = yield* WorkspacesRepo
+export const layer: Layer.Layer<
+	WorkspaceService,
+	never,
+	ProjectsRepo | WorkspacesRepo | ServerConfig
+> = Layer.effect(WorkspaceService)(
+	Effect.gen(function* () {
+		const projects = yield* ProjectsRepo;
+		const workspaces = yield* WorkspacesRepo;
+		const config = yield* ServerConfig;
 
-    const create: WorkspaceServiceShape["create"] = (input) =>
-      Effect.gen(function* () {
-        if (!isAbsolutePath(input.path)) {
-          return yield* Effect.fail(
-            new WorkspacePathInvalid({ path: input.path, reason: "path must be absolute" }),
-          )
-        }
-        const stat = yield* pathStat(input.path)
-        if (!stat.exists) {
-          return yield* Effect.fail(new WorkspacePathNotFound({ path: input.path }))
-        }
-        if (!stat.isDirectory) {
-          return yield* Effect.fail(
-            new WorkspacePathInvalid({ path: input.path, reason: "path is not a directory" }),
-          )
-        }
+		const list: WorkspaceServiceShape["list"] = (projectId) =>
+			Effect.gen(function* () {
+				const project = yield* projects.getById(projectId).pipe(Effect.mapError(toInternal));
+				if (project === null || project.deletedAt !== null) {
+					return yield* Effect.fail(new ProjectNotFound({ projectId: projectId as string }));
+				}
+				const rows = yield* workspaces.list({ projectId }).pipe(Effect.mapError(toInternal));
+				return rows.map(toWire);
+			});
 
-        const isGit = yield* probeIsGit(input.path)
-        const id = newWorkspaceId()
+		const create: WorkspaceServiceShape["create"] = (input) =>
+			Effect.gen(function* () {
+				const project = yield* projects.getById(input.projectId).pipe(Effect.mapError(toInternal));
+				if (project === null || project.deletedAt !== null) {
+					return yield* Effect.fail(new ProjectNotFound({ projectId: input.projectId as string }));
+				}
 
-        const created = yield* repo
-          .create({
-            id: id as unknown as Parameters<typeof repo.create>[0]["id"],
-            label: input.label,
-            path: AbsolutePath.make(input.path) as unknown as Parameters<
-              typeof repo.create
-            >[0]["path"],
-            isGit,
-          })
-          .pipe(
-            Effect.catchTag("WorkspacePathConflict", (err: WorkspacePathConflictDb) =>
-              Effect.fail(new WorkspacePathConflict({ path: err.path })),
-            ),
-            Effect.catchTag("SqliteError", (cause: SqliteError) => Effect.fail(toInternal(cause))),
-          )
+				const workspaceId = newWorkspaceId();
+				let path: string;
+				let branch: string | null;
+				let baseBranch: string | null;
+				let kind: "local" | "worktree";
+				let createdOnDisk = false;
 
-        return toWire(created)
-      })
+				if (input.config._tag === "local") {
+					const existing = yield* workspaces
+						.list({ projectId: input.projectId })
+						.pipe(Effect.mapError(toInternal));
+					if (existing.some((w) => w.kind === "local")) {
+						return yield* Effect.fail(
+							new WorkspaceLocalConflict({ projectId: input.projectId as string }),
+						);
+					}
+					path = project.rootPath as unknown as string;
+					branch = null;
+					baseBranch = null;
+					kind = "local";
+				} else {
+					if (!project.isGit) {
+						return yield* Effect.fail(
+							new WorkspaceNotGit({ projectId: input.projectId as string }),
+						);
+					}
 
-    const list: WorkspaceServiceShape["list"] = () =>
-      repo.list().pipe(
-        Effect.mapError(toInternal),
-        Effect.map((rows) => rows.map(toWire)),
-      )
+					path = join(
+						config.worktreesDir,
+						input.projectId as unknown as string,
+						workspaceId as unknown as string,
+					);
 
-    const get: WorkspaceServiceShape["get"] = (workspaceId) =>
-      repo
-        .getById(workspaceId as unknown as Parameters<typeof repo.getById>[0])
-        .pipe(
-          Effect.mapError(toInternal),
-          Effect.flatMap((row) =>
-            row === null
-              ? Effect.fail(new WorkspaceNotFound({ workspaceId: workspaceId as string }))
-              : Effect.succeed(toWire(row)),
-          ),
-        )
+					branch = input.config.branch ?? `sandcastle/${shortId(workspaceId as unknown as string)}`;
 
-    const del: WorkspaceServiceShape["delete"] = (workspaceId) =>
-      repo
-        .softDelete(workspaceId as unknown as Parameters<typeof repo.softDelete>[0])
-        .pipe(
-          Effect.catchTag("WorkspaceNotFound", (e: { workspaceId: string }) =>
-            Effect.fail(new WorkspaceNotFound({ workspaceId: e.workspaceId })),
-          ),
-          Effect.catchTag("SqliteError", (cause: SqliteError) => Effect.fail(toInternal(cause))),
-        )
+					if (input.config.baseBranch !== undefined) {
+						baseBranch = input.config.baseBranch;
+					} else {
+						const head = yield* runGit(project.rootPath as unknown as string, [
+							"rev-parse",
+							"HEAD",
+						]);
+						if (head.code !== 0) {
+							return yield* Effect.fail(
+								new WorktreeCreateFailed({
+									message: head.stderr.trim() || "failed to resolve project HEAD",
+								}),
+							);
+						}
+						baseBranch = head.stdout.trim();
+					}
 
-    return WorkspaceService.of({ create, list, get, delete: del })
-  }),
-)
+					const add = yield* runGit(project.rootPath as unknown as string, [
+						"worktree",
+						"add",
+						"-b",
+						branch,
+						path,
+						baseBranch,
+					]);
+					if (add.code !== 0) {
+						return yield* Effect.fail(
+							new WorktreeCreateFailed({
+								message: add.stderr.trim() || "git worktree add failed",
+							}),
+						);
+					}
+					createdOnDisk = true;
+					kind = "worktree";
+				}
+
+				const inserted = yield* workspaces
+					.create({
+						id: workspaceId,
+						projectId: input.projectId,
+						name: input.name,
+						kind,
+						path: AbsolutePath.make(path),
+						branch,
+						baseBranch,
+					})
+					.pipe(
+						Effect.catchTag("WorkspacePathConflict", (err: WorkspacePathConflictDb) =>
+							Effect.fail(toInternal(new Error(`workspace path conflict: ${err.path}`))),
+						),
+						Effect.catchTag("SqliteError", (cause: SqliteError) => Effect.fail(toInternal(cause))),
+						Effect.tapError(() =>
+							createdOnDisk
+								? removeWorktreeBestEffort(project.rootPath as unknown as string, path)
+								: Effect.void,
+						),
+					);
+
+				return toWire(inserted);
+			});
+
+		const del: WorkspaceServiceShape["delete"] = (workspaceId) =>
+			Effect.gen(function* () {
+				const workspace = yield* workspaces.getById(workspaceId).pipe(Effect.mapError(toInternal));
+				if (workspace === null || workspace.deletedAt !== null) {
+					return yield* Effect.fail(new WorkspaceNotFound({ workspaceId: workspaceId as string }));
+				}
+
+				if (workspace.kind === "worktree") {
+					const project = yield* projects
+						.getById(workspace.projectId)
+						.pipe(Effect.mapError(toInternal));
+					if (project !== null) {
+						yield* removeWorktreeBestEffort(
+							project.rootPath as unknown as string,
+							workspace.path as unknown as string,
+						);
+					}
+				}
+
+				yield* workspaces.softDelete(workspaceId).pipe(
+					Effect.catchTag("WorkspaceNotFound", (e: { workspaceId: string }) =>
+						Effect.fail(new WorkspaceNotFound({ workspaceId: e.workspaceId })),
+					),
+					Effect.catchTag("SqliteError", (cause: SqliteError) => Effect.fail(toInternal(cause))),
+				);
+			});
+
+		return WorkspaceService.of({ list, create, delete: del });
+	}),
+);

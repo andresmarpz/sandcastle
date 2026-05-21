@@ -22,10 +22,7 @@ import { cn } from "@/lib/utils";
 function AppSidebar(): React.JSX.Element {
 	const [openSessions, setOpenSessions] = useState(true);
 
-	const onSessionContextMenu = async (
-		e: React.MouseEvent,
-		sessionLabel: string,
-	): Promise<void> => {
+	const onSessionContextMenu = async (e: React.MouseEvent, sessionLabel: string): Promise<void> => {
 		e.preventDefault();
 		e.stopPropagation();
 		const choice = await window.api.menu.popup([
@@ -61,9 +58,7 @@ function AppSidebar(): React.JSX.Element {
 						<CollapsibleContent className="data-closed:hidden">
 							<SidebarGroupContent>
 								<SidebarMenu>
-									<SidebarMenuItem
-										onContextMenu={(e) => void onSessionContextMenu(e, "Terminal")}
-									>
+									<SidebarMenuItem onContextMenu={(e) => void onSessionContextMenu(e, "Terminal")}>
 										<SidebarMenuButton tooltip="Terminal" data-active>
 											<TerminalWindowIcon />
 											<span>Terminal</span>

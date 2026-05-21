@@ -1,3 +1,3 @@
-import { IsoDateTime } from "@sandcastle/contracts"
+import { IsoDateTime } from "@sandcastle/contracts";
 
-export const now = (): IsoDateTime => IsoDateTime.make(new Date().toISOString())
+export const now = (): IsoDateTime => IsoDateTime.make(new Date().toISOString());

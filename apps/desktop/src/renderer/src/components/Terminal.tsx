@@ -10,6 +10,7 @@ import {
 } from "../lib/terminalRegistry";
 
 type Corners = { tl: boolean; tr: boolean; bl: boolean; br: boolean };
+type Edges = { t: boolean; r: boolean; b: boolean; l: boolean };
 
 type TerminalProps = {
 	leafId: string;
@@ -17,9 +18,17 @@ type TerminalProps = {
 	shell?: string;
 	className?: string;
 	corners?: Corners;
+	edges?: Edges;
 };
 
-function Terminal({ leafId, cwd, shell, className, corners }: TerminalProps): React.JSX.Element {
+function Terminal({
+	leafId,
+	cwd,
+	shell,
+	className,
+	corners,
+	edges,
+}: TerminalProps): React.JSX.Element {
 	const slotRef = useRef<HTMLDivElement>(null);
 	const [focused, setFocused] = useState(false);
 	const { resolvedTheme } = useTheme();
@@ -47,28 +56,49 @@ function Terminal({ leafId, cwd, shell, className, corners }: TerminalProps): Re
 
 	const onMouseDown = (): void => focusTerminal(leafId);
 
-	const ringClass = focused
+	const borderColorClass = focused
 		? mode === "light"
-			? "ring-1 ring-inset ring-neutral-400/70"
-			: "ring-1 ring-inset ring-neutral-500/70"
-		: "";
+			? "border-neutral-400/70"
+			: "border-neutral-500/70"
+		: "border-border";
 
+	const e = edges ?? { t: true, r: true, b: true, l: true };
+	const edgeWidths = [
+		e.t ? "border-t" : "",
+		e.r ? "border-r" : "",
+		e.b ? "border-b" : "",
+		e.l ? "border-l" : "",
+	]
+		.filter(Boolean)
+		.join(" ");
+
+	const bgColor = mode === "light" ? "#ffffff" : "#0a0a0a";
+	const focusShadowColor = mode === "light" ? "rgb(163 163 163 / 0.7)" : "rgb(115 115 115 / 0.7)";
 	const c = corners ?? { tl: true, tr: true, bl: true, br: true };
 
 	return (
+		// biome-ignore lint/a11y/noStaticElementInteractions: focus state wrapper for an xterm terminal
 		<div
+			data-focused={focused ? "true" : undefined}
 			data-corner-tl={c.tl ? "" : undefined}
 			data-corner-tr={c.tr ? "" : undefined}
 			data-corner-bl={c.bl ? "" : undefined}
 			data-corner-br={c.br ? "" : undefined}
-			className={`${className ?? "h-full w-full"} overflow-hidden data-[corner-tl]:rounded-tl-xl data-[corner-tr]:rounded-tr-xl data-[corner-bl]:rounded-bl-xl data-[corner-br]:rounded-br-xl ${ringClass}`}
-			style={{ backgroundColor: mode === "light" ? "#ffffff" : "#0a0a0a" }}
+			className={`relative ${className ?? "h-full w-full"} ${edgeWidths} ${borderColorClass} overflow-hidden data-[corner-tl]:rounded-tl-xl data-[corner-tr]:rounded-tr-xl data-[corner-bl]:rounded-bl-xl data-[corner-br]:rounded-br-xl`}
+			style={{
+				backgroundColor: bgColor,
+				boxShadow: focused ? `0 0 0 1px ${focusShadowColor}` : undefined,
+				zIndex: focused ? 2 : undefined,
+			}}
 			onFocus={() => setFocused(true)}
 			onBlur={() => setFocused(false)}
 		>
 			<div
 				ref={slotRef}
-				className="h-full w-full overflow-hidden"
+				role="application"
+				aria-label="Terminal"
+				tabIndex={-1}
+				className="h-full w-full overflow-hidden p-3"
 				onKeyDown={onKeyDown}
 				onMouseDown={onMouseDown}
 			/>

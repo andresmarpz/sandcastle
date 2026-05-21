@@ -33,7 +33,7 @@ function Layout(): React.JSX.Element {
 				style={{ contain: "layout" } as React.CSSProperties}
 			>
 				<AppSidebar />
-				<SidebarInset className="relative min-w-0 overflow-hidden bg-card">
+				<SidebarInset className="relative min-w-0 overflow-hidden bg-card md:peer-data-[variant=inset]:border-0">
 					<Outlet />
 				</SidebarInset>
 				<SidebarResizeHandle

@@ -3,7 +3,7 @@ import { FitAddon } from "@xterm/addon-fit";
 import { SearchAddon } from "@xterm/addon-search";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { WebglAddon } from "@xterm/addon-webgl";
-import { Terminal as XTerm, type ITheme } from "@xterm/xterm";
+import { type ITheme, Terminal as XTerm } from "@xterm/xterm";
 
 type CreateOptions = {
 	cwd?: string;
@@ -148,11 +148,7 @@ const scheduleResize = (inst: Instance): void => {
 	}, 50);
 };
 
-const createInstance = (
-	leafId: string,
-	container: HTMLElement,
-	opts: CreateOptions,
-): Instance => {
+const createInstance = (leafId: string, container: HTMLElement, opts: CreateOptions): Instance => {
 	const { xterm, fit, search } = createXterm();
 	const sessionId = `term-${leafId}-${Date.now()}`;
 
@@ -209,9 +205,7 @@ const createInstance = (
 
 	requestAnimationFrame(() => safeFit(inst));
 
-	inst.ipcUnsubs.push(
-		window.api.terminal.onData(sessionId, (data) => xterm.write(data)),
-	);
+	inst.ipcUnsubs.push(window.api.terminal.onData(sessionId, (data) => xterm.write(data)));
 	inst.ipcUnsubs.push(
 		window.api.terminal.onExit(sessionId, ({ exitCode }) => {
 			xterm.writeln(`\r\n\x1b[2m[process exited with code ${exitCode}]\x1b[0m`);

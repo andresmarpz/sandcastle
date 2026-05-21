@@ -1,12 +1,8 @@
 import { Columns2, Rows2, X } from "lucide-react";
 import { Fragment, useCallback, useState } from "react";
 import { disposeTerminal, getTerminalCwd } from "../lib/terminalRegistry";
-import {
-	ResizableHandle,
-	ResizablePanel,
-	ResizablePanelGroup,
-} from "./ui/resizable";
 import Terminal from "./Terminal";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "./ui/resizable";
 
 type Orientation = "horizontal" | "vertical";
 
@@ -15,17 +11,14 @@ type Split = { kind: "split"; id: string; orientation: Orientation; children: Pa
 type Pane = Leaf | Split;
 
 export type Corners = { tl: boolean; tr: boolean; bl: boolean; br: boolean };
+export type Edges = { t: boolean; r: boolean; b: boolean; l: boolean };
 const ALL_CORNERS: Corners = { tl: true, tr: true, bl: true, br: true };
+const ALL_EDGES: Edges = { t: true, r: true, b: true, l: true };
 
 let counter = 0;
 const nextId = (prefix: string): string => `${prefix}-${++counter}`;
 
-const splitLeaf = (
-	tree: Pane,
-	leafId: string,
-	orientation: Orientation,
-	newCwd?: string,
-): Pane => {
+const splitLeaf = (tree: Pane, leafId: string, orientation: Orientation, newCwd?: string): Pane => {
 	if (tree.kind === "leaf") {
 		if (tree.id !== leafId) return tree;
 		return {
@@ -57,12 +50,20 @@ const removeLeaf = (tree: Pane, leafId: string): Pane | null => {
 type LeafProps = {
 	leaf: Leaf;
 	corners: Corners;
+	edges: Edges;
 	onSplit: (id: string, orientation: Orientation) => void;
 	onClose: (id: string) => void;
 	canClose: boolean;
 };
 
-function LeafPane({ leaf, corners, onSplit, onClose, canClose }: LeafProps): React.JSX.Element {
+function LeafPane({
+	leaf,
+	corners,
+	edges,
+	onSplit,
+	onClose,
+	canClose,
+}: LeafProps): React.JSX.Element {
 	const handleKeyDown = (e: React.KeyboardEvent): void => {
 		const mod = e.metaKey || e.ctrlKey;
 		if (!mod) return;
@@ -85,7 +86,13 @@ function LeafPane({ leaf, corners, onSplit, onClose, canClose }: LeafProps): Rea
 
 	return (
 		<div className="group relative h-full w-full" onKeyDownCapture={handleKeyDown}>
-			<Terminal leafId={leaf.id} cwd={leaf.cwd} corners={corners} className="h-full w-full p-3" />
+			<Terminal
+				leafId={leaf.id}
+				cwd={leaf.cwd}
+				corners={corners}
+				edges={edges}
+				className="h-full w-full"
+			/>
 			<div className="pointer-events-none absolute top-1.5 right-1.5 z-10 flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
 				<button
 					type="button"
@@ -124,12 +131,13 @@ type RenderCtx = {
 	rootIsLeaf: boolean;
 };
 
-function renderPane(node: Pane, ctx: RenderCtx, corners: Corners): React.ReactNode {
+function renderPane(node: Pane, ctx: RenderCtx, corners: Corners, edges: Edges): React.ReactNode {
 	if (node.kind === "leaf") {
 		return (
 			<LeafPane
 				leaf={node}
 				corners={corners}
+				edges={edges}
 				onSplit={ctx.onSplit}
 				onClose={ctx.onClose}
 				canClose={!ctx.rootIsLeaf}
@@ -139,7 +147,7 @@ function renderPane(node: Pane, ctx: RenderCtx, corners: Corners): React.ReactNo
 	const isHorizontal = node.orientation === "horizontal";
 	const lastIdx = node.children.length - 1;
 	return (
-		<ResizablePanelGroup orientation={node.orientation} id={node.id}>
+		<ResizablePanelGroup orientation={node.orientation} id={node.id} className="overflow-visible!">
 			{node.children.map((child, i) => {
 				const isFirst = i === 0;
 				const isLast = i === lastIdx;
@@ -156,6 +164,19 @@ function renderPane(node: Pane, ctx: RenderCtx, corners: Corners): React.ReactNo
 							bl: corners.bl && isLast,
 							br: corners.br && isLast,
 						};
+				const childEdges: Edges = isHorizontal
+					? {
+							t: edges.t,
+							b: edges.b,
+							l: edges.l && isFirst,
+							r: edges.r && isLast,
+						}
+					: {
+							t: edges.t && isFirst,
+							b: edges.b && isLast,
+							l: edges.l,
+							r: edges.r,
+						};
 				return (
 					<Fragment key={child.id}>
 						{i > 0 && <ResizableHandle />}
@@ -163,8 +184,9 @@ function renderPane(node: Pane, ctx: RenderCtx, corners: Corners): React.ReactNo
 							id={child.id}
 							defaultSize={100 / node.children.length}
 							minSize={10}
+							className="overflow-visible!"
 						>
-							{renderPane(child, ctx, childCorners)}
+							{renderPane(child, ctx, childCorners, childEdges)}
 						</ResizablePanel>
 					</Fragment>
 				);
@@ -179,13 +201,10 @@ function TerminalPanes(): React.JSX.Element {
 		id: nextId("leaf"),
 	}));
 
-	const handleSplit = useCallback(
-		async (id: string, orientation: Orientation): Promise<void> => {
-			const cwd = (await getTerminalCwd(id)) ?? undefined;
-			setTree((t) => splitLeaf(t, id, orientation, cwd));
-		},
-		[],
-	);
+	const handleSplit = useCallback(async (id: string, orientation: Orientation): Promise<void> => {
+		const cwd = (await getTerminalCwd(id)) ?? undefined;
+		setTree((t) => splitLeaf(t, id, orientation, cwd));
+	}, []);
 
 	const handleClose = useCallback((id: string): void => {
 		disposeTerminal(id);
@@ -203,7 +222,7 @@ function TerminalPanes(): React.JSX.Element {
 		rootIsLeaf: tree.kind === "leaf",
 	};
 
-	return <div className="h-full w-full">{renderPane(tree, ctx, ALL_CORNERS)}</div>;
+	return <div className="h-full w-full">{renderPane(tree, ctx, ALL_CORNERS, ALL_EDGES)}</div>;
 }
 
 export default TerminalPanes;

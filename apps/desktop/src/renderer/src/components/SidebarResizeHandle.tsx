@@ -59,11 +59,16 @@ function SidebarResizeHandle({
 	if (isMobile || state !== "expanded") return null;
 
 	return (
+		// biome-ignore lint/a11y/useSemanticElements: <hr> cannot host pointer-resize behavior
 		<div
 			onPointerDown={onPointerDown}
 			role="separator"
+			tabIndex={0}
 			aria-orientation="vertical"
 			aria-label="Resize sidebar"
+			aria-valuenow={width}
+			aria-valuemin={min}
+			aria-valuemax={max}
 			className="absolute top-1 bottom-2 z-20 w-1 cursor-col-resize bg-transparent transition-colors hover:bg-sidebar-border"
 			style={{ left: `calc(var(--sidebar-width) - 6px)` }}
 		/>

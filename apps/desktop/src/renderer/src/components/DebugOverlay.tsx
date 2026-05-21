@@ -1,9 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import {
-	getStats,
-	subscribeStats,
-	type TerminalStat,
-} from "../lib/terminalRegistry";
+import { getStats, subscribeStats, type TerminalStat } from "../lib/terminalRegistry";
 
 type PerformanceWithMemory = Performance & {
 	memory?: {
@@ -19,9 +15,7 @@ function DebugOverlay(): React.JSX.Element | null {
 	const [collapsed, setCollapsed] = useState(false);
 	const [fps, setFps] = useState(0);
 	const [stats, setStats] = useState<TerminalStat[]>(getStats());
-	const [heap, setHeap] = useState<{ used: number; total: number; limit: number } | null>(
-		null,
-	);
+	const [heap, setHeap] = useState<{ used: number; total: number; limit: number } | null>(null);
 
 	const framesRef = useRef(0);
 	const lastTickRef = useRef(performance.now());
@@ -62,8 +56,7 @@ function DebugOverlay(): React.JSX.Element | null {
 		};
 	}, []);
 
-	const fpsColor =
-		fps >= 55 ? "text-emerald-400" : fps >= 30 ? "text-amber-400" : "text-red-400";
+	const fpsColor = fps >= 55 ? "text-emerald-400" : fps >= 30 ? "text-amber-400" : "text-red-400";
 
 	return (
 		<div className="no-drag pointer-events-auto fixed right-2 bottom-2 z-50 select-none font-mono text-[10px] text-white/80">
@@ -80,18 +73,12 @@ function DebugOverlay(): React.JSX.Element | null {
 					<div className="space-y-1 border-t border-white/10 px-2 py-1.5">
 						<Row label="terminals" value={String(stats.length)} />
 						{heap && (
-							<Row
-								label="heap"
-								value={`${formatMB(heap.used)} / ${formatMB(heap.total)}`}
-							/>
+							<Row label="heap" value={`${formatMB(heap.used)} / ${formatMB(heap.total)}`} />
 						)}
 						{stats.length > 0 && (
 							<div className="space-y-0.5 pt-1">
 								{stats.map((s) => (
-									<div
-										key={s.leafId}
-										className="flex items-center justify-between gap-2"
-									>
+									<div key={s.leafId} className="flex items-center justify-between gap-2">
 										<span className="truncate text-white/50">{s.leafId}</span>
 										<span className="flex items-center gap-1.5">
 											<RendererBadge type={s.rendererType} />
