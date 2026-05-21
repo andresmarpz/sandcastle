@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Outlet } from "react-router";
 
 import AppSidebar from "@/components/AppSidebar";
 import DebugOverlay from "@/components/DebugOverlay";
@@ -10,7 +9,11 @@ import { cn } from "@/lib/utils";
 
 const DEFAULT_SIDEBAR_WIDTH = 256;
 
-function Layout(): React.JSX.Element {
+type Props = {
+	children: React.ReactNode;
+};
+
+function Layout({ children }: Props): React.JSX.Element {
 	const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
 	const [isResizing, setIsResizing] = useState(false);
 
@@ -34,7 +37,7 @@ function Layout(): React.JSX.Element {
 			>
 				<AppSidebar />
 				<SidebarInset className="relative min-w-0 overflow-hidden bg-card md:peer-data-[variant=inset]:border-0">
-					<Outlet />
+					{children}
 				</SidebarInset>
 				<SidebarResizeHandle
 					width={sidebarWidth}

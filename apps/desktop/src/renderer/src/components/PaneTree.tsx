@@ -1,51 +1,25 @@
+import type { WorkspaceId } from "@sandcastle/contracts";
 import { Columns2, Rows2, X } from "lucide-react";
-import { Fragment, useCallback, useState } from "react";
-import { disposeTerminal, getTerminalCwd } from "../lib/terminalRegistry";
+import { Fragment, useCallback } from "react";
+
+import { disposeTerminal, getTerminalCwd } from "@/lib/terminalRegistry";
+import {
+	type Leaf,
+	makeLeaf,
+	type Orientation,
+	type Pane,
+	removeLeaf,
+	splitLeaf,
+} from "@/lib/paneTree";
+import { type TabId, useTabsStore } from "@/stores/tabs";
+
 import Terminal from "./Terminal";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "./ui/resizable";
-
-type Orientation = "horizontal" | "vertical";
-
-type Leaf = { kind: "leaf"; id: string; cwd?: string };
-type Split = { kind: "split"; id: string; orientation: Orientation; children: Pane[] };
-type Pane = Leaf | Split;
 
 export type Corners = { tl: boolean; tr: boolean; bl: boolean; br: boolean };
 export type Edges = { t: boolean; r: boolean; b: boolean; l: boolean };
 const ALL_CORNERS: Corners = { tl: true, tr: true, bl: true, br: true };
 const ALL_EDGES: Edges = { t: true, r: true, b: true, l: true };
-
-let counter = 0;
-const nextId = (prefix: string): string => `${prefix}-${++counter}`;
-
-const splitLeaf = (tree: Pane, leafId: string, orientation: Orientation, newCwd?: string): Pane => {
-	if (tree.kind === "leaf") {
-		if (tree.id !== leafId) return tree;
-		return {
-			kind: "split",
-			id: nextId("split"),
-			orientation,
-			children: [tree, { kind: "leaf", id: nextId("leaf"), cwd: newCwd }],
-		};
-	}
-	return {
-		...tree,
-		children: tree.children.map((c) => splitLeaf(c, leafId, orientation, newCwd)),
-	};
-};
-
-const removeLeaf = (tree: Pane, leafId: string): Pane | null => {
-	if (tree.kind === "leaf") {
-		return tree.id === leafId ? null : tree;
-	}
-	const filtered = tree.children
-		.map((c) => removeLeaf(c, leafId))
-		.filter((c): c is Pane => c !== null);
-	if (filtered.length === 0) return null;
-	// Collapse split with a single remaining child.
-	if (filtered.length === 1) return filtered[0];
-	return { ...tree, children: filtered };
-};
 
 type LeafProps = {
 	leaf: Leaf;
@@ -195,26 +169,39 @@ function renderPane(node: Pane, ctx: RenderCtx, corners: Corners, edges: Edges):
 	);
 }
 
-function TerminalPanes(): React.JSX.Element {
-	const [tree, setTree] = useState<Pane>(() => ({
-		kind: "leaf",
-		id: nextId("leaf"),
-	}));
+type Props = {
+	workspaceId: WorkspaceId;
+	tabId: TabId;
+	defaultCwd: string;
+};
 
-	const handleSplit = useCallback(async (id: string, orientation: Orientation): Promise<void> => {
-		const cwd = (await getTerminalCwd(id)) ?? undefined;
-		setTree((t) => splitLeaf(t, id, orientation, cwd));
-	}, []);
+function PaneTree({ workspaceId, tabId, defaultCwd }: Props): React.JSX.Element | null {
+	const tree = useTabsStore((s) =>
+		s.byWorkspace[workspaceId as string]?.tabs.find((t) => t.id === tabId)?.tree,
+	);
+	const updateTree = useTabsStore((s) => s.updateTree);
 
-	const handleClose = useCallback((id: string): void => {
-		disposeTerminal(id);
-		setTree((t) => {
-			const next = removeLeaf(t, id);
-			// Don't allow closing the last pane — keep one leaf around.
-			if (next === null) return { kind: "leaf", id: nextId("leaf") };
-			return next;
-		});
-	}, []);
+	const handleSplit = useCallback(
+		async (id: string, orientation: Orientation): Promise<void> => {
+			const cwd = (await getTerminalCwd(id)) ?? defaultCwd;
+			updateTree(workspaceId, tabId, (t) => splitLeaf(t, id, orientation, cwd));
+		},
+		[workspaceId, tabId, defaultCwd, updateTree],
+	);
+
+	const handleClose = useCallback(
+		(id: string): void => {
+			disposeTerminal(id);
+			updateTree(workspaceId, tabId, (t) => {
+				const next = removeLeaf(t, id);
+				if (next === null) return makeLeaf(defaultCwd);
+				return next;
+			});
+		},
+		[workspaceId, tabId, defaultCwd, updateTree],
+	);
+
+	if (!tree) return null;
 
 	const ctx: RenderCtx = {
 		onSplit: handleSplit,
@@ -225,4 +212,4 @@ function TerminalPanes(): React.JSX.Element {
 	return <div className="h-full w-full">{renderPane(tree, ctx, ALL_CORNERS, ALL_EDGES)}</div>;
 }
 
-export default TerminalPanes;
+export default PaneTree;

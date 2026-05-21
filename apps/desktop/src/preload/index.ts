@@ -56,6 +56,10 @@ const menu = {
 		ipcRenderer.invoke("menu:popup", items),
 };
 
+const fileDialog = {
+	pickDirectory: (): Promise<string | null> => ipcRenderer.invoke("dialog:pick-directory"),
+};
+
 type CaffeinateStatus = { enabled: boolean; supported: boolean };
 
 const caffeinate = {
@@ -69,7 +73,7 @@ const caffeinate = {
 	},
 };
 
-const api = { terminal, menu, caffeinate };
+const api = { terminal, menu, caffeinate, dialog: fileDialog };
 
 if (process.contextIsolated) {
 	try {

@@ -1,7 +1,7 @@
 import { join } from "node:path";
 import { electronApp, is, optimizer } from "@electron-toolkit/utils";
 import type { MenuItemConstructorOptions } from "electron";
-import { app, BrowserWindow, ipcMain, Menu, nativeImage, shell } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, shell } from "electron";
 import icon from "../../resources/icon.png?asset";
 import { disposeCaffeinate, registerCaffeinateHandlers } from "./caffeinate";
 import { disposeAllSessions, primeWarmPool, registerPtyHandlers } from "./pty";
@@ -137,6 +137,18 @@ void app.whenReady().then(() => {
 	});
 
 	ipcMain.on("ping", () => console.log("pong"));
+
+	ipcMain.handle("dialog:pick-directory", async (event): Promise<string | null> => {
+		const win = BrowserWindow.fromWebContents(event.sender);
+		const options: Electron.OpenDialogOptions = {
+			properties: ["openDirectory", "createDirectory"],
+		};
+		const result = win
+			? await dialog.showOpenDialog(win, options)
+			: await dialog.showOpenDialog(options);
+		if (result.canceled || result.filePaths.length === 0) return null;
+		return result.filePaths[0] ?? null;
+	});
 
 	ipcMain.handle("menu:popup", (event, items: Array<MenuPopupItem>): Promise<string | null> => {
 		return new Promise((resolve) => {

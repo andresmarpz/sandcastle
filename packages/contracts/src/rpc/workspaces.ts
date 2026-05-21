@@ -47,6 +47,17 @@ export const WorkspacesListRpc = Rpc.make("workspaces.list", {
 	error: Schema.Union([ProjectNotFound, InternalError]),
 });
 
+export const WorkspacesGetPayload = Schema.Struct({
+	workspaceId: WorkspaceId,
+});
+export type WorkspacesGetPayload = typeof WorkspacesGetPayload.Type;
+
+export const WorkspacesGetRpc = Rpc.make("workspaces.get", {
+	payload: WorkspacesGetPayload,
+	success: Workspace,
+	error: Schema.Union([WorkspaceNotFound, InternalError]),
+});
+
 export const WorkspacesCreatePayload = Schema.Struct({
 	projectId: ProjectId,
 	name: Schema.String,

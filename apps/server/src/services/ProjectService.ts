@@ -18,7 +18,7 @@ import {
 import type { Project as ProjectEntity } from "@sandcastle/entities";
 import { Context, Effect, Layer } from "effect";
 
-import { newProjectId } from "../lib/ids.ts";
+import { newProjectId, newWorkspaceId } from "../lib/ids.ts";
 import { isAbsolutePath, pathStat } from "../lib/paths.ts";
 
 const toInternal = (cause: unknown): InternalError =>
@@ -129,6 +129,23 @@ export const layer: Layer.Layer<ProjectService, never, ProjectsRepo | Workspaces
 							Effect.catchTag("ProjectPathConflict", (err: ProjectPathConflictDb) =>
 								Effect.fail(new ProjectPathConflict({ rootPath: err.rootPath })),
 							),
+							Effect.catchTag("SqliteError", (cause: SqliteError) =>
+								Effect.fail(toInternal(cause)),
+							),
+						);
+
+					yield* workspaces
+						.create({
+							id: newWorkspaceId(),
+							projectId: id,
+							name: "main",
+							kind: "local",
+							path: AbsolutePath.make(input.rootPath),
+							branch: null,
+							baseBranch: null,
+						})
+						.pipe(
+							Effect.catchTag("WorkspacePathConflict", () => Effect.void),
 							Effect.catchTag("SqliteError", (cause: SqliteError) =>
 								Effect.fail(toInternal(cause)),
 							),

@@ -26,5 +26,9 @@
       "msgpackr-extract",
       "node-pty"
     ]
+  },
+  "dependencies": {
+    "@fontsource/ibm-plex-mono": "^5.2.7",
+    "desktop": "workspace:*"
   }
 }
