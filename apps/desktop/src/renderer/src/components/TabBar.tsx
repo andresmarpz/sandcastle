@@ -2,8 +2,10 @@ import type { WorkspaceId } from "@sandcastle/contracts";
 import { PlusIcon, XIcon } from "@phosphor-icons/react";
 import { useNavigate } from "@tanstack/react-router";
 
+import StackedIcons from "@/components/StackedIcons";
 import { Button } from "@/components/ui/button";
-import { collectLeafIds } from "@/lib/paneTree";
+import { useTabProcesses } from "@/hooks/useTabProcesses";
+import { collectLeafIds, type Pane } from "@/lib/paneTree";
 import { disposeTerminal } from "@/lib/terminalRegistry";
 import { cn } from "@/lib/utils";
 import { type TabId, useTabsStore } from "@/stores/tabs";
@@ -13,6 +15,65 @@ type Props = {
 	activeTabId: TabId;
 	defaultCwd: string;
 };
+
+type TabItemProps = {
+	id: TabId;
+	title: string;
+	tree: Pane;
+	isActive: boolean;
+	onSelect: () => void;
+	onClose: () => void;
+};
+
+function TabItem({
+	title,
+	tree,
+	isActive,
+	onSelect,
+	onClose,
+}: TabItemProps): React.JSX.Element {
+	// Active tab polls a bit faster — the user is most likely looking at it.
+	const procs = useTabProcesses({ tree, intervalMs: isActive ? 1000 : 2500 });
+
+	return (
+		<div
+			role="button"
+			tabIndex={0}
+			onClick={onSelect}
+			onKeyDown={(e) => {
+				if (e.key === "Enter" || e.key === " ") {
+					e.preventDefault();
+					onSelect();
+				}
+			}}
+			className={cn(
+				"no-drag group flex h-6 max-w-[200px] min-w-0 shrink-0 cursor-default items-center gap-1.5 rounded-md border px-2 text-xs",
+				isActive
+					? "border-border bg-card text-foreground"
+					: "border-transparent text-muted-foreground hover:bg-card/60",
+			)}
+		>
+			<StackedIcons
+				items={procs.map((p) => ({ key: p.leafId, kind: p.kind, label: p.comm ?? "" }))}
+				chipSurfaceClass={isActive ? "bg-card border-card" : "bg-background border-background"}
+			/>
+			<span className="min-w-0 flex-1 truncate text-left" title={title}>
+				{title}
+			</span>
+			<button
+				type="button"
+				onClick={(e) => {
+					e.stopPropagation();
+					onClose();
+				}}
+				aria-label="Close tab"
+				className="rounded p-0.5 opacity-0 group-hover:opacity-100 hover:bg-muted hover:text-foreground"
+			>
+				<XIcon size={10} />
+			</button>
+		</div>
+	);
+}
 
 function TabBar({ workspaceId, activeTabId, defaultCwd }: Props): React.JSX.Element {
 	const navigate = useNavigate();
@@ -64,37 +125,17 @@ function TabBar({ workspaceId, activeTabId, defaultCwd }: Props): React.JSX.Elem
 	return (
 		<div className="flex min-w-0 flex-1 items-center gap-1">
 			<div className="flex min-w-0 shrink items-center gap-1 overflow-x-auto">
-				{tabs.map((tab) => {
-					const isActive = tab.id === activeTabId;
-					return (
-						<div
-							key={tab.id}
-							className={cn(
-								"no-drag group flex h-6 max-w-[180px] min-w-0 shrink-0 items-center gap-1 rounded-md border px-2 text-xs",
-								isActive
-									? "border-border bg-card text-foreground"
-									: "border-transparent text-muted-foreground hover:bg-card/60",
-							)}
-						>
-							<button
-								type="button"
-								onClick={() => handleSelect(tab.id)}
-								className="min-w-0 flex-1 truncate text-left"
-								title={tab.title}
-							>
-								{tab.title}
-							</button>
-							<button
-								type="button"
-								onClick={() => handleClose(tab.id)}
-								aria-label="Close tab"
-								className="rounded p-0.5 opacity-0 group-hover:opacity-100 hover:bg-muted hover:text-foreground"
-							>
-								<XIcon size={10} />
-							</button>
-						</div>
-					);
-				})}
+				{tabs.map((tab) => (
+					<TabItem
+						key={tab.id}
+						id={tab.id}
+						title={tab.title}
+						tree={tab.tree}
+						isActive={tab.id === activeTabId}
+						onSelect={() => handleSelect(tab.id)}
+						onClose={() => handleClose(tab.id)}
+					/>
+				))}
 			</div>
 			<Button
 				type="button"

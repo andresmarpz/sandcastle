@@ -380,6 +380,10 @@ export const focusTerminal = (leafId: string): void => {
 	instances.get(leafId)?.xterm.focus();
 };
 
+export const getSessionId = (leafId: string): string | null => {
+	return instances.get(leafId)?.sessionId ?? null;
+};
+
 export const getTerminalCwd = async (leafId: string): Promise<string | null> => {
 	const inst = instances.get(leafId);
 	if (!inst) return null;
