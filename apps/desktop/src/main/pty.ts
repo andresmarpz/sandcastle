@@ -235,6 +235,110 @@ export const registerPtyHandlers = (): void => {
 		if (!session) return null;
 		return getProcessCwd(session.pty.pid);
 	});
+
+	ipcMain.handle("terminal:get-foreground-procs", async (_event, ids: string[]) => {
+		return getForegroundProcs(ids);
+	});
+};
+
+type ProcRow = { pid: number; ppid: number; stat: string; command: string };
+type ForegroundProc = { pid: number; comm: string; args: string };
+
+const parsePsRows = (stdout: string): ProcRow[] => {
+	const rows: ProcRow[] = [];
+	for (const line of stdout.split("\n")) {
+		if (!line.trim()) continue;
+		// "  pid  ppid stat  command with args..."
+		const m = line.match(/^\s*(\d+)\s+(\d+)\s+(\S+)\s+(.*)$/);
+		if (!m) continue;
+		rows.push({
+			pid: Number(m[1]),
+			ppid: Number(m[2]),
+			stat: m[3],
+			command: m[4],
+		});
+	}
+	return rows;
+};
+
+const commFromCommand = (command: string): string => {
+	// First whitespace-delimited token, basename only.
+	const first = command.split(/\s+/)[0] ?? "";
+	const slash = first.lastIndexOf("/");
+	return slash >= 0 ? first.slice(slash + 1) : first;
+};
+
+const pickForeground = (
+	shellPid: number,
+	childrenOf: Map<number, ProcRow[]>,
+): ForegroundProc | null => {
+	// Walk all descendants of the shell. Prefer the deepest descendant whose
+	// STAT contains '+' (member of the foreground process group). Falls back to
+	// the deepest descendant if none are marked foreground (rare; the shell is
+	// likely idle at the prompt then — return null so the UI shows no icon).
+	let best: { row: ProcRow; depth: number } | null = null;
+	const stack: Array<{ pid: number; depth: number }> = [{ pid: shellPid, depth: 0 }];
+	while (stack.length > 0) {
+		const { pid, depth } = stack.pop()!;
+		for (const child of childrenOf.get(pid) ?? []) {
+			if (child.stat.includes("+")) {
+				if (!best || depth + 1 > best.depth) {
+					best = { row: child, depth: depth + 1 };
+				}
+			}
+			stack.push({ pid: child.pid, depth: depth + 1 });
+		}
+	}
+	if (!best) return null;
+	const { row } = best;
+	return { pid: row.pid, comm: commFromCommand(row.command), args: row.command };
+};
+
+const getForegroundProcs = async (
+	ids: string[],
+): Promise<Record<string, ForegroundProc | null>> => {
+	const result: Record<string, ForegroundProc | null> = {};
+	const targets: Array<{ id: string; shellPid: number }> = [];
+	for (const id of ids) {
+		const session = sessions.get(id);
+		if (!session) {
+			result[id] = null;
+			continue;
+		}
+		targets.push({ id, shellPid: session.pty.pid });
+	}
+	if (targets.length === 0) return result;
+
+	if (process.platform === "win32") {
+		// node-pty on Windows uses ConPTY; no foreground-pgrp concept. Skip for now.
+		for (const t of targets) result[t.id] = null;
+		return result;
+	}
+
+	let stdout = "";
+	try {
+		// One ps call covers every session. -A: all processes, -o with trailing `=`
+		// suppresses headers and lets `command` consume the rest of the line.
+		const r = await execFileAsync("/bin/ps", ["-Ao", "pid=,ppid=,stat=,command="], {
+			maxBuffer: 8 * 1024 * 1024,
+		});
+		stdout = r.stdout;
+	} catch {
+		for (const t of targets) result[t.id] = null;
+		return result;
+	}
+
+	const rows = parsePsRows(stdout);
+	const childrenOf = new Map<number, ProcRow[]>();
+	for (const row of rows) {
+		const arr = childrenOf.get(row.ppid);
+		if (arr) arr.push(row);
+		else childrenOf.set(row.ppid, [row]);
+	}
+	for (const t of targets) {
+		result[t.id] = pickForeground(t.shellPid, childrenOf);
+	}
+	return result;
 };
 
 export const disposeAllSessions = (): void => {

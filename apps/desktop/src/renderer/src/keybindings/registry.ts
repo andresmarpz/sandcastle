@@ -139,7 +139,7 @@ export const KEYBINDINGS = {
 
 	"sidebar.toggle": {
 		id: "sidebar.toggle",
-		hotkey: "Mod+b",
+		hotkey: "Mod+B",
 		name: "Toggle sidebar",
 		description: "Show or hide the application sidebar",
 		group: "sidebar",
