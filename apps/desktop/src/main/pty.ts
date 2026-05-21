@@ -1,10 +1,10 @@
-import { execFile } from "child_process";
+import { execFile } from "node:child_process";
+import { promises as fs } from "node:fs";
+import os from "node:os";
+import process from "node:process";
+import { promisify } from "node:util";
 import { ipcMain, webContents } from "electron";
-import { promises as fs } from "fs";
 import * as nodePty from "node-pty";
-import os from "os";
-import process from "process";
-import { promisify } from "util";
 import { userEnvReady } from "./userEnv";
 
 const execFileAsync = promisify(execFile);
@@ -220,11 +220,7 @@ const scheduleReplenish = (): void => {
 	});
 };
 
-const adoptWarmPty = (
-	warm: WarmPty,
-	sender: Electron.WebContents,
-	opts: CreateOptions,
-): void => {
+const adoptWarmPty = (warm: WarmPty, sender: Electron.WebContents, opts: CreateOptions): void => {
 	// Detach buffer-capturing listeners. The buffered prompt was rendered at
 	// the warm size (WARM_COLS × WARM_ROWS) and would corrupt the visual at the
 	// renderer's actual size, so we discard it and force the shell to redraw.
@@ -288,7 +284,7 @@ export const registerPtyHandlers = (): void => {
 
 		if (isPoolable(opts) && warmPool.length > 0) {
 			const warm = warmPool.shift();
-			if (warm && warm.alive) {
+			if (warm?.alive) {
 				adoptWarmPty(warm, event.sender, opts);
 				scheduleReplenish();
 				return { ok: true };

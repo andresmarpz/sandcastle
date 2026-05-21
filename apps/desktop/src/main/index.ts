@@ -1,8 +1,9 @@
+import { join } from "node:path";
 import { electronApp, is, optimizer } from "@electron-toolkit/utils";
-import { app, BrowserWindow, ipcMain, Menu, nativeImage, shell } from "electron";
 import type { MenuItemConstructorOptions } from "electron";
-import { join } from "path";
+import { app, BrowserWindow, ipcMain, Menu, nativeImage, shell } from "electron";
 import icon from "../../resources/icon.png?asset";
+import { disposeCaffeinate, registerCaffeinateHandlers } from "./caffeinate";
 import { disposeAllSessions, primeWarmPool, registerPtyHandlers } from "./pty";
 import { captureUserEnv } from "./userEnv";
 
@@ -116,8 +117,8 @@ function createWindow(): void {
 		return { action: "deny" };
 	});
 
-	if (is.dev && process.env["ELECTRON_RENDERER_URL"]) {
-		void mainWindow.loadURL(process.env["ELECTRON_RENDERER_URL"]);
+	if (is.dev && process.env.ELECTRON_RENDERER_URL) {
+		void mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL);
 	} else {
 		void mainWindow.loadFile(join(__dirname, "../renderer/index.html"));
 	}
@@ -137,36 +138,34 @@ void app.whenReady().then(() => {
 
 	ipcMain.on("ping", () => console.log("pong"));
 
-	ipcMain.handle(
-		"menu:popup",
-		(event, items: Array<MenuPopupItem>): Promise<string | null> => {
-			return new Promise((resolve) => {
-				let resolved = false;
-				const template: MenuItemConstructorOptions[] = items.map((item) => {
-					if (item.type === "separator") return { type: "separator" };
-					return {
-						label: item.label,
-						enabled: item.enabled !== false,
-						accelerator: item.accelerator,
-						click: () => {
-							resolved = true;
-							resolve(item.id);
-						},
-					};
-				});
-				const menu = Menu.buildFromTemplate(template);
-				const win = BrowserWindow.fromWebContents(event.sender);
-				menu.popup({
-					window: win ?? undefined,
-					callback: () => {
-						if (!resolved) resolve(null);
+	ipcMain.handle("menu:popup", (event, items: Array<MenuPopupItem>): Promise<string | null> => {
+		return new Promise((resolve) => {
+			let resolved = false;
+			const template: MenuItemConstructorOptions[] = items.map((item) => {
+				if (item.type === "separator") return { type: "separator" };
+				return {
+					label: item.label,
+					enabled: item.enabled !== false,
+					accelerator: item.accelerator,
+					click: () => {
+						resolved = true;
+						resolve(item.id);
 					},
-				});
+				};
 			});
-		},
-	);
+			const menu = Menu.buildFromTemplate(template);
+			const win = BrowserWindow.fromWebContents(event.sender);
+			menu.popup({
+				window: win ?? undefined,
+				callback: () => {
+					if (!resolved) resolve(null);
+				},
+			});
+		});
+	});
 
 	registerPtyHandlers();
+	registerCaffeinateHandlers();
 	primeWarmPool();
 
 	createWindow();
@@ -191,4 +190,5 @@ app.on("window-all-closed", () => {
 
 app.on("before-quit", () => {
 	disposeAllSessions();
+	disposeCaffeinate();
 });

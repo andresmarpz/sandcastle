@@ -1,3 +1,4 @@
+import CaffeinateButton from "@/components/CaffeinateButton";
 import ThemeSwitcher from "@/components/ThemeSwitcher";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
@@ -15,6 +16,7 @@ function TopBar(): React.JSX.Element {
 		>
 			<SidebarTrigger className="no-drag" />
 			<div className="flex-1" />
+			<CaffeinateButton />
 			<ThemeSwitcher />
 		</header>
 	);

@@ -1,25 +1,20 @@
-export * from "./errors.ts"
 export {
-  Sqlite,
-  layer as sqliteLayer,
-  type RunResult,
-  type SqliteValue,
-} from "./client.ts"
-export * as Migrations from "./migrations.ts"
+	layer as sqliteLayer,
+	type RunResult,
+	Sqlite,
+	type SqliteValue,
+} from "./client.ts";
+export * from "./errors.ts";
+export * as Migrations from "./migrations.ts";
 
 export {
-  Workspaces,
-  layer as workspacesLayer,
-  type CreateWorkspaceInput,
-} from "./repos/workspaces.ts"
+	type CreateProjectInput,
+	layer as projectsLayer,
+	Projects,
+} from "./repos/projects.ts";
 export {
-  Sessions,
-  layer as sessionsLayer,
-  type CreateSessionInput,
-  type SessionPatch,
-} from "./repos/sessions.ts"
-export {
-  Blobs,
-  layer as blobsLayer,
-  type UpsertBlobInput,
-} from "./repos/blobs.ts"
+	type CreateWorkspaceInput,
+	type ListWorkspacesFilter,
+	layer as workspacesLayer,
+	Workspaces,
+} from "./repos/workspaces.ts";

@@ -6,8 +6,7 @@ import { Socket } from "effect/unstable/socket";
 
 const DEFAULT_URL = "ws://127.0.0.1:7421/rpc";
 
-const url =
-	(import.meta.env.VITE_SANDCASTLE_URL as string | undefined) ?? DEFAULT_URL;
+const url = (import.meta.env.VITE_SANDCASTLE_URL as string | undefined) ?? DEFAULT_URL;
 
 const SocketLive = Socket.layerWebSocket(url).pipe(
 	Layer.provide(Socket.layerWebSocketConstructorGlobal),

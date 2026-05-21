@@ -8,9 +8,10 @@
 			"!**/out",
 			"!**/build",
 			"!**/.turbo",
-			"!resources",
+			"!**/*.tsbuildinfo",
+			"!apps/desktop/resources",
 			"!pnpm-lock.yaml",
-			"!tsconfig*.json"
+			"!**/tsconfig*.json"
 		]
 	},
 	"linter": {
@@ -44,12 +45,13 @@
 	},
 	"overrides": [
 		{
-			"includes": ["src/renderer/src/components/ui/**"],
+			"includes": ["apps/desktop/src/renderer/src/components/ui/**"],
 			"linter": {
 				"rules": {
 					"suspicious": {
 						"noExplicitAny": "off",
-						"noArrayIndexKey": "off"
+						"noArrayIndexKey": "off",
+						"noDocumentCookie": "off"
 					},
 					"a11y": {
 						"useKeyWithClickEvents": "off",
@@ -57,7 +59,8 @@
 						"useSemanticElements": "off"
 					},
 					"correctness": {
-						"useUniqueElementIds": "off"
+						"useUniqueElementIds": "off",
+						"useExhaustiveDependencies": "off"
 					}
 				}
 			}

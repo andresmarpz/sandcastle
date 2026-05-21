@@ -12,6 +12,17 @@
     },
     "typecheck": {
       "dependsOn": ["^build"]
+    },
+    "lint": {},
+    "lint:fix": {
+      "cache": false
+    },
+    "format": {
+      "cache": false
+    },
+    "check": {},
+    "check:fix": {
+      "cache": false
     }
   }
 }

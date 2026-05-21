@@ -69,5 +69,4 @@ export const captureUserEnv = (): Promise<void> => {
 	return promise;
 };
 
-export const userEnvReady = (): Promise<void> =>
-	promise ?? Promise.resolve();
+export const userEnvReady = (): Promise<void> => promise ?? Promise.resolve();

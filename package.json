@@ -6,9 +6,17 @@
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",
-    "typecheck": "turbo run typecheck"
+    "typecheck": "turbo run typecheck",
+    "lint": "turbo run lint",
+    "lint:fix": "turbo run lint:fix",
+    "format": "turbo run format",
+    "check": "turbo run check",
+    "check:fix": "turbo run check:fix",
+    "quality": "turbo run typecheck check",
+    "quality:fix": "turbo run typecheck check:fix"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.15",
     "turbo": "^2.9.6"
   },
   "pnpm": {
