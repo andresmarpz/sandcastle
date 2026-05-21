@@ -2,7 +2,6 @@ import { CanvasAddon } from "@xterm/addon-canvas";
 import { FitAddon } from "@xterm/addon-fit";
 import { SearchAddon } from "@xterm/addon-search";
 import { WebLinksAddon } from "@xterm/addon-web-links";
-import { WebglAddon } from "@xterm/addon-webgl";
 import { type ITheme, Terminal as XTerm } from "@xterm/xterm";
 
 type CreateOptions = {
@@ -26,7 +25,8 @@ type Instance = {
 	disposed: boolean;
 };
 
-const FONT_FAMILY = '"JetBrainsMono Nerd Font", "MesloLGS NF", "Menlo", "Monaco", monospace';
+const FONT_FAMILY =
+	'"IBM Plex Mono", "Symbols Nerd Font Mono", "Symbols Nerd Font", "JetBrainsMono Nerd Font", "MesloLGS NF", "Menlo", "Monaco", monospace';
 
 export type TerminalThemeMode = "light" | "dark";
 
@@ -95,10 +95,13 @@ const createXterm = (): { xterm: XTerm; fit: FitAddon; search: SearchAddon } => 
 	const xterm = new XTerm({
 		fontFamily: FONT_FAMILY,
 		fontSize: 13,
+		fontWeight: 400,
+		fontWeightBold: 700,
 		lineHeight: 1,
 		letterSpacing: 0,
 		cursorBlink: false,
 		allowProposedApi: true,
+		customGlyphs: true,
 		scrollback: 10000,
 		macOptionIsMeta: true,
 		rightClickSelectsWord: true,
@@ -110,22 +113,6 @@ const createXterm = (): { xterm: XTerm; fit: FitAddon; search: SearchAddon } => 
 	xterm.loadAddon(search);
 	xterm.loadAddon(new WebLinksAddon());
 	return { xterm, fit, search };
-};
-
-const loadPostOpenAddons = (xterm: XTerm): RendererType => {
-	try {
-		const webgl = new WebglAddon();
-		webgl.onContextLoss(() => webgl.dispose());
-		xterm.loadAddon(webgl);
-		return "webgl";
-	} catch {
-		try {
-			xterm.loadAddon(new CanvasAddon());
-			return "canvas";
-		} catch {
-			return "dom";
-		}
-	}
 };
 
 const safeFit = (inst: Instance): void => {
@@ -153,7 +140,13 @@ const createInstance = (leafId: string, container: HTMLElement, opts: CreateOpti
 	const sessionId = `term-${leafId}-${Date.now()}`;
 
 	xterm.open(container);
-	const rendererType = loadPostOpenAddons(xterm);
+	let rendererType: RendererType = "dom";
+	try {
+		xterm.loadAddon(new CanvasAddon());
+		rendererType = "canvas";
+	} catch {
+		// fall back to DOM renderer
+	}
 
 	// macOS line-editing shortcuts that xterm.js doesn't bind by default.
 	// We intercept before xterm processes the key, then write the equivalent

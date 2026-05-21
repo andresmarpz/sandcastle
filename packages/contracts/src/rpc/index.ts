@@ -6,7 +6,12 @@ import {
 	ProjectsListRpc,
 	ProjectsRenameRpc,
 } from "./projects.ts";
-import { WorkspacesCreateRpc, WorkspacesDeleteRpc, WorkspacesListRpc } from "./workspaces.ts";
+import {
+	WorkspacesCreateRpc,
+	WorkspacesDeleteRpc,
+	WorkspacesGetRpc,
+	WorkspacesListRpc,
+} from "./workspaces.ts";
 
 /**
  * Single WS RPC group exposed at `/rpc`. Terminal I/O (attach/write/resize)
@@ -18,6 +23,7 @@ export const SandcastleRpc = RpcGroup.make(
 	ProjectsRenameRpc,
 	ProjectsDeleteRpc,
 	WorkspacesListRpc,
+	WorkspacesGetRpc,
 	WorkspacesCreateRpc,
 	WorkspacesDeleteRpc,
 );

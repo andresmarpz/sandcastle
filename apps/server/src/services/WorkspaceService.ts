@@ -83,6 +83,9 @@ export interface WorkspaceServiceShape {
 	readonly list: (
 		projectId: ProjectId,
 	) => Effect.Effect<ReadonlyArray<WorkspaceWire>, ProjectNotFound | InternalError>;
+	readonly get: (
+		workspaceId: WorkspaceId,
+	) => Effect.Effect<WorkspaceWire, WorkspaceNotFound | InternalError>;
 	readonly create: (input: {
 		readonly projectId: ProjectId;
 		readonly name: string;
@@ -122,6 +125,17 @@ export const layer: Layer.Layer<
 				}
 				const rows = yield* workspaces.list({ projectId }).pipe(Effect.mapError(toInternal));
 				return rows.map(toWire);
+			});
+
+		const get: WorkspaceServiceShape["get"] = (workspaceId) =>
+			Effect.gen(function* () {
+				const row = yield* workspaces.getById(workspaceId).pipe(Effect.mapError(toInternal));
+				if (row === null || row.deletedAt !== null) {
+					return yield* Effect.fail(
+						new WorkspaceNotFound({ workspaceId: workspaceId as string }),
+					);
+				}
+				return toWire(row);
 			});
 
 		const create: WorkspaceServiceShape["create"] = (input) =>
@@ -254,6 +268,6 @@ export const layer: Layer.Layer<
 				);
 			});
 
-		return WorkspaceService.of({ list, create, delete: del });
+		return WorkspaceService.of({ list, get, create, delete: del });
 	}),
 );
