@@ -24,7 +24,7 @@ export const splitLeaf = (
 	tree: Pane,
 	leafId: string,
 	orientation: Orientation,
-	newCwd?: string,
+	newLeaf: Leaf,
 ): Pane => {
 	if (tree.kind === "leaf") {
 		if (tree.id !== leafId) return tree;
@@ -32,12 +32,12 @@ export const splitLeaf = (
 			kind: "split",
 			id: nextPaneId("split"),
 			orientation,
-			children: [tree, makeLeaf(newCwd)],
+			children: [tree, newLeaf],
 		};
 	}
 	return {
 		...tree,
-		children: tree.children.map((c) => splitLeaf(c, leafId, orientation, newCwd)),
+		children: tree.children.map((c) => splitLeaf(c, leafId, orientation, newLeaf)),
 	};
 };
 

@@ -31,6 +31,7 @@ type LeafProps = {
 	edges: Edges;
 	onSplit: (id: string, orientation: Orientation) => void;
 	onClose: (id: string) => void;
+	onFocus: (id: string) => void;
 	canClose: boolean;
 };
 
@@ -40,6 +41,7 @@ function LeafPane({
 	edges,
 	onSplit,
 	onClose,
+	onFocus,
 	canClose,
 }: LeafProps): React.JSX.Element {
 	const handleKeyDown = (e: React.KeyboardEvent): void => {
@@ -68,6 +70,7 @@ function LeafPane({
 			data-leaf-id={leaf.id}
 			className="group relative h-full w-full"
 			onKeyDownCapture={handleKeyDown}
+			onFocusCapture={() => onFocus(leaf.id)}
 		>
 			<Terminal
 				leafId={leaf.id}
@@ -111,6 +114,7 @@ function LeafPane({
 type RenderCtx = {
 	onSplit: (id: string, orientation: Orientation) => void;
 	onClose: (id: string) => void;
+	onFocus: (id: string) => void;
 	rootIsLeaf: boolean;
 };
 
@@ -196,6 +200,7 @@ function renderPane(node: Pane, ctx: RenderCtx, corners: Corners, edges: Edges):
 				edges={edges}
 				onSplit={ctx.onSplit}
 				onClose={ctx.onClose}
+				onFocus={ctx.onFocus}
 				canClose={!ctx.rootIsLeaf}
 			/>
 		);
@@ -215,13 +220,23 @@ function PaneTree({ workspaceId, tabId, defaultCwd }: Props): React.JSX.Element 
 	const tree = tabs?.find((t) => t.id === tabId)?.tree;
 	const updateTree = useTabsStore((s) => s.updateTree);
 	const closeTab = useTabsStore((s) => s.closeTab);
+	const setActiveLeaf = useTabsStore((s) => s.setActiveLeaf);
 
 	const handleSplit = useCallback(
 		async (id: string, orientation: Orientation): Promise<void> => {
 			const cwd = (await getTerminalCwd(id)) ?? defaultCwd;
-			updateTree(workspaceId, tabId, (t) => splitLeaf(t, id, orientation, cwd));
+			const newLeaf = makeLeaf(cwd);
+			updateTree(workspaceId, tabId, (t) => splitLeaf(t, id, orientation, newLeaf));
+			setActiveLeaf(workspaceId, tabId, newLeaf.id);
 		},
-		[workspaceId, tabId, defaultCwd, updateTree],
+		[workspaceId, tabId, defaultCwd, updateTree, setActiveLeaf],
+	);
+
+	const handleFocus = useCallback(
+		(id: string): void => {
+			setActiveLeaf(workspaceId, tabId, id);
+		},
+		[workspaceId, tabId, setActiveLeaf],
 	);
 
 	const handleClose = useCallback(
@@ -232,11 +247,18 @@ function PaneTree({ workspaceId, tabId, defaultCwd }: Props): React.JSX.Element 
 			// teardown — if disposeTerminal ever throws, we've already removed the
 			// leaf from the tree so the pane disappears rather than getting stuck.
 			if (leafIds.length > 1) {
+				let fallbackLeafId: string | null = null;
 				updateTree(workspaceId, tabId, (t) => {
 					const next = removeLeaf(t, id);
-					if (next === null) return makeLeaf(defaultCwd);
+					if (next === null) {
+						const replacement = makeLeaf(defaultCwd);
+						fallbackLeafId = replacement.id;
+						return replacement;
+					}
+					fallbackLeafId = collectLeafIds(next)[0] ?? null;
 					return next;
 				});
+				if (fallbackLeafId) setActiveLeaf(workspaceId, tabId, fallbackLeafId);
 				disposeTerminal(id);
 				return;
 			}
@@ -261,7 +283,7 @@ function PaneTree({ workspaceId, tabId, defaultCwd }: Props): React.JSX.Element 
 				});
 			}
 		},
-		[workspaceId, tabId, defaultCwd, tree, tabs, updateTree, closeTab, navigate],
+		[workspaceId, tabId, defaultCwd, tree, tabs, updateTree, closeTab, setActiveLeaf, navigate],
 	);
 
 	if (!tree) return null;
@@ -269,6 +291,7 @@ function PaneTree({ workspaceId, tabId, defaultCwd }: Props): React.JSX.Element 
 	const ctx: RenderCtx = {
 		onSplit: handleSplit,
 		onClose: handleClose,
+		onFocus: handleFocus,
 		rootIsLeaf: tree.kind === "leaf",
 	};
 

@@ -5,6 +5,8 @@ import DebugOverlay from "@/components/DebugOverlay";
 import SidebarResizeHandle from "@/components/SidebarResizeHandle";
 import TopBar from "@/components/TopBar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import ProjectKeybindings from "@/keybindings/ProjectKeybindings";
+import SidebarKeybindings from "@/keybindings/SidebarKeybindings";
 import { cn } from "@/lib/utils";
 
 const DEFAULT_SIDEBAR_WIDTH = 256;
@@ -20,7 +22,7 @@ function Layout({ children }: Props): React.JSX.Element {
 	return (
 		<SidebarProvider
 			className={cn(
-				"h-full min-h-0 flex-col bg-sidebar",
+				"h-full min-h-0 flex-col bg-background",
 				isResizing &&
 					"[&_[data-slot=sidebar-gap]]:!transition-none [&_[data-slot=sidebar-container]]:!transition-none",
 			)}
@@ -36,7 +38,7 @@ function Layout({ children }: Props): React.JSX.Element {
 				style={{ contain: "layout" } as React.CSSProperties}
 			>
 				<AppSidebar />
-				<SidebarInset className="relative min-w-0 overflow-hidden bg-card md:peer-data-[variant=inset]:border-0">
+				<SidebarInset className="relative min-w-0 overflow-hidden bg-card">
 					{children}
 				</SidebarInset>
 				<SidebarResizeHandle
@@ -45,6 +47,8 @@ function Layout({ children }: Props): React.JSX.Element {
 					onResizingChange={setIsResizing}
 				/>
 			</div>
+			<ProjectKeybindings />
+			<SidebarKeybindings />
 			{import.meta.env.DEV && <DebugOverlay />}
 		</SidebarProvider>
 	);

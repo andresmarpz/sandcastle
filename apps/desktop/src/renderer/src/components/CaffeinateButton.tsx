@@ -50,10 +50,7 @@ function CaffeinateButton(): React.JSX.Element | null {
 		>
 			<CoffeeIcon
 				weight={enabled ? "fill" : "regular"}
-				className={cn(
-					"size-4 transition-colors",
-					enabled ? "text-foreground" : "text-muted-foreground",
-				)}
+				className={cn("size-4", enabled ? "text-foreground" : "text-foreground-tertiary")}
 			/>
 		</Button>
 	);
