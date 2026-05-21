@@ -1,14 +1,17 @@
 import { join } from "node:path";
 import { electronApp, is, optimizer } from "@electron-toolkit/utils";
 import type { MenuItemConstructorOptions } from "electron";
-import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, shell } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, screen, shell } from "electron";
 import icon from "../../resources/icon.png?asset";
 import { disposeCaffeinate, registerCaffeinateHandlers } from "./caffeinate";
-import { disposeAllSessions, primeWarmPool, registerPtyHandlers } from "./pty";
+import { disposeAllSessions, registerPtyHandlers } from "./pty";
 import { captureUserEnv } from "./userEnv";
 
-const APP_ID = "com.sandcastle.desktop";
-const APP_NAME = "Sandcastle";
+// Use a distinct identity for unpackaged (dev / preview) runs so a packaged
+// "stable" install can run alongside `electron-vite dev` without colliding on
+// the single-instance lock or sharing userData with the production build.
+const APP_ID = app.isPackaged ? "com.sandcastle.desktop" : "com.sandcastle.desktop.dev";
+const APP_NAME = app.isPackaged ? "Sandcastle" : "Sandcastle Dev";
 
 type MenuPopupItem =
 	| { type: "separator" }
@@ -19,6 +22,53 @@ type MenuPopupItem =
 			enabled?: boolean;
 			accelerator?: string;
 	  };
+
+// Electron's default macOS menu binds Cmd+W to "Close Window", which races with
+// our renderer-owned pane/tab close logic. Install a minimal menu that omits
+// that accelerator so the renderer is the only Cmd+W handler.
+const installApplicationMenu = (): void => {
+	const isMac = process.platform === "darwin";
+	const template: MenuItemConstructorOptions[] = [];
+
+	if (isMac) {
+		template.push({
+			label: app.name,
+			submenu: [
+				{ role: "about" },
+				{ type: "separator" },
+				{ role: "services" },
+				{ type: "separator" },
+				{ role: "hide" },
+				{ role: "hideOthers" },
+				{ role: "unhide" },
+				{ type: "separator" },
+				{ role: "quit" },
+			],
+		});
+	}
+
+	template.push({
+		label: "Edit",
+		submenu: [
+			{ role: "undo" },
+			{ role: "redo" },
+			{ type: "separator" },
+			{ role: "cut" },
+			{ role: "copy" },
+			{ role: "paste" },
+			{ role: "selectAll" },
+		],
+	});
+
+	template.push({
+		label: "Window",
+		submenu: isMac
+			? [{ role: "minimize" }, { role: "zoom" }, { type: "separator" }, { role: "front" }]
+			: [{ role: "minimize" }],
+	});
+
+	Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+};
 
 app.setName(APP_NAME);
 app.setAppUserModelId(APP_ID);
@@ -33,10 +83,27 @@ if (!app.requestSingleInstanceLock()) {
 // without each pane re-running a login shell.
 void captureUserEnv();
 
+function getInitialWindowSize(): { width: number; height: number } {
+	const cursorPoint = screen.getCursorScreenPoint();
+	const { workAreaSize } = screen.getDisplayNearestPoint(cursorPoint);
+	// Treat anything ≥ ~2.2K wide as a large external display (4K, ultrawide, etc.).
+	// On laptop-class displays use ~80% width and full height; on large displays
+	// clamp to a comfortable size so the window doesn't spawn tiny on a 4K panel.
+	const isLargeDisplay = workAreaSize.width >= 2200;
+	const width = isLargeDisplay
+		? Math.max(1680, Math.round(workAreaSize.width * 0.6))
+		: Math.round(workAreaSize.width * 0.8);
+	const height = isLargeDisplay
+		? Math.max(1260, Math.round(workAreaSize.height * 0.7))
+		: workAreaSize.height;
+	return { width, height };
+}
+
 function createWindow(): void {
+	const { width, height } = getInitialWindowSize();
 	const mainWindow = new BrowserWindow({
-		width: 1200,
-		height: 960,
+		width,
+		height,
 		show: false,
 		autoHideMenuBar: true,
 		title: APP_NAME,
@@ -176,10 +243,14 @@ void app.whenReady().then(() => {
 		});
 	});
 
+	ipcMain.on("window:close", (event) => {
+		BrowserWindow.fromWebContents(event.sender)?.close();
+	});
+
 	registerPtyHandlers();
 	registerCaffeinateHandlers();
-	primeWarmPool();
 
+	installApplicationMenu();
 	createWindow();
 
 	app.on("activate", () => {

@@ -3,6 +3,7 @@ import type { WorkspaceId } from "@sandcastle/contracts";
 import { Cause } from "effect";
 
 import PaneTree from "@/components/PaneTree";
+import WorkspaceKeybindings from "@/keybindings/WorkspaceKeybindings";
 import { Client } from "@/rpc/client";
 import { type TabId, useTabsStore } from "@/stores/tabs";
 
@@ -40,6 +41,7 @@ function WorkspaceView({ workspaceId, tabId }: Props): React.JSX.Element {
 
 	return (
 		<div className="min-h-0 flex-1">
+			<WorkspaceKeybindings workspaceId={workspaceId} tabId={tabId} />
 			<PaneTree workspaceId={workspaceId} tabId={tabId} defaultCwd={defaultCwd} />
 		</div>
 	);

@@ -9,8 +9,10 @@ export type Split = {
 };
 export type Pane = Leaf | Split;
 
-let counter = 0;
-export const nextPaneId = (prefix: string): string => `${prefix}-${++counter}`;
+// UUIDs avoid collisions when the renderer reloads with a persisted tree:
+// a module-level counter would reset to 0 while leaves like `leaf-7` survive,
+// so the next split would eventually mint a colliding id.
+export const nextPaneId = (prefix: string): string => `${prefix}-${crypto.randomUUID()}`;
 
 export const makeLeaf = (cwd?: string): Leaf => ({
 	kind: "leaf",
@@ -54,4 +56,23 @@ export const removeLeaf = (tree: Pane, leafId: string): Pane | null => {
 export const collectLeafIds = (tree: Pane): string[] => {
 	if (tree.kind === "leaf") return [tree.id];
 	return tree.children.flatMap(collectLeafIds);
+};
+
+export type PathStep = { split: Split; childIndex: number };
+
+/**
+ * Walk from `tree` down to the leaf with `leafId`. Returns the sequence of
+ * (parent split, child index) steps along the path. Empty path means the leaf
+ * is the root (no parent splits exist).
+ */
+export const pathToLeaf = (tree: Pane, leafId: string): PathStep[] | null => {
+	if (tree.kind === "leaf") {
+		return tree.id === leafId ? [] : null;
+	}
+	for (let i = 0; i < tree.children.length; i++) {
+		const child = tree.children[i];
+		const sub = pathToLeaf(child, leafId);
+		if (sub !== null) return [{ split: tree, childIndex: i }, ...sub];
+	}
+	return null;
 };

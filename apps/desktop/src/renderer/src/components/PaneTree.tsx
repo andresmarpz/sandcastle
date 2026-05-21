@@ -1,9 +1,13 @@
 import type { WorkspaceId } from "@sandcastle/contracts";
+import { useNavigate } from "@tanstack/react-router";
 import { Columns2, Rows2, X } from "lucide-react";
-import { Fragment, useCallback } from "react";
+import { Fragment, useCallback, useEffect, useRef } from "react";
+import type { ImperativePanelGroupHandle } from "react-resizable-panels";
 
+import { registerPanelGroup, unregisterPanelGroup } from "@/lib/panelGroupRegistry";
 import { disposeTerminal, getTerminalCwd } from "@/lib/terminalRegistry";
 import {
+	collectLeafIds,
 	type Leaf,
 	makeLeaf,
 	type Orientation,
@@ -51,7 +55,8 @@ function LeafPane({
 			e.stopPropagation();
 			onSplit(leaf.id, "vertical");
 		} else if (key === "w") {
-			if (!canClose) return;
+			// Always swallow Cmd+W and delegate to onClose — the handler decides
+			// whether to close the pane, the tab, or the window.
 			e.preventDefault();
 			e.stopPropagation();
 			onClose(leaf.id);
@@ -59,7 +64,11 @@ function LeafPane({
 	};
 
 	return (
-		<div className="group relative h-full w-full" onKeyDownCapture={handleKeyDown}>
+		<div
+			data-leaf-id={leaf.id}
+			className="group relative h-full w-full"
+			onKeyDownCapture={handleKeyDown}
+		>
 			<Terminal
 				leafId={leaf.id}
 				cwd={leaf.cwd}
@@ -105,23 +114,32 @@ type RenderCtx = {
 	rootIsLeaf: boolean;
 };
 
-function renderPane(node: Pane, ctx: RenderCtx, corners: Corners, edges: Edges): React.ReactNode {
-	if (node.kind === "leaf") {
-		return (
-			<LeafPane
-				leaf={node}
-				corners={corners}
-				edges={edges}
-				onSplit={ctx.onSplit}
-				onClose={ctx.onClose}
-				canClose={!ctx.rootIsLeaf}
-			/>
-		);
-	}
+type SplitProps = {
+	node: Extract<Pane, { kind: "split" }>;
+	ctx: RenderCtx;
+	corners: Corners;
+	edges: Edges;
+};
+
+function SplitPane({ node, ctx, corners, edges }: SplitProps): React.JSX.Element {
 	const isHorizontal = node.orientation === "horizontal";
 	const lastIdx = node.children.length - 1;
+	const groupRef = useRef<ImperativePanelGroupHandle | null>(null);
+
+	useEffect(() => {
+		const handle = groupRef.current;
+		if (!handle) return;
+		registerPanelGroup(node.id, handle);
+		return () => unregisterPanelGroup(node.id);
+	}, [node.id]);
+
 	return (
-		<ResizablePanelGroup orientation={node.orientation} id={node.id} className="overflow-visible!">
+		<ResizablePanelGroup
+			ref={groupRef}
+			orientation={node.orientation}
+			id={node.id}
+			className="overflow-visible!"
+		>
 			{node.children.map((child, i) => {
 				const isFirst = i === 0;
 				const isLast = i === lastIdx;
@@ -169,6 +187,22 @@ function renderPane(node: Pane, ctx: RenderCtx, corners: Corners, edges: Edges):
 	);
 }
 
+function renderPane(node: Pane, ctx: RenderCtx, corners: Corners, edges: Edges): React.ReactNode {
+	if (node.kind === "leaf") {
+		return (
+			<LeafPane
+				leaf={node}
+				corners={corners}
+				edges={edges}
+				onSplit={ctx.onSplit}
+				onClose={ctx.onClose}
+				canClose={!ctx.rootIsLeaf}
+			/>
+		);
+	}
+	return <SplitPane node={node} ctx={ctx} corners={corners} edges={edges} />;
+}
+
 type Props = {
 	workspaceId: WorkspaceId;
 	tabId: TabId;
@@ -176,10 +210,11 @@ type Props = {
 };
 
 function PaneTree({ workspaceId, tabId, defaultCwd }: Props): React.JSX.Element | null {
-	const tree = useTabsStore((s) =>
-		s.byWorkspace[workspaceId as string]?.tabs.find((t) => t.id === tabId)?.tree,
-	);
+	const navigate = useNavigate();
+	const tabs = useTabsStore((s) => s.byWorkspace[workspaceId as string]?.tabs);
+	const tree = tabs?.find((t) => t.id === tabId)?.tree;
 	const updateTree = useTabsStore((s) => s.updateTree);
+	const closeTab = useTabsStore((s) => s.closeTab);
 
 	const handleSplit = useCallback(
 		async (id: string, orientation: Orientation): Promise<void> => {
@@ -191,14 +226,42 @@ function PaneTree({ workspaceId, tabId, defaultCwd }: Props): React.JSX.Element 
 
 	const handleClose = useCallback(
 		(id: string): void => {
-			disposeTerminal(id);
-			updateTree(workspaceId, tabId, (t) => {
-				const next = removeLeaf(t, id);
-				if (next === null) return makeLeaf(defaultCwd);
-				return next;
-			});
+			if (!tree) return;
+			const leafIds = collectLeafIds(tree);
+			// Multiple panes in the tab: just close this one. State first, then
+			// teardown — if disposeTerminal ever throws, we've already removed the
+			// leaf from the tree so the pane disappears rather than getting stuck.
+			if (leafIds.length > 1) {
+				updateTree(workspaceId, tabId, (t) => {
+					const next = removeLeaf(t, id);
+					if (next === null) return makeLeaf(defaultCwd);
+					return next;
+				});
+				disposeTerminal(id);
+				return;
+			}
+			// Last pane in the tab: escalate. Close the tab — and if it was the
+			// last tab in the workspace, close the window.
+			const wasLastTab = (tabs?.length ?? 0) <= 1;
+			const nextActive = closeTab(workspaceId, tabId);
+			for (const leafId of leafIds) disposeTerminal(leafId);
+			if (wasLastTab) {
+				window.api.window.close();
+				return;
+			}
+			if (nextActive) {
+				void navigate({
+					to: "/workspaces/$wsId/tabs/$tabId",
+					params: { wsId: workspaceId as string, tabId: nextActive },
+				});
+			} else {
+				void navigate({
+					to: "/workspaces/$wsId",
+					params: { wsId: workspaceId as string },
+				});
+			}
 		},
-		[workspaceId, tabId, defaultCwd, updateTree],
+		[workspaceId, tabId, defaultCwd, tree, tabs, updateTree, closeTab, navigate],
 	);
 
 	if (!tree) return null;

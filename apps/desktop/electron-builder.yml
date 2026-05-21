@@ -1,5 +1,5 @@
-appId: com.electron.app
-productName: react-ts
+appId: com.sandcastle.desktop
+productName: Sandcastle
 directories:
   buildResources: build
 files:
@@ -13,7 +13,7 @@ asarUnpack:
   - resources/**
   - "**/node_modules/node-pty/**"
 win:
-  executableName: react-ts
+  executableName: Sandcastle
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}

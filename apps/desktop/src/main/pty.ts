@@ -15,21 +15,8 @@ type Session = {
 	webContentsId: number;
 };
 
-type WarmPty = {
-	pty: nodePty.IPty;
-	buffer: string;
-	dataListener: nodePty.IDisposable;
-	exitListener: nodePty.IDisposable;
-	alive: boolean;
-};
-
 const sessions = new Map<string, Session>();
 const watchedRenderers = new Set<number>();
-const warmPool: WarmPty[] = [];
-const POOL_SIZE = 1;
-const WARM_COLS = 100;
-const WARM_ROWS = 30;
-let replenishScheduled = false;
 
 const defaultShell = (): string => {
 	if (process.platform === "win32") {
@@ -63,19 +50,64 @@ type CreateOptions = {
 	env?: Record<string, string>;
 };
 
+// Grace window we give a shell + its foreground job (e.g. a TUI like Claude)
+// to handle SIGHUP and unwind cleanly before we force-kill the whole group.
+const KILL_GRACE_MS = 2000;
+
 const killTree = (pty: nodePty.IPty): void => {
-	try {
-		if (process.platform !== "win32") {
-			try {
-				process.kill(-pty.pid, "SIGHUP");
-			} catch {
-				// fall through to direct kill
-			}
+	if (process.platform === "win32") {
+		try {
+			pty.kill();
+		} catch {
+			// already gone
 		}
+		return;
+	}
+
+	const pid = pty.pid;
+
+	// Watch for the leader exiting so we don't escalate to SIGKILL after the
+	// PID has potentially been recycled by the kernel for an unrelated process.
+	let exited = false;
+	let exitSub: nodePty.IDisposable | null = null;
+	try {
+		exitSub = pty.onExit(() => {
+			exited = true;
+			exitSub?.dispose();
+		});
+	} catch {
+		// pty already torn down
+		exited = true;
+	}
+
+	// Phase 1 — graceful: SIGHUP to the whole process group. node-pty spawns
+	// the shell as a session leader, so PGID == pty.pid. Any child the shell
+	// launched (Claude TUI, fzf, less, nested shells) inherits that PGID
+	// unless it explicitly setsid'd away.
+	try {
+		process.kill(-pid, "SIGHUP");
+	} catch {
+		// group already gone
+	}
+	try {
 		pty.kill();
 	} catch {
 		// already gone
 	}
+
+	// Phase 2 — force: anything still alive after the grace window gets
+	// SIGKILL'd at the group level. Catches processes that catch/ignore SIGHUP
+	// (nohup wrappers, custom signal handlers) and tools that hang during
+	// cleanup. Skipped if the leader already exited cleanly to avoid hitting
+	// a recycled PID.
+	setTimeout(() => {
+		if (exited) return;
+		try {
+			process.kill(-pid, "SIGKILL");
+		} catch {
+			// group already gone between phase 1 and now
+		}
+	}, KILL_GRACE_MS);
 };
 
 const disposeSession = (id: string): void => {
@@ -141,18 +173,6 @@ const createSession = (sender: Electron.WebContents, opts: CreateOptions): void 
 	wireSessionEvents(session);
 };
 
-const isPoolable = (opts: CreateOptions): boolean => {
-	// A non-default cwd is handled at adoption time by writing `cd` into the
-	// warm shell, so it doesn't disqualify pooling. Only a non-default shell
-	// or renderer-supplied env force a fresh spawn (warm shell's binary + env
-	// are fixed at spawn time).
-	if (opts.shell && opts.shell !== defaultShell()) return false;
-	if (opts.env && Object.keys(opts.env).length > 0) return false;
-	return true;
-};
-
-const shellQuote = (s: string): string => `'${s.replace(/'/g, "'\\''")}'`;
-
 const getProcessCwd = async (pid: number): Promise<string | null> => {
 	if (process.platform === "linux") {
 		try {
@@ -182,117 +202,11 @@ const getProcessCwd = async (pid: number): Promise<string | null> => {
 	return null;
 };
 
-const createWarmPty = (): WarmPty => {
-	const shell = defaultShell();
-	const pty = nodePty.spawn(shell, shellArgs(shell), {
-		name: "xterm-256color",
-		cols: WARM_COLS,
-		rows: WARM_ROWS,
-		cwd: homeDir(),
-		env: buildEnv(),
-		useConpty: process.platform === "win32",
-	});
-	const warm: WarmPty = {
-		pty,
-		buffer: "",
-		alive: true,
-		dataListener: pty.onData((d) => {
-			warm.buffer += d;
-		}),
-		exitListener: pty.onExit(() => {
-			warm.alive = false;
-			const idx = warmPool.indexOf(warm);
-			if (idx >= 0) warmPool.splice(idx, 1);
-			scheduleReplenish();
-		}),
-	};
-	return warm;
-};
-
-const scheduleReplenish = (): void => {
-	if (replenishScheduled) return;
-	replenishScheduled = true;
-	setImmediate(() => {
-		replenishScheduled = false;
-		while (warmPool.length < POOL_SIZE) {
-			warmPool.push(createWarmPty());
-		}
-	});
-};
-
-const adoptWarmPty = (warm: WarmPty, sender: Electron.WebContents, opts: CreateOptions): void => {
-	// Detach buffer-capturing listeners. The buffered prompt was rendered at
-	// the warm size (WARM_COLS × WARM_ROWS) and would corrupt the visual at the
-	// renderer's actual size, so we discard it and force the shell to redraw.
-	warm.dataListener.dispose();
-	warm.exitListener.dispose();
-	warm.buffer = "";
-
-	const pty = warm.pty;
-	const cols = Math.max(1, opts.cols ?? WARM_COLS);
-	const rows = Math.max(1, opts.rows ?? WARM_ROWS);
-
-	// Wire the session BEFORE resizing/redrawing so we capture every byte the
-	// shell emits in response (WINCH, then the Ctrl-L redraw).
-	const session: Session = { id: opts.id, pty, webContentsId: sender.id };
-	sessions.set(opts.id, session);
-	watchRenderer(sender);
-	wireSessionEvents(session);
-
-	try {
-		pty.resize(cols, rows);
-	} catch {
-		// pty exited between pool check and adoption — fall back to fresh
-		sessions.delete(opts.id);
-		createSession(sender, opts);
-		return;
-	}
-
-	// Defer by a tick so terminal:create resolves first and the renderer is
-	// fully subscribed to terminal:data:<id> before output flies past.
-	const wantsCd = opts.cwd && opts.cwd !== homeDir();
-	setImmediate(() => {
-		try {
-			if (wantsCd) {
-				// `cd` to the inherited cwd. The resulting prompt repaint also
-				// covers the resize redraw, so no Ctrl-L is needed.
-				pty.write(`cd ${shellQuote(opts.cwd!)}\r`);
-			} else {
-				// Ctrl-L → ZLE clear-screen / readline clear-screen in bash →
-				// the shell repaints prompt at the new cols/rows.
-				pty.write("\x0c");
-			}
-		} catch {
-			// pty already gone
-		}
-	});
-};
-
-const initWarmPool = (): void => {
-	scheduleReplenish();
-};
-
-export const primeWarmPool = (): void => {
-	void userEnvReady().then(initWarmPool);
-};
-
 export const registerPtyHandlers = (): void => {
 	ipcMain.handle("terminal:create", async (event, opts: CreateOptions) => {
 		if (sessions.has(opts.id)) return { ok: true };
 		await userEnvReady();
-		initWarmPool();
-
-		if (isPoolable(opts) && warmPool.length > 0) {
-			const warm = warmPool.shift();
-			if (warm?.alive) {
-				adoptWarmPty(warm, event.sender, opts);
-				scheduleReplenish();
-				return { ok: true };
-			}
-		}
-
 		createSession(event.sender, opts);
-		scheduleReplenish();
 		return { ok: true };
 	});
 
@@ -325,13 +239,4 @@ export const registerPtyHandlers = (): void => {
 
 export const disposeAllSessions = (): void => {
 	for (const id of [...sessions.keys()]) disposeSession(id);
-	for (const warm of warmPool.splice(0)) {
-		try {
-			warm.dataListener.dispose();
-			warm.exitListener.dispose();
-			killTree(warm.pty);
-		} catch {
-			// already gone
-		}
-	}
 };

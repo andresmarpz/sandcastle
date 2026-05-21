@@ -98,7 +98,7 @@ function Terminal({
 				role="application"
 				aria-label="Terminal"
 				tabIndex={-1}
-				className="h-full w-full overflow-hidden p-3"
+				className="absolute inset-x-2 top-2 bottom-3 overflow-hidden"
 				onKeyDown={onKeyDown}
 				onMouseDown={onMouseDown}
 			/>

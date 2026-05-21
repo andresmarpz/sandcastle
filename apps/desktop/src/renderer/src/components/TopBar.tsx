@@ -21,11 +21,7 @@ function TopBarTabs({
 }): React.JSX.Element | null {
 	const workspaceId = WorkspaceId.make(wsId);
 	const workspaceResult = useAtomValue(
-		Client.query(
-			"workspaces.get",
-			{ workspaceId },
-			{ reactivityKeys: ["workspaces", wsId] },
-		),
+		Client.query("workspaces.get", { workspaceId }, { reactivityKeys: ["workspaces", wsId] }),
 	);
 	if (workspaceResult._tag !== "Success") return null;
 	const defaultCwd = workspaceResult.value.path as unknown as string;
@@ -39,7 +35,7 @@ function TopBar(): React.JSX.Element {
 		<header
 			className={cn(
 				"drag flex h-9 w-full shrink-0 items-center gap-1 pr-2",
-				isMac ? "pl-[78px]" : "pl-2",
+				isMac ? "pl-19.5" : "pl-2",
 			)}
 		>
 			<SidebarTrigger className="no-drag" />

@@ -62,15 +62,15 @@ function TabBar({ workspaceId, activeTabId, defaultCwd }: Props): React.JSX.Elem
 	};
 
 	return (
-		<div className="no-drag flex min-w-0 flex-1 items-center gap-1">
-			<div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
+		<div className="flex min-w-0 flex-1 items-center gap-1">
+			<div className="flex min-w-0 shrink items-center gap-1 overflow-x-auto">
 				{tabs.map((tab) => {
 					const isActive = tab.id === activeTabId;
 					return (
 						<div
 							key={tab.id}
 							className={cn(
-								"group flex h-7 max-w-[180px] min-w-0 shrink-0 items-center gap-1 rounded-md border px-2 text-xs transition-colors",
+								"no-drag group flex h-6 max-w-[180px] min-w-0 shrink-0 items-center gap-1 rounded-md border px-2 text-xs transition-colors",
 								isActive
 									? "border-border bg-card text-foreground"
 									: "border-transparent text-muted-foreground hover:bg-card/60",
@@ -102,6 +102,7 @@ function TabBar({ workspaceId, activeTabId, defaultCwd }: Props): React.JSX.Elem
 				size="icon-sm"
 				aria-label="New tab"
 				onClick={handleNew}
+				className="no-drag"
 			>
 				<PlusIcon />
 			</Button>
