@@ -93,17 +93,44 @@ export const focusPaneInDirection = (dir: Direction): boolean => {
 const directionAxis = (dir: Direction): "horizontal" | "vertical" =>
 	dir === "left" || dir === "right" ? "horizontal" : "vertical";
 
+const MIN_PANEL_PCT = 10;
+
+const applyResize = (
+	split: Extract<Pane, { kind: "split" }>,
+	growingChildIndex: number,
+	shrinkingChildIndex: number,
+): boolean => {
+	const handle = getPanelGroup(split.id);
+	if (!handle) return false;
+	const layout = handle.getLayout();
+	const growingId = split.children[growingChildIndex].id;
+	const shrinkingId = split.children[shrinkingChildIndex].id;
+	const growingSize = layout[growingId];
+	const shrinkingSize = layout[shrinkingId];
+	if (typeof growingSize !== "number" || typeof shrinkingSize !== "number") return false;
+	const step = Math.min(RESIZE_STEP_PCT, shrinkingSize - MIN_PANEL_PCT);
+	if (step <= 0) return false;
+	handle.setLayout({
+		...layout,
+		[growingId]: growingSize + step,
+		[shrinkingId]: shrinkingSize - step,
+	});
+	return true;
+};
+
 /**
- * Resize the focused pane in `dir`. Walks from the focused leaf up the pane
- * tree, finds the nearest ancestor split whose orientation matches the arrow
- * axis AND where the focused-containing child has a sibling on the side the
- * arrow points to. Then shifts RESIZE_STEP_PCT between the two via the
- * react-resizable-panels imperative API.
+ * Resize the focused pane in `dir`. The arrow direction moves the focused
+ * pane's active edge:
  *
- * "Grow direction" semantics: pressing the arrow moves the boundary in that
- * direction — so Cmd+Shift+Right grows the focused pane to the right (or, if
- * the focused pane is the right-most child of a horizontal split, climbs to
- * the next horizontal ancestor where there's still room).
+ *   • If a sibling exists on the arrow side, grow the focused pane into it
+ *     (the boundary between them moves outward).
+ *   • If the focused pane is already at the wall in that direction, shrink it
+ *     by moving the *opposite* edge inward — so Cmd+Shift+Down on a pane
+ *     pinned at the bottom shrinks it from the top.
+ *
+ * The walk prefers the grow case at deeper splits first (so nested layouts
+ * climb to outer groups when there's room outside), then falls back to the
+ * shrink case in a second pass.
  */
 export const resizePaneInDirection = (tree: Pane, dir: Direction): boolean => {
 	const focused = getFocusedLeafId();
@@ -114,30 +141,24 @@ export const resizePaneInDirection = (tree: Pane, dir: Direction): boolean => {
 	const axis = directionAxis(dir);
 	const growsToHigherIndex = dir === "right" || dir === "down";
 
+	// Pass 1: grow into a sibling in the arrow direction (deepest first, then
+	// climb).
 	for (let i = path.length - 1; i >= 0; i--) {
 		const { split, childIndex } = path[i];
 		if (split.orientation !== axis) continue;
 		const siblingIndex = growsToHigherIndex ? childIndex + 1 : childIndex - 1;
 		if (siblingIndex < 0 || siblingIndex >= split.children.length) continue;
+		if (applyResize(split, childIndex, siblingIndex)) return true;
+	}
 
-		const handle = getPanelGroup(split.id);
-		if (!handle) return false;
-		const layout = handle.getLayout();
-		if (layout.length !== split.children.length) return false;
-
-		const focusedSize = layout[childIndex];
-		const siblingSize = layout[siblingIndex];
-		// Don't pull a sibling below its 10% minSize (matches ResizablePanel's
-		// minSize prop). Without this the call no-ops silently and the user
-		// thinks the keybind is broken.
-		const step = Math.min(RESIZE_STEP_PCT, siblingSize - 10);
-		if (step <= 0) return false;
-
-		const next = layout.slice();
-		next[childIndex] = focusedSize + step;
-		next[siblingIndex] = siblingSize - step;
-		handle.setLayout(next);
-		return true;
+	// Pass 2: focused is at the wall in the arrow direction everywhere — shrink
+	// it instead by giving size to the sibling on the opposite side.
+	for (let i = path.length - 1; i >= 0; i--) {
+		const { split, childIndex } = path[i];
+		if (split.orientation !== axis) continue;
+		const oppositeIndex = growsToHigherIndex ? childIndex - 1 : childIndex + 1;
+		if (oppositeIndex < 0 || oppositeIndex >= split.children.length) continue;
+		if (applyResize(split, oppositeIndex, childIndex)) return true;
 	}
 	return false;
 };

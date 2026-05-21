@@ -2,7 +2,7 @@ import type { WorkspaceId } from "@sandcastle/contracts";
 import { useNavigate } from "@tanstack/react-router";
 import { Columns2, Rows2, X } from "lucide-react";
 import { Fragment, useCallback, useEffect, useRef } from "react";
-import type { ImperativePanelGroupHandle } from "react-resizable-panels";
+import type { GroupImperativeHandle } from "react-resizable-panels";
 
 import { registerPanelGroup, unregisterPanelGroup } from "@/lib/panelGroupRegistry";
 import { disposeTerminal, getTerminalCwd } from "@/lib/terminalRegistry";
@@ -124,7 +124,7 @@ type SplitProps = {
 function SplitPane({ node, ctx, corners, edges }: SplitProps): React.JSX.Element {
 	const isHorizontal = node.orientation === "horizontal";
 	const lastIdx = node.children.length - 1;
-	const groupRef = useRef<ImperativePanelGroupHandle | null>(null);
+	const groupRef = useRef<GroupImperativeHandle | null>(null);
 
 	useEffect(() => {
 		const handle = groupRef.current;
@@ -135,7 +135,7 @@ function SplitPane({ node, ctx, corners, edges }: SplitProps): React.JSX.Element
 
 	return (
 		<ResizablePanelGroup
-			ref={groupRef}
+			groupRef={groupRef}
 			orientation={node.orientation}
 			id={node.id}
 			className="overflow-visible!"

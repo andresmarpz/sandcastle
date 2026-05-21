@@ -2,6 +2,7 @@ import { CanvasAddon } from "@xterm/addon-canvas";
 import { FitAddon } from "@xterm/addon-fit";
 import { SearchAddon } from "@xterm/addon-search";
 import { WebLinksAddon } from "@xterm/addon-web-links";
+import { WebglAddon } from "@xterm/addon-webgl";
 import { type ITheme, Terminal as XTerm } from "@xterm/xterm";
 
 type CreateOptions = {
@@ -20,7 +21,7 @@ type Instance = {
 	rendererType: RendererType;
 	currentContainer: HTMLElement | null;
 	resizeObserver: ResizeObserver;
-	resizeTimer: ReturnType<typeof setTimeout> | null;
+	ptyResizeTimer: ReturnType<typeof setTimeout> | null;
 	ipcUnsubs: Array<() => void>;
 	disposed: boolean;
 	lastSentCols: number;
@@ -128,12 +129,19 @@ const safeFit = (inst: Instance): void => {
 	}
 };
 
+// Debounce fit so it does NOT run during continuous drag: each xterm.resize()
+// resizes the WebGL canvas which clears its framebuffer, and a clear-and-redraw
+// every frame looks like flicker. By only firing after the user pauses or
+// releases, the canvas just gets CSS-stretched during the drag (mildly blurry)
+// and snaps crisp once they stop. This is the VS Code approach.
+const RESIZE_DEBOUNCE_MS = 75;
+
 const scheduleResize = (inst: Instance): void => {
-	if (inst.resizeTimer) clearTimeout(inst.resizeTimer);
-	inst.resizeTimer = setTimeout(() => {
-		inst.resizeTimer = null;
-		safeFit(inst);
+	if (inst.ptyResizeTimer) clearTimeout(inst.ptyResizeTimer);
+	inst.ptyResizeTimer = setTimeout(() => {
+		inst.ptyResizeTimer = null;
 		if (inst.disposed) return;
+		safeFit(inst);
 		const { cols, rows } = inst.xterm;
 		// During pane-tree restructures the slot can momentarily be ~0px; a 1×1
 		// SIGWINCH makes most TUIs (Claude Code, fzf, less, htop) bail out, so
@@ -143,7 +151,7 @@ const scheduleResize = (inst: Instance): void => {
 		inst.lastSentCols = cols;
 		inst.lastSentRows = rows;
 		window.api.terminal.resize(inst.sessionId, cols, rows);
-	}, 50);
+	}, RESIZE_DEBOUNCE_MS);
 };
 
 const createInstance = (leafId: string, container: HTMLElement, opts: CreateOptions): Instance => {
@@ -152,11 +160,34 @@ const createInstance = (leafId: string, container: HTMLElement, opts: CreateOpti
 
 	xterm.open(container);
 	let rendererType: RendererType = "dom";
+	// WebGL is far smoother on resize and on large output bursts than the
+	// Canvas renderer (no clear-and-redraw flash, GPU-cached glyph atlas).
+	// If the GL context is ever lost (driver reset, tab thrown away by the
+	// GPU process), the addon's onContextLoss fires once — recover by
+	// disposing the WebGL addon and falling back to Canvas, which is good
+	// enough and won't keep crashing.
 	try {
-		xterm.loadAddon(new CanvasAddon());
-		rendererType = "canvas";
+		// preserveDrawingBuffer asks the GL context to keep its previous frame
+		// instead of being cleared at swap time — reduces black-flash during
+		// resizes at a small memory cost.
+		const webgl = new WebglAddon(true);
+		webgl.onContextLoss(() => {
+			webgl.dispose();
+			try {
+				xterm.loadAddon(new CanvasAddon());
+			} catch {
+				// DOM renderer remains as last resort
+			}
+		});
+		xterm.loadAddon(webgl);
+		rendererType = "webgl";
 	} catch {
-		// fall back to DOM renderer
+		try {
+			xterm.loadAddon(new CanvasAddon());
+			rendererType = "canvas";
+		} catch {
+			// fall back to DOM renderer
+		}
 	}
 
 	// Fit before spawning so the pty starts at the real container size. If we
@@ -213,7 +244,7 @@ const createInstance = (leafId: string, container: HTMLElement, opts: CreateOpti
 		rendererType,
 		currentContainer: container,
 		resizeObserver: new ResizeObserver(() => scheduleResize(inst)),
-		resizeTimer: null,
+		ptyResizeTimer: null,
 		ipcUnsubs: [],
 		disposed: false,
 		lastSentCols: xterm.cols,
@@ -294,7 +325,7 @@ export const disposeTerminal = (leafId: string): void => {
 	// Each cleanup step is best-effort: a throw anywhere here used to abort the
 	// caller (handleClose) before the tree could be updated, leaving the pane
 	// visually alive after the shell had already been killed.
-	if (inst.resizeTimer) clearTimeout(inst.resizeTimer);
+	if (inst.ptyResizeTimer) clearTimeout(inst.ptyResizeTimer);
 	try {
 		inst.resizeObserver.disconnect();
 	} catch {}
