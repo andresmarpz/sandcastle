@@ -13,6 +13,11 @@ export class ProjectPathConflict extends Data.TaggedError("ProjectPathConflict")
 	readonly rootPath: string;
 }> {}
 
+export class ProjectReorderMismatch extends Data.TaggedError("ProjectReorderMismatch")<{
+	readonly expected: ReadonlyArray<string>;
+	readonly got: ReadonlyArray<string>;
+}> {}
+
 export class WorkspaceNotFound extends Data.TaggedError("WorkspaceNotFound")<{
 	readonly workspaceId: string;
 }> {}

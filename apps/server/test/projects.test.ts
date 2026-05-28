@@ -136,6 +136,44 @@ describe("ProjectService", () => {
 		expect(renamed?.name).toBe("new name");
 	});
 
+	test("reorder permutes list() output and is rejected on set mismatch", async () => {
+		const dirA = ephemeralDir();
+		const dirB = ephemeralDir();
+		const dirC = ephemeralDir();
+
+		const result = await h.runtime.runPromise(
+			Effect.gen(function* () {
+				const projects = yield* ProjectService;
+				const a = yield* projects.create({ name: "a", rootPath: dirA });
+				const b = yield* projects.create({ name: "b", rootPath: dirB });
+				const c = yield* projects.create({ name: "c", rootPath: dirC });
+
+				// Sanity: insertion order is preserved by default.
+				const initial = yield* projects.list();
+				const initialIds = initial.map((p) => p.id);
+				if (initialIds[0] !== a.id || initialIds[1] !== b.id || initialIds[2] !== c.id) {
+					return yield* Effect.fail(new Error(`unexpected initial order: ${initialIds.join(",")}`));
+				}
+
+				// Reorder to c, a, b.
+				yield* projects.reorder([c.id, a.id, b.id]);
+				const reordered = yield* projects.list();
+				const reorderedIds = reordered.map((p) => p.id);
+
+				// Submitting a subset should fail with ProjectReorderMismatch.
+				const subsetResult = yield* Effect.result(projects.reorder([c.id, a.id]));
+
+				return { reorderedIds, expected: [c.id, a.id, b.id], subsetResult };
+			}),
+		);
+
+		expect(result.reorderedIds).toEqual(result.expected);
+		expect(Result.isFailure(result.subsetResult)).toBe(true);
+		if (Result.isFailure(result.subsetResult)) {
+			expect(result.subsetResult.failure._tag).toBe("ProjectReorderMismatch");
+		}
+	});
+
 	test("delete cascades: removes worktrees on disk and soft-deletes the project", async () => {
 		const repo = ephemeralDir();
 		await initGitRepo(repo);

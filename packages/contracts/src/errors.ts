@@ -27,6 +27,14 @@ export class ProjectNotFound extends Schema.TaggedErrorClass<ProjectNotFound>()(
 	projectId: Schema.String,
 }) {}
 
+export class ProjectReorderMismatch extends Schema.TaggedErrorClass<ProjectReorderMismatch>()(
+	"ProjectReorderMismatch",
+	{
+		expected: Schema.Array(Schema.String),
+		got: Schema.Array(Schema.String),
+	},
+) {}
+
 // workspaces.*
 export class WorkspaceNotFound extends Schema.TaggedErrorClass<WorkspaceNotFound>()(
 	"WorkspaceNotFound",

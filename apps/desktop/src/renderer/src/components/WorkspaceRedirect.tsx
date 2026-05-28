@@ -35,9 +35,7 @@ function WorkspaceRedirect({ workspaceId }: Props): React.JSX.Element {
 	}, [workspaceResult, workspaceId, ensureTab, navigate]);
 
 	if (workspaceResult._tag === "Failure") {
-		return (
-			<p className="p-4 text-xs text-destructive">{Cause.pretty(workspaceResult.cause)}</p>
-		);
+		return <p className="p-4 text-xs text-destructive">{Cause.pretty(workspaceResult.cause)}</p>;
 	}
 	return <p className="p-4 text-xs text-muted-foreground">Opening workspace…</p>;
 }

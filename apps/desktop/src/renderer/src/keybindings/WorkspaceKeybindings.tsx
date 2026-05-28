@@ -2,11 +2,7 @@ import type { WorkspaceId } from "@sandcastle/contracts";
 import { useNavigate } from "@tanstack/react-router";
 import { useCallback } from "react";
 
-import {
-	type Direction,
-	focusPaneInDirection,
-	resizePaneInDirection,
-} from "@/lib/paneActions";
+import { type Direction, focusPaneInDirection, resizePaneInDirection } from "@/lib/paneActions";
 import { type TabId, useTabsStore } from "@/stores/tabs";
 
 import type { KeybindingId } from "./registry";

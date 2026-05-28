@@ -38,9 +38,7 @@ function Layout({ children }: Props): React.JSX.Element {
 				style={{ contain: "layout" } as React.CSSProperties}
 			>
 				<AppSidebar />
-				<SidebarInset className="relative min-w-0 overflow-hidden bg-card">
-					{children}
-				</SidebarInset>
+				<SidebarInset className="relative min-w-0 overflow-hidden bg-card">{children}</SidebarInset>
 				<SidebarResizeHandle
 					width={sidebarWidth}
 					onWidthChange={setSidebarWidth}

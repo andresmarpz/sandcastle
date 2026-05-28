@@ -63,9 +63,7 @@ function WorkspaceView({ workspaceId, tabId }: Props): React.JSX.Element {
 		return <p className="p-4 text-xs text-muted-foreground">Loading workspace…</p>;
 	}
 	if (workspaceResult._tag === "Failure") {
-		return (
-			<p className="p-4 text-xs text-destructive">{Cause.pretty(workspaceResult.cause)}</p>
-		);
+		return <p className="p-4 text-xs text-destructive">{Cause.pretty(workspaceResult.cause)}</p>;
 	}
 	if (!tab) {
 		return <p className="p-4 text-xs text-muted-foreground">Tab not found</p>;

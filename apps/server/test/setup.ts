@@ -7,8 +7,14 @@ import { Effect, Layer, ManagedRuntime } from "effect";
 
 import { ServerConfig } from "../src/config/ConfigService.ts";
 import { ensureDir } from "../src/lib/paths.ts";
-import { layer as ProjectServiceLive, ProjectService } from "../src/services/ProjectService.ts";
-import { layer as WorkspaceServiceLive, WorkspaceService } from "../src/services/WorkspaceService.ts";
+import {
+	type ProjectService,
+	layer as ProjectServiceLive,
+} from "../src/services/ProjectService.ts";
+import {
+	type WorkspaceService,
+	layer as WorkspaceServiceLive,
+} from "../src/services/WorkspaceService.ts";
 
 /**
  * One harness per test: temp `~/.sandcastle` under `os.tmpdir()`, a fresh

@@ -7,6 +7,7 @@ import {
 	ProjectPathConflict,
 	ProjectPathInvalid,
 	ProjectPathNotFound,
+	ProjectReorderMismatch,
 } from "../errors.ts";
 import { AbsolutePath, IsoDateTime, ProjectId } from "../ids.ts";
 
@@ -67,4 +68,15 @@ export const ProjectsDeleteRpc = Rpc.make("projects.delete", {
 	payload: ProjectsDeletePayload,
 	success: Schema.Struct({}),
 	error: Schema.Union([ProjectNotFound, InternalError]),
+});
+
+export const ProjectsReorderPayload = Schema.Struct({
+	projectIds: Schema.Array(ProjectId),
+});
+export type ProjectsReorderPayload = typeof ProjectsReorderPayload.Type;
+
+export const ProjectsReorderRpc = Rpc.make("projects.reorder", {
+	payload: ProjectsReorderPayload,
+	success: Schema.Struct({}),
+	error: Schema.Union([ProjectReorderMismatch, InternalError]),
 });
