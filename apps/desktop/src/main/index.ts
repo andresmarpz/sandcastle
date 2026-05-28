@@ -14,6 +14,7 @@ import {
 } from "electron";
 import icon from "../../resources/icon.png?asset";
 import { disposeCaffeinate, registerCaffeinateHandlers } from "./caffeinate";
+import { disposeClaudeHooks, registerClaudeHookHandlers } from "./claudeHooks";
 import { disposeAllSessions, registerPtyHandlers } from "./pty";
 import { captureUserEnv } from "./userEnv";
 
@@ -261,6 +262,9 @@ void app.whenReady().then(() => {
 
 	registerPtyHandlers();
 	registerCaffeinateHandlers();
+	void registerClaudeHookHandlers().catch((err) =>
+		console.warn("[claudeHooks] failed to register:", err),
+	);
 
 	installApplicationMenu();
 	createWindow();
@@ -286,4 +290,5 @@ app.on("window-all-closed", () => {
 app.on("before-quit", () => {
 	disposeAllSessions();
 	disposeCaffeinate();
+	disposeClaudeHooks();
 });

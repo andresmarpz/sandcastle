@@ -163,7 +163,9 @@ const createSession = (sender: Electron.WebContents, opts: CreateOptions): void 
 		cols: opts.cols ?? 80,
 		rows: opts.rows ?? 24,
 		cwd,
-		env: buildEnv(opts.env),
+		// Tag every Sandcastle PTY so the Claude Code activity hook can report
+		// which session fired (and no-op in shells we didn't spawn).
+		env: buildEnv({ ...opts.env, SANDCASTLE_SESSION_ID: opts.id }),
 		useConpty: process.platform === "win32",
 	});
 

@@ -8,6 +8,7 @@ import WorkspaceKeybindings from "@/keybindings/WorkspaceKeybindings";
 import { collectLeafIds } from "@/lib/paneTree";
 import { focusTerminal } from "@/lib/terminalRegistry";
 import { Client } from "@/rpc/client";
+import { useActivityStore } from "@/stores/activity";
 import { type TabId, useTabsStore } from "@/stores/tabs";
 
 type Props = {
@@ -35,6 +36,8 @@ function WorkspaceView({ workspaceId, tabId }: Props): React.JSX.Element {
 	// stale once the user navigates between tabs via clicks or Cmd+1..9).
 	useEffect(() => {
 		setActiveTab(workspaceId, tabId);
+		// Viewing a workspace clears its latched done/needs-attention status.
+		useActivityStore.getState().acknowledgeWorkspace(workspaceId as string);
 	}, [workspaceId, tabId, setActiveTab]);
 
 	// Restore pane focus after the tab mounts. The terminal registry attaches
