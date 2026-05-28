@@ -43,7 +43,7 @@ function TabItem({ title, tree, isActive, onSelect, onClose }: TabItemProps): Re
 				}
 			}}
 			className={cn(
-				"no-drag group flex h-6 max-w-[200px] min-w-0 shrink-0 cursor-default items-center gap-1.5 rounded-md border px-2 text-xs",
+				"no-drag group flex h-[26px] max-w-[200px] min-w-0 shrink-0 cursor-default items-center gap-1.5 rounded-md border px-2 text-xs",
 				isActive
 					? "border-border bg-card text-foreground"
 					: "border-transparent text-muted-foreground hover:bg-card/60",
