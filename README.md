@@ -1,58 +1,60 @@
-<p align="center">
-  <img alt="Sandcastle" src="assets/logo-rounded.png" width="120">
-</p>
+# Sandcastle
 
-<h1 align="center">Sandcastle</h1>
+A desktop app for managing git worktrees and terminal-based agent workspaces. Built with Electron, React, and TypeScript in a pnpm + Turborepo monorepo.
 
-<p align="center">
-  The agent orchestrator for Claude Code.
-</p>
+## Download & install
 
-<p align="center">
-  <img src="https://img.shields.io/github/v/release/andresmarpz/sandcastle?include_prereleases&color=blue" alt="Version" />
-  <a href="https://github.com/andresmarpz/sandcastle/blob/main/LICENSE"><img src="https://img.shields.io/github/license/andresmarpz/sandcastle?label=license&logo=github&color=f80&logoColor=fff" alt="License" /></a>
-</p>
+Grab the latest build for your platform from the [**Releases**](https://github.com/andresmarpz/sandcastle/releases/latest) page.
 
-<p align="center">
-  <em>
-    Luna sobre el mar,<br>
-    granos de arena brillan,<br>
-    noche de cristal.
-  </em>
-  <br>
-  <sub>— Claude's haiku for Sandcastle</sub>
-</p>
+| Platform | File |
+| --- | --- |
+| macOS (Apple Silicon) | `sandcastle-<version>-arm64.dmg` |
+| macOS (Intel) | `sandcastle-<version>-x64.dmg` |
+| Windows | `sandcastle-<version>-setup-*.exe` |
+| Linux | `sandcastle-<version>-*.AppImage` or `.deb` |
 
-<br/>
+### macOS — first launch
 
-> [!WARNING]
-> **Early Development** — This project is under active development. Real usage is not recommended at this time. Expect breaking changes and potential data loss until we reach a stable release.
->
+These builds are **not yet signed with an Apple Developer ID**, so macOS Gatekeeper will block the first launch. To open it once:
 
-<img width="4054" height="2462" alt="image" src="https://github.com/user-attachments/assets/849a39da-46ea-4c44-a075-e15d2f8ac28d" />
+1. Open the `.dmg` and drag **Sandcastle** to **Applications**.
+2. In Finder, **right-click** (or Control-click) `Sandcastle.app` → **Open**, then confirm **Open** in the dialog.
 
-## About
+   If macOS says the app is *"damaged"* (this happens on downloaded, unsigned apps), clear the quarantine flag once:
 
-Sandcastle is an open-source agent orchestrator for managing fleets of AI coding agents. Spawn isolated development environments, assign Claude Code instances to specific tasks, and monitor progress across all your work streams—from a beautiful, unified interface.
+   ```bash
+   xattr -dr com.apple.quarantine /Applications/Sandcastle.app
+   ```
 
-Built with a client-server architecture, Sandcastle lets you host your orchestration server wherever you want and connect from desktop or web clients. Multi-client streaming keeps everything in sync, so you can seamlessly switch between devices while your agents keep working.
+After the first launch, it opens normally. Signing + notarization is wired up and will remove this step entirely once Apple Developer credentials are added (see [Releasing](#releasing)).
 
-## Tech Stack
+## Development
 
-- [Tauri](https://tauri.app/) – Desktop framework
-- [React](https://react.dev/) – UI framework
-- [Effect](https://effect.website/) – Type-safe services and composition
-- [SQLite](https://www.sqlite.org/) – Embedded database
-- [Bun](https://bun.sh/) – JavaScript runtime
+```bash
+pnpm install
+pnpm dev          # run the desktop app with HMR
+pnpm quality      # typecheck + biome check
+pnpm build        # production build
+```
 
-## Contributing
+## Releasing
 
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details on how to get started.
+Releases are produced by GitHub Actions (`.github/workflows/release.yml`):
 
-## License
+1. Bump the version in the root `package.json` and `apps/desktop/package.json`.
+2. Tag and push: `git tag v<version> && git push origin v<version>`.
+3. The workflow builds installers on macOS (arm64 + x64), Windows, and Linux, uploads them to a draft GitHub Release, then publishes it.
 
-Sandcastle is open-source software licensed under the [Apache 2.0 License](LICENSE).
+### Enabling macOS code signing + notarization
 
-## Contact
+The release workflow already passes the signing environment variables. To produce Gatekeeper-approved builds, add these repository secrets:
 
-Built by [@andresmarpz](https://x.com/andresmarpz). Reach out at [hi@andrs.me](mailto:hi@andrs.me).
+| Secret | Description |
+| --- | --- |
+| `MAC_CSC_LINK` | base64-encoded Developer ID Application `.p12` certificate |
+| `MAC_CSC_KEY_PASSWORD` | password for that `.p12` |
+| `APPLE_ID` | Apple ID email |
+| `APPLE_APP_SPECIFIC_PASSWORD` | app-specific password for notarization |
+| `APPLE_TEAM_ID` | Apple Developer Team ID |
+
+Then set `mac.notarize: true` in `apps/desktop/electron-builder.yml`. No other changes are required.

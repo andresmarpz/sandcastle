@@ -1,0 +1,32 @@
+{
+	"name": "@sandcastle/server",
+	"version": "0.3.0",
+	"module": "src/main.ts",
+	"type": "module",
+	"private": true,
+	"scripts": {
+		"dev": "bun --hot ./src/main.ts",
+		"start": "bun ./src/main.ts",
+		"test": "bun --bun vitest run",
+		"test:watch": "bun --bun vitest",
+		"typecheck": "tsc --noEmit",
+		"lint": "biome lint .",
+		"lint:fix": "biome lint --write .",
+		"format": "biome format --write .",
+		"check": "biome check .",
+		"check:fix": "biome check --write ."
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.4.15",
+		"@types/bun": "latest",
+		"typescript": "^5.9.3",
+		"vitest": "^4.1.7"
+	},
+	"dependencies": {
+		"@effect/platform-bun": "^4.0.0-beta.57",
+		"@sandcastle/contracts": "workspace:*",
+		"@sandcastle/db": "workspace:*",
+		"@sandcastle/entities": "workspace:*",
+		"effect": "^4.0.0-beta.57"
+	}
+}

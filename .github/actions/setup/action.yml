@@ -1,26 +1,23 @@
 name: Setup
-description: Checkout, setup Bun, cache dependencies, and install
+description: Checkout-free composite setup — pnpm, Node, dependency install, and Turbo cache
 
 inputs:
   turbo-cache-key:
-    description: Unique key suffix for Turbo cache
-    required: true
+    description: Suffix used to scope the Turbo cache (e.g. "quality", "build")
+    required: false
+    default: default
 
 runs:
   using: composite
   steps:
-    - name: Setup Bun
-      uses: oven-sh/setup-bun@v2
-      with:
-        bun-version: latest
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
 
-    - name: Cache Bun dependencies
-      uses: actions/cache@v4
+    - name: Setup Node
+      uses: actions/setup-node@v4
       with:
-        path: ~/.bun/install/cache
-        key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-bun-
+        node-version: 22
+        cache: pnpm
 
     - name: Cache Turbo
       uses: actions/cache@v4
@@ -32,4 +29,4 @@ runs:
 
     - name: Install dependencies
       shell: bash
-      run: bun install --frozen-lockfile
+      run: pnpm install --frozen-lockfile

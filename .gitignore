@@ -1,46 +1,7 @@
-# Dependencies
-node_modules/
-
-# Build outputs
-dist/
-build/
-out/
-.next/
-.nuxt/
-.output/
-
-# TypeScript
-*.tsbuildinfo
-
-# Turbo
-.turbo/
-
-# Environment files
-.env
-.env.*
-!.env.example
-
-# Logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Test coverage
-coverage/
-.nyc_output/
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# OS
+node_modules
+.turbo
 .DS_Store
-Thumbs.db
+*.log
 
-# Cache
-.cache/
-.eslintcache
-.prettiercache
+# Reference clones (not part of this project — see superset.sh integration work)
+repos/
