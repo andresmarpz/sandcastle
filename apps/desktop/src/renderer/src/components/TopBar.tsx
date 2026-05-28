@@ -34,8 +34,8 @@ function TopBar(): React.JSX.Element {
 	return (
 		<header
 			className={cn(
-				"drag flex h-9 w-full shrink-0 items-center gap-1 pr-2",
-				isMac ? "pl-19.5" : "pl-2",
+				"drag flex h-11 w-full shrink-0 items-center gap-1 bg-background pr-2",
+				isMac ? "pl-[84px]" : "pl-2",
 			)}
 		>
 			<SidebarTrigger className="no-drag text-foreground-tertiary" />

@@ -1,6 +1,6 @@
 import "@xterm/xterm/css/xterm.css";
 import { useTheme } from "next-themes";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import {
 	attachTerminal,
 	detachTerminal,
@@ -27,7 +27,6 @@ function Terminal({
 	corners,
 }: TerminalProps): React.JSX.Element {
 	const slotRef = useRef<HTMLDivElement>(null);
-	const [focused, setFocused] = useState(false);
 	const { resolvedTheme } = useTheme();
 	const mode = resolvedTheme === "light" ? "light" : "dark";
 
@@ -53,11 +52,7 @@ function Terminal({
 
 	const onMouseDown = (): void => focusTerminal(leafId);
 
-	const focusRingColor = mode === "light" ? "rgb(59 130 246 / 0.8)" : "rgb(96 165 250 / 0.8)";
 	const c = corners ?? { tl: true, tr: true, bl: true, br: true };
-	// Match SidebarInset's inner curve (outer radius minus its 1px border) so
-	// the focus ring traces the inset edge cleanly. Only round corners that
-	// actually touch the inset; inner pane edges stay square.
 	const outerR = "calc(var(--radius-xl) - 1px)";
 	const cornerRadii: React.CSSProperties = {
 		borderTopLeftRadius: c.tl ? outerR : "0px",
@@ -67,16 +62,9 @@ function Terminal({
 	};
 
 	return (
-		// biome-ignore lint/a11y/noStaticElementInteractions: focus state wrapper for an xterm terminal
 		<div
-			data-focused={focused ? "true" : undefined}
 			className={`relative bg-sidebar ${className ?? "h-full w-full"}`}
-			style={{
-				...cornerRadii,
-				zIndex: focused ? 2 : undefined,
-			}}
-			onFocus={() => setFocused(true)}
-			onBlur={() => setFocused(false)}
+			style={cornerRadii}
 		>
 			<div
 				ref={slotRef}
@@ -87,13 +75,6 @@ function Terminal({
 				onKeyDown={onKeyDown}
 				onMouseDown={onMouseDown}
 			/>
-			{focused ? (
-				<div
-					aria-hidden
-					className="pointer-events-none absolute inset-0 box-border border-[1.5px]"
-					style={{ ...cornerRadii, borderColor: focusRingColor }}
-				/>
-			) : null}
 		</div>
 	);
 }

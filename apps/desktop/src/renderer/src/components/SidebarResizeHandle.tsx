@@ -14,7 +14,7 @@ function SidebarResizeHandle({
 	width,
 	onWidthChange,
 	onResizingChange,
-	min = 240,
+	min = 276,
 	max = 480,
 }: SidebarResizeHandleProps): React.JSX.Element | null {
 	const { state, isMobile } = useSidebar();
@@ -69,9 +69,14 @@ function SidebarResizeHandle({
 			aria-valuenow={width}
 			aria-valuemin={min}
 			aria-valuemax={max}
-			className="absolute top-1 bottom-2 z-20 w-1 cursor-col-resize bg-transparent transition-colors hover:bg-sidebar-border"
-			style={{ left: `calc(var(--sidebar-width) - 6px)` }}
-		/>
+			className="group/resize absolute inset-y-0 z-20 w-3 -translate-x-1/2 cursor-col-resize"
+			style={{ left: `var(--sidebar-width)` }}
+		>
+			<span
+				aria-hidden
+				className="pointer-events-none absolute top-1/2 left-1/2 block h-10 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-foreground/40 opacity-0 transition-opacity duration-150 group-hover/resize:opacity-100"
+			/>
+		</div>
 	);
 }
 
