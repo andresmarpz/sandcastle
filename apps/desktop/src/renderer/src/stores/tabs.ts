@@ -36,9 +36,15 @@ type Actions = {
 let tabCounter = 0;
 const nextTabId = (): TabId => `tab-${Date.now().toString(36)}-${++tabCounter}`;
 
-const defaultTitle = (cwd: string): string => {
-	const parts = cwd.split(/[/\\]/).filter(Boolean);
-	return parts[parts.length - 1] ?? "Tab";
+const defaultTitle = (existing: readonly Tab[]): string => {
+	const used = new Set<number>();
+	for (const t of existing) {
+		const match = /^Tab (\d+)$/.exec(t.title);
+		if (match) used.add(Number(match[1]));
+	}
+	let n = 1;
+	while (used.has(n)) n++;
+	return `Tab ${n}`;
 };
 
 export const useTabsStore = create<State & Actions>()(
@@ -62,14 +68,14 @@ export const useTabsStore = create<State & Actions>()(
 				const key = wsId as string;
 				const id = nextTabId();
 				const rootLeaf = makeLeaf(cwd);
-				const tab: Tab = {
-					id,
-					title: defaultTitle(cwd),
-					tree: rootLeaf,
-					activeLeafId: rootLeaf.id,
-				};
 				set((s) => {
 					const existing = s.byWorkspace[key] ?? { tabs: [], activeTabId: null };
+					const tab: Tab = {
+						id,
+						title: defaultTitle(existing.tabs),
+						tree: rootLeaf,
+						activeLeafId: rootLeaf.id,
+					};
 					return {
 						byWorkspace: {
 							...s.byWorkspace,

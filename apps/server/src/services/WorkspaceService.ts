@@ -23,7 +23,16 @@ import type { Workspace as WorkspaceEntity } from "@sandcastle/entities";
 import { Context, Effect, Layer } from "effect";
 
 import { ServerConfig } from "../config/ConfigService.ts";
-import { newWorkspaceId, shortId } from "../lib/ids.ts";
+import { newWorkspaceId } from "../lib/ids.ts";
+
+const slugify = (input: string): string => {
+	const slug = input
+		.toLowerCase()
+		.normalize("NFKD")
+		.replace(/[^a-z0-9]+/g, "-")
+		.replace(/^-+|-+$/g, "");
+	return slug.length > 0 ? slug : "workspace";
+};
 
 const toInternal = (cause: unknown): InternalError =>
 	new InternalError({ message: cause instanceof Error ? cause.message : String(cause) });
@@ -178,7 +187,22 @@ export const layer: Layer.Layer<
 						workspaceId as unknown as string,
 					);
 
-					branch = input.config.branch ?? `sandcastle/${shortId(workspaceId as unknown as string)}`;
+					if (input.config.branch !== undefined) {
+						branch = input.config.branch;
+					} else {
+						const base = `sandcastle/${slugify(input.name)}`;
+						branch = base;
+						for (let suffix = 2; suffix < 100; suffix++) {
+							const ref = yield* runGit(project.rootPath as unknown as string, [
+								"show-ref",
+								"--verify",
+								"--quiet",
+								`refs/heads/${branch}`,
+							]);
+							if (ref.code !== 0) break;
+							branch = `${base}-${suffix}`;
+						}
+					}
 
 					if (input.config.baseBranch !== undefined) {
 						baseBranch = input.config.baseBranch;

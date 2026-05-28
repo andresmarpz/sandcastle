@@ -2,13 +2,12 @@ import {
 	CodeIcon,
 	CubeIcon,
 	GitBranchIcon,
-	type Icon as PhosphorIcon,
 	LightningIcon,
+	type Icon as PhosphorIcon,
 	SnowflakeIcon,
 	TerminalWindowIcon,
 } from "@phosphor-icons/react";
-
-import { ClaudeAI } from "@/components/icons/ClaudeAI";
+import { ClaudeAI } from "@/components/icons/logos/Claude";
 import type { ProcKind } from "@/lib/procClassifier";
 
 export type ProcIconProps = { size: number; className?: string };
@@ -33,10 +32,7 @@ export type ProcVisual = {
 const Letter =
 	(ch: string): React.ComponentType<ProcIconProps> =>
 	({ size, className }) => (
-		<span
-			className={className}
-			style={{ fontWeight: 700, lineHeight: 1, fontSize: size }}
-		>
+		<span className={className} style={{ fontWeight: 700, lineHeight: 1, fontSize: size }}>
 			{ch}
 		</span>
 	);
@@ -62,7 +58,11 @@ const VISUALS: Partial<Record<ProcKind, ProcVisual>> = {
 	node: { label: "Node", fg: "text-green-600", Icon: Letter("N") },
 	python: { label: "Python", fg: "text-blue-600", Icon: phosphor(SnowflakeIcon) },
 	docker: { label: "Docker", fg: "text-blue-500", Icon: phosphor(CubeIcon) },
-	shell: { label: "Shell", fg: "text-muted-foreground", Icon: phosphor(TerminalWindowIcon, "regular") },
+	shell: {
+		label: "Shell",
+		fg: "text-muted-foreground",
+		Icon: phosphor(TerminalWindowIcon, "regular"),
+	},
 };
 
 export const visualFor = (kind: ProcKind | null): ProcVisual | null => {
