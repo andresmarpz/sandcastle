@@ -1,7 +1,17 @@
 import { join } from "node:path";
 import { electronApp, is, optimizer } from "@electron-toolkit/utils";
 import type { MenuItemConstructorOptions } from "electron";
-import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, screen, shell } from "electron";
+import {
+	app,
+	BrowserWindow,
+	dialog,
+	ipcMain,
+	Menu,
+	nativeImage,
+	nativeTheme,
+	screen,
+	shell,
+} from "electron";
 import icon from "../../resources/icon.png?asset";
 import { disposeCaffeinate, registerCaffeinateHandlers } from "./caffeinate";
 import { disposeAllSessions, registerPtyHandlers } from "./pty";
@@ -108,9 +118,11 @@ function createWindow(): void {
 		autoHideMenuBar: true,
 		title: APP_NAME,
 		icon,
-		backgroundColor: "#000000",
-		titleBarStyle: "hiddenInset",
-		trafficLightPosition: { x: 12, y: 12 },
+		// Match the resolved --background (bg-deep) token so the traffic-light
+		// gutter paints the correct color before the renderer mounts.
+		backgroundColor: nativeTheme.shouldUseDarkColors ? "#080808" : "#fafafa",
+		titleBarStyle: "hidden",
+		trafficLightPosition: { x: 12, y: 14 },
 		webPreferences: {
 			preload: join(__dirname, "../preload/index.js"),
 			sandbox: false,

@@ -3,7 +3,7 @@ import { DotsThreeIcon, GearIcon, QuestionIcon } from "@phosphor-icons/react";
 import type { Project, Workspace } from "@sandcastle/contracts";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { Cause } from "effect";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import NewProjectDialog from "@/components/NewProjectDialog";
 import NewWorkspaceDialog from "@/components/NewWorkspaceDialog";
@@ -17,21 +17,45 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup } from "@/components/ui/sidebar";
 import { useTabProcesses } from "@/hooks/useTabProcesses";
+import {
+	type AvatarColorKey,
+	assignColors,
+	firstGrapheme,
+	loadColorMap,
+	saveColorMap,
+} from "@/lib/avatarColors";
 import { cn } from "@/lib/utils";
 import { Client } from "@/rpc/client";
 import { type Tab, useTabsStore } from "@/stores/tabs";
 
-const ACTIVE_ROW_CLASSES =
-	"border border-border bg-sidebar text-foreground shadow-[0_1px_1px_rgba(0,0,0,0.03),0_2px_6px_-2px_rgba(0,0,0,0.08)] dark:shadow-[0_1px_1px_rgba(0,0,0,0.25),0_4px_10px_-3px_rgba(0,0,0,0.35)]";
+const ACTIVE_ROW_CLASSES = "bg-sidebar text-foreground shadow-elevated";
 
-function ProjectAvatar({ name }: { name: string }): React.JSX.Element {
-	const letter = (name.trim().charAt(0) || "?").toUpperCase();
+function ProjectAvatar({
+	name,
+	color,
+}: {
+	name: string;
+	color: AvatarColorKey | undefined;
+}): React.JSX.Element {
+	const letter = (firstGrapheme(name) || "?").toUpperCase();
+	const style = color
+		? ({
+				background: `var(--avatar-background-${color})`,
+				color: `var(--avatar-text-${color})`,
+			} as React.CSSProperties)
+		: undefined;
 	return (
 		<div
 			aria-hidden
-			className="grid size-6 shrink-0 place-items-center rounded-md bg-muted text-[11px] font-medium uppercase text-foreground-tertiary"
+			style={style}
+			className={cn(
+				"relative grid size-5 shrink-0 place-items-center overflow-hidden rounded",
+				"border-[0.5px] border-border text-[10px] font-medium uppercase",
+				"before:pointer-events-none before:absolute before:inset-0 before:bg-[linear-gradient(180deg,rgba(255,255,255,0.16),rgba(255,255,255,0))]",
+				!color && "bg-muted text-foreground-tertiary",
+			)}
 		>
-			{letter}
+			<span className="relative">{letter}</span>
 		</div>
 	);
 }
@@ -94,12 +118,7 @@ function WorkspaceTabList({
 	return (
 		<ul className="mt-[6px] ml-[6px] flex flex-col gap-px border-l border-sidebar-border/70 pl-1.5">
 			{tabs.map((tab) => (
-				<WorkspaceTabRow
-					key={tab.id}
-					wsId={wsId}
-					tab={tab}
-					isActive={tab.id === activeTabId}
-				/>
+				<WorkspaceTabRow key={tab.id} wsId={wsId} tab={tab} isActive={tab.id === activeTabId} />
 			))}
 		</ul>
 	);
@@ -124,7 +143,7 @@ function WorkspaceItem({
 		<Collapsible open={open} onOpenChange={setOpen}>
 			<div
 				className={cn(
-					"flex h-7 w-full items-center gap-0.5 rounded-md border border-transparent text-xsm",
+					"flex h-[26px] w-full items-center gap-0.5 rounded-md border border-transparent text-xsm",
 					isActive
 						? ACTIVE_ROW_CLASSES
 						: "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground",
@@ -206,7 +225,13 @@ function ProjectWorkspaces({
 	);
 }
 
-function ProjectItem({ project }: { project: Project }): React.JSX.Element {
+function ProjectItem({
+	project,
+	color,
+}: {
+	project: Project;
+	color: AvatarColorKey | undefined;
+}): React.JSX.Element {
 	const [open, setOpen] = useState(true);
 	const [menuOpen, setMenuOpen] = useState(false);
 	const [dialogOpen, setDialogOpen] = useState(false);
@@ -233,7 +258,7 @@ function ProjectItem({ project }: { project: Project }): React.JSX.Element {
 				)}
 			>
 				<CollapsibleTrigger className="flex min-w-0 flex-1 items-center gap-2">
-					<ProjectAvatar name={project.name} />
+					<ProjectAvatar name={project.name} color={color} />
 					<span className="truncate">{project.name}</span>
 				</CollapsibleTrigger>
 				<DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
@@ -259,16 +284,14 @@ function ProjectItem({ project }: { project: Project }): React.JSX.Element {
 					</DropdownMenuContent>
 				</DropdownMenu>
 			</div>
-			<CollapsibleContent className="data-closed:hidden">
+			<CollapsibleContent className="data-closed:hidden ml-[11px] border-l border-sidebar-border/50 pl-2">
 				{workspacesResult._tag === "Initial" ? (
 					<div className="py-1 pl-2">
 						<span className="text-xs text-foreground-tertiary">Loading…</span>
 					</div>
 				) : workspacesResult._tag === "Failure" ? (
 					<div className="py-1 pl-2">
-						<span className="text-xs text-destructive">
-							{Cause.pretty(workspacesResult.cause)}
-						</span>
+						<span className="text-xs text-destructive">{Cause.pretty(workspacesResult.cause)}</span>
 					</div>
 				) : (
 					<ProjectWorkspaces
@@ -288,10 +311,30 @@ function ProjectItem({ project }: { project: Project }): React.JSX.Element {
 	);
 }
 
+function useProjectAvatarColors(projectIds: readonly string[]): Record<string, AvatarColorKey> {
+	const [colors, setColors] = useState<Record<string, AvatarColorKey>>(() => loadColorMap());
+
+	useEffect(() => {
+		if (projectIds.length === 0) return;
+		setColors((prev) => {
+			const next = assignColors(projectIds, prev);
+			if (next !== prev) saveColorMap(next);
+			return next;
+		});
+	}, [projectIds]);
+
+	return colors;
+}
+
 function ProjectList(): React.JSX.Element {
 	const projectsResult = useAtomValue(
 		Client.query("projects.list", {}, { reactivityKeys: ["projects"] }),
 	);
+
+	const projects =
+		projectsResult._tag === "Success" ? projectsResult.value : ([] as readonly Project[]);
+	const projectIds = useMemo(() => projects.map((p) => p.id as string), [projects]);
+	const colors = useProjectAvatarColors(projectIds);
 
 	if (projectsResult._tag === "Initial") {
 		return <p className="px-2 py-1 text-xs text-foreground-tertiary">Loading…</p>;
@@ -301,14 +344,15 @@ function ProjectList(): React.JSX.Element {
 			<p className="px-2 py-1 text-xs text-destructive">{Cause.pretty(projectsResult.cause)}</p>
 		);
 	}
-	const projects = projectsResult.value;
 	if (projects.length === 0) {
 		return <p className="px-2 py-1 text-xs text-foreground-tertiary">No projects yet</p>;
 	}
 	return (
-		<div className="flex flex-col gap-3">
+		<div className="flex flex-col divide-y divide-sidebar-border/50">
 			{projects.map((project) => (
-				<ProjectItem key={project.id} project={project} />
+				<div key={project.id} className="py-2 first:pt-0 last:pb-0">
+					<ProjectItem project={project} color={colors[project.id as string]} />
+				</div>
 			))}
 		</div>
 	);
@@ -343,13 +387,10 @@ function AppSidebar(): React.JSX.Element {
 	const navigate = useNavigate();
 
 	return (
-		<Sidebar collapsible="offcanvas" variant="inset">
+		<Sidebar collapsible="offcanvas" variant="sidebar">
 			<SidebarContent>
 				<SidebarGroup>
 					<ProjectList />
-				</SidebarGroup>
-				<SidebarGroup className="pt-0">
-					<NewProjectDialog />
 				</SidebarGroup>
 			</SidebarContent>
 			<SidebarFooter className="flex-row items-center gap-1 px-2">
@@ -366,6 +407,9 @@ function AppSidebar(): React.JSX.Element {
 				>
 					<QuestionIcon className="size-4" />
 				</a>
+				<div className="ml-auto">
+					<NewProjectDialog />
+				</div>
 			</SidebarFooter>
 		</Sidebar>
 	);

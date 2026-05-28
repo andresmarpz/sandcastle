@@ -63,12 +63,15 @@
 	--radius-2xl: calc(var(--radius) * 1.8);
 	--radius-3xl: calc(var(--radius) * 2.2);
 	--radius-4xl: calc(var(--radius) * 2.6);
+	--shadow-elevated: var(--elevation-raised);
 }
 
 :root {
-	--background: oklch(0.985 0 0);
+	--background: #fafafa;
 	--foreground: oklch(0.145 0 0);
-	--card: oklch(1 0 0);
+	--card: #ffffff;
+	--elevation-raised:
+		0 2px 4px 0 #0000000a, 0 1px 2px -1px #00000014, 0 0 0 0.5px #0000001f;
 	--card-foreground: oklch(0.145 0 0);
 	--popover: oklch(1 0 0);
 	--popover-foreground: oklch(0.145 0 0);
@@ -99,12 +102,27 @@
 	--sidebar-accent-foreground: oklch(0.205 0 0);
 	--sidebar-border: oklch(0.88 0 0);
 	--sidebar-ring: oklch(0.708 0 0);
+	--avatar-background-pink: #feeef8;
+	--avatar-text-pink: #cd1d8d;
+	--avatar-background-mint: #e1fbf4;
+	--avatar-text-mint: #147d6f;
+	--avatar-background-orange: #fff1e7;
+	--avatar-text-orange: #ed5f00;
+	--avatar-background-purple: #f9f1fe;
+	--avatar-text-purple: #8445bc;
+	--avatar-background-cyan: #e7f9fb;
+	--avatar-text-cyan: #0894b3;
+	--avatar-background-lime: #eefadc;
+	--avatar-text-lime: #5d770d;
 }
 
 .dark {
-	--background: #101010;
+	--background: #080808;
 	--foreground: oklch(0.985 0 0);
 	--card: #161616;
+	--elevation-raised:
+		0 2px 4px 0 rgba(0, 0, 0, 0.3), 0 1px 2px 0 rgba(0, 0, 0, 0.3),
+		0 0 0 0.5px rgba(255, 255, 255, 0.16), 0 -0.5px 0 0 rgba(255, 255, 255, 0.06);
 	--card-foreground: oklch(0.985 0 0);
 	--popover: #1c1c1c;
 	--popover-foreground: oklch(0.985 0 0);
@@ -134,6 +152,18 @@
 	--sidebar-accent-foreground: oklch(0.985 0 0);
 	--sidebar-border: oklch(1 0 0 / 18%);
 	--sidebar-ring: oklch(0.556 0 0);
+	--avatar-background-pink: #501b3f;
+	--avatar-text-pink: #e34ba9;
+	--avatar-background-mint: #033a34;
+	--avatar-text-mint: #95f3d9;
+	--avatar-background-orange: #5f2a06;
+	--avatar-text-orange: #ff802b;
+	--avatar-background-purple: #432155;
+	--avatar-text-purple: #9d5bd2;
+	--avatar-background-cyan: #0f3058;
+	--avatar-text-cyan: #369eff;
+	--avatar-background-lime: #2b3711;
+	--avatar-text-lime: #c4f042;
 }
 
 @layer base {

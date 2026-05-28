@@ -53,7 +53,7 @@ const tabSwitch = (n: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9): KeybindingDef => ({
 
 const projectSwitch = (n: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9): KeybindingDef => ({
 	id: `project.switch.${n}` as KeybindingId,
-	hotkey: `Control+${n}` as Hotkey,
+	hotkey: `Alt+${n}` as Hotkey,
 	name: `Switch to project ${n}`,
 	description: `Open the ${n}${ordinalSuffix(n)} project's first workspace`,
 	group: "projects",

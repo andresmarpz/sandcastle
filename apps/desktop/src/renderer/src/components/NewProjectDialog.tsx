@@ -11,11 +11,12 @@ function NewProjectDialog(): React.JSX.Element {
 		<>
 			<button
 				type="button"
+				aria-label="New project"
+				title="New project"
 				onClick={() => setOpen(true)}
-				className="flex h-7 w-full items-center gap-2 rounded-md border border-border bg-sidebar px-2 text-left text-xsm text-foreground shadow-[0_1px_1px_rgba(0,0,0,0.03),0_2px_6px_-2px_rgba(0,0,0,0.08)] hover:bg-sidebar-accent dark:shadow-[0_1px_1px_rgba(0,0,0,0.25),0_4px_10px_-3px_rgba(0,0,0,0.35)]"
+				className="grid size-7 place-items-center rounded text-foreground-tertiary hover:bg-sidebar-accent/60 hover:text-foreground"
 			>
-				<PlusIcon className="size-4 shrink-0 text-foreground-tertiary" />
-				<span className="min-w-0 flex-1 truncate">New project</span>
+				<PlusIcon className="size-4" />
 			</button>
 			<Dialog open={open} onOpenChange={setOpen}>
 				<DialogContent>

@@ -48,7 +48,7 @@ function ProjectSwitchSlot({ id, projectId }: SlotProps): null {
 }
 
 /**
- * Registers Control+1..9 to switch to the Nth project. Each binding navigates
+ * Registers Alt+1..9 to switch to the Nth project. Each binding navigates
  * to the project's workspace root and lets the router resolve the active tab.
  *
  * Slots mount only for projects that actually exist, so unused bindings simply

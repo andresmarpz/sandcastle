@@ -9,7 +9,7 @@ import ProjectKeybindings from "@/keybindings/ProjectKeybindings";
 import SidebarKeybindings from "@/keybindings/SidebarKeybindings";
 import { cn } from "@/lib/utils";
 
-const DEFAULT_SIDEBAR_WIDTH = 256;
+const DEFAULT_SIDEBAR_WIDTH = 276;
 
 type Props = {
 	children: React.ReactNode;
@@ -33,8 +33,8 @@ function Layout({ children }: Props): React.JSX.Element {
 			}
 		>
 			<TopBar />
-			<div
-				className="relative flex w-full min-h-0 flex-1"
+			<main
+				className="relative m-2 mt-0 flex w-auto min-h-0 flex-1 overflow-hidden rounded-[10px] bg-card shadow-elevated"
 				style={{ contain: "layout" } as React.CSSProperties}
 			>
 				<AppSidebar />
@@ -46,7 +46,7 @@ function Layout({ children }: Props): React.JSX.Element {
 					onWidthChange={setSidebarWidth}
 					onResizingChange={setIsResizing}
 				/>
-			</div>
+			</main>
 			<ProjectKeybindings />
 			<SidebarKeybindings />
 			{import.meta.env.DEV && <DebugOverlay />}

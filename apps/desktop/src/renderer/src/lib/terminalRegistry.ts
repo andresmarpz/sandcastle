@@ -18,6 +18,7 @@ type Instance = {
 	xterm: XTerm;
 	fit: FitAddon;
 	search: SearchAddon;
+	webgl: WebglAddon | null;
 	rendererType: RendererType;
 	currentContainer: HTMLElement | null;
 	resizeObserver: ResizeObserver;
@@ -103,12 +104,45 @@ const applyCurrentTheme = (mode: TerminalThemeMode): void => {
 	currentTheme = buildTheme(mode);
 	for (const inst of instances.values()) {
 		inst.xterm.options.theme = currentTheme;
-		// The WebGL/Canvas renderers cache cells; without a refresh, painted
-		// regions keep the old bg until something else forces a redraw.
-		try {
-			inst.xterm.refresh(0, Math.max(0, inst.xterm.rows - 1));
-		} catch {
-			// terminal not yet measured
+		// xterm.refresh() repaints cells but reuses the WebGL texture atlas,
+		// which is keyed on (glyph, fg, bg) and still holds the old palette.
+		// That mismatch is one of the ways atlas slots end up with stale
+		// pixels and show as garbled glyphs. Tear the WebGL addon down and
+		// re-add it so the atlas is rebuilt from scratch under the new theme.
+		if (inst.rendererType === "webgl" && inst.webgl) {
+			try {
+				inst.webgl.dispose();
+			} catch {
+				// already disposed
+			}
+			inst.webgl = null;
+			try {
+				const next = new WebglAddon();
+				next.onContextLoss(() => {
+					try {
+						next.dispose();
+					} catch {}
+					inst.webgl = null;
+					try {
+						inst.xterm.loadAddon(new CanvasAddon());
+						inst.rendererType = "canvas";
+					} catch {}
+				});
+				inst.xterm.loadAddon(next);
+				inst.webgl = next;
+			} catch {
+				// WebGL gone — fall back to canvas
+				try {
+					inst.xterm.loadAddon(new CanvasAddon());
+					inst.rendererType = "canvas";
+				} catch {}
+			}
+		} else {
+			try {
+				inst.xterm.refresh(0, Math.max(0, inst.xterm.rows - 1));
+			} catch {
+				// terminal not yet measured
+			}
 		}
 	}
 };
@@ -135,7 +169,7 @@ const createXterm = (): { xterm: XTerm; fit: FitAddon; search: SearchAddon } => 
 		letterSpacing: 0,
 		cursorBlink: false,
 		allowProposedApi: true,
-		customGlyphs: true,
+		customGlyphs: false,
 		scrollback: 10000,
 		scrollSensitivity: 3,
 		fastScrollSensitivity: 6,
@@ -191,6 +225,7 @@ const createInstance = (leafId: string, container: HTMLElement, opts: CreateOpti
 
 	xterm.open(container);
 	let rendererType: RendererType = "dom";
+	let webgl: WebglAddon | null = null;
 	// WebGL is far smoother on resize and on large output bursts than the
 	// Canvas renderer (no clear-and-redraw flash, GPU-cached glyph atlas).
 	// If the GL context is ever lost (driver reset, tab thrown away by the
@@ -198,19 +233,26 @@ const createInstance = (leafId: string, container: HTMLElement, opts: CreateOpti
 	// disposing the WebGL addon and falling back to Canvas, which is good
 	// enough and won't keep crashing.
 	try {
-		// preserveDrawingBuffer asks the GL context to keep its previous frame
-		// instead of being cleared at swap time — reduces black-flash during
-		// resizes at a small memory cost.
-		const webgl = new WebglAddon(true);
-		webgl.onContextLoss(() => {
-			webgl.dispose();
+		// preserveDrawingBuffer leaves stale pixels in the GL framebuffer between
+		// frames, which makes WebGL atlas-eviction artifacts visible as garbled
+		// glyphs during heavy TUI repaints (e.g. Claude Code). Default-cleared
+		// swaps avoid that at the cost of a barely-perceptible flash on resize.
+		const addon = new WebglAddon();
+		addon.onContextLoss(() => {
+			try {
+				addon.dispose();
+			} catch {}
+			inst.webgl = null;
 			try {
 				xterm.loadAddon(new CanvasAddon());
+				inst.rendererType = "canvas";
 			} catch {
 				// DOM renderer remains as last resort
+				inst.rendererType = "dom";
 			}
 		});
-		xterm.loadAddon(webgl);
+		xterm.loadAddon(addon);
+		webgl = addon;
 		rendererType = "webgl";
 	} catch {
 		try {
@@ -272,6 +314,7 @@ const createInstance = (leafId: string, container: HTMLElement, opts: CreateOpti
 		xterm,
 		fit,
 		search,
+		webgl,
 		rendererType,
 		currentContainer: container,
 		resizeObserver: new ResizeObserver(() => scheduleResize(inst)),

@@ -138,7 +138,7 @@ export const layer: Layer.Layer<ProjectService, never, ProjectsRepo | Workspaces
 						.create({
 							id: newWorkspaceId(),
 							projectId: id,
-							name: "main",
+							name: "Local",
 							kind: "local",
 							path: AbsolutePath.make(input.rootPath),
 							branch: null,
