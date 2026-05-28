@@ -22,6 +22,7 @@ import { useEffect, useMemo, useState } from "react";
 import NewProjectDialog from "@/components/NewProjectDialog";
 import NewWorkspaceDialog from "@/components/NewWorkspaceDialog";
 import StackedIcons from "@/components/StackedIcons";
+import StatusDot from "@/components/StatusDot";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
 	DropdownMenu,
@@ -40,7 +41,14 @@ import {
 } from "@/lib/avatarColors";
 import { cn } from "@/lib/utils";
 import { Client } from "@/rpc/client";
+import { useActivityStore, useWorkspaceActivity } from "@/stores/activity";
 import { type Tab, useTabsStore } from "@/stores/tabs";
+
+const STATUS_LABEL: Record<string, string> = {
+	working: "working",
+	done: "done",
+	"needs-attention": "needs attention",
+};
 
 const ACTIVE_ROW_CLASSES = "bg-sidebar text-foreground shadow-elevated";
 
@@ -151,7 +159,10 @@ function WorkspaceItem({
 }): React.JSX.Element {
 	const wsIdStr = ws.id as string;
 	const hasTabs = useTabsStore((s) => (s.byWorkspace[wsIdStr]?.tabs.length ?? 0) > 0);
+	const status = useWorkspaceActivity(wsIdStr);
 	const [open, setOpen] = useState(false);
+
+	const label = STATUS_LABEL[status] ? `${ws.name} — ${STATUS_LABEL[status]}` : ws.name;
 
 	return (
 		<Collapsible open={open} onOpenChange={setOpen}>
@@ -173,11 +184,11 @@ function WorkspaceItem({
 				>
 					<span
 						role="img"
-						className="relative flex size-2 shrink-0 items-center"
-						title={ws.name}
-						aria-label={ws.name}
+						className="relative flex size-2 shrink-0 items-center justify-center"
+						title={label}
+						aria-label={label}
 					>
-						<span className="h-px w-full bg-muted-foreground" />
+						<StatusDot status={status} />
 					</span>
 				</CollapsibleTrigger>
 				<button
@@ -216,6 +227,8 @@ function ProjectWorkspaces({
 	}
 
 	const handleSelect = (wsId: string): void => {
+		// Opening a workspace acknowledges its done/needs-attention latches.
+		useActivityStore.getState().acknowledgeWorkspace(wsId);
 		void navigate({ to: "/workspaces/$wsId", params: { wsId } });
 	};
 

@@ -5,6 +5,8 @@ import { WebLinksAddon } from "@xterm/addon-web-links";
 import { WebglAddon } from "@xterm/addon-webgl";
 import { type ITheme, Terminal as XTerm } from "@xterm/xterm";
 
+import { DECAY_MS, scanWorking } from "@/lib/activityDetector";
+
 type CreateOptions = {
 	cwd?: string;
 	shell?: string;
@@ -27,6 +29,10 @@ type Instance = {
 	disposed: boolean;
 	lastSentCols: number;
 	lastSentRows: number;
+	// Byte-path Claude activity detection (see activityDetector + stores/activity).
+	activityTail: string;
+	lastWorkingAt: number;
+	byteWorking: boolean;
 };
 
 const FONT_FAMILY =
@@ -99,6 +105,74 @@ const buildTheme = (mode: TerminalThemeMode): ITheme => {
 let currentTheme: ITheme = buildTheme("dark");
 
 const instances = new Map<string, Instance>();
+
+// --- Claude activity (byte path) ---------------------------------------------
+// This registry is the single chokepoint where every PTY's output is observed,
+// so the cheap "working" spinner scan lives here and is pushed to the activity
+// store through this channel. Authoritative status (working/needs-attention/
+// done) comes from Claude Code hooks in main; this is the zero-setup fallback
+// that only ever asserts "working".
+
+export type ActivityEvent =
+	| { kind: "byte-working"; leafId: string; working: boolean }
+	| { kind: "focus"; leafId: string }
+	| { kind: "dispose"; leafId: string };
+
+const activityListeners = new Set<(event: ActivityEvent) => void>();
+
+const notifyActivity = (event: ActivityEvent): void => {
+	for (const fn of activityListeners) fn(event);
+};
+
+export const subscribeActivity = (fn: (event: ActivityEvent) => void): (() => void) => {
+	activityListeners.add(fn);
+	return () => {
+		activityListeners.delete(fn);
+	};
+};
+
+// Resolve the leaf that owns a PTY session, so hook events (which carry the
+// sessionId injected into the PTY env) can be routed to the right pane.
+export const getLeafIdForSession = (sessionId: string): string | null => {
+	for (const inst of instances.values()) {
+		if (inst.sessionId === sessionId) return inst.leafId;
+	}
+	return null;
+};
+
+let decayTimer: ReturnType<typeof setInterval> | null = null;
+
+// onData fires only while output flows, so it can raise "working" but never
+// lower it. This shared 1s sweep emits the falling edge once the spinner has
+// been quiet past DECAY_MS, and tears itself down when no terminals remain.
+const ensureDecayTimer = (): void => {
+	if (decayTimer) return;
+	decayTimer = setInterval(() => {
+		const now = Date.now();
+		for (const inst of instances.values()) {
+			if (inst.byteWorking && now - inst.lastWorkingAt >= DECAY_MS) {
+				inst.byteWorking = false;
+				notifyActivity({ kind: "byte-working", leafId: inst.leafId, working: false });
+			}
+		}
+		if (instances.size === 0 && decayTimer) {
+			clearInterval(decayTimer);
+			decayTimer = null;
+		}
+	}, 1000);
+};
+
+// Feed a chunk of PTY output to the byte-path detector. Emits only on the
+// rising edge into "working"; ensureDecayTimer emits the falling edge.
+const ingestOutput = (inst: Instance, data: string): void => {
+	const { tail, working } = scanWorking(inst.activityTail, data);
+	inst.activityTail = tail;
+	if (working) inst.lastWorkingAt = Date.now();
+	if (working && !inst.byteWorking) {
+		inst.byteWorking = true;
+		notifyActivity({ kind: "byte-working", leafId: inst.leafId, working: true });
+	}
+};
 
 const applyCurrentTheme = (mode: TerminalThemeMode): void => {
 	currentTheme = buildTheme(mode);
@@ -332,11 +406,19 @@ const createInstance = (leafId: string, container: HTMLElement, opts: CreateOpti
 		disposed: false,
 		lastSentCols: xterm.cols,
 		lastSentRows: xterm.rows,
+		activityTail: "",
+		lastWorkingAt: 0,
+		byteWorking: false,
 	};
 
 	requestAnimationFrame(() => safeFit(inst));
 
-	inst.ipcUnsubs.push(window.api.terminal.onData(sessionId, (data) => xterm.write(data)));
+	inst.ipcUnsubs.push(
+		window.api.terminal.onData(sessionId, (data) => {
+			xterm.write(data);
+			ingestOutput(inst, data);
+		}),
+	);
 	inst.ipcUnsubs.push(
 		window.api.terminal.onExit(sessionId, ({ exitCode }) => {
 			xterm.writeln(`\r\n\x1b[2m[process exited with code ${exitCode}]\x1b[0m`);
@@ -374,6 +456,7 @@ export const attachTerminal = (
 		inst = createInstance(leafId, container, opts);
 		instances.set(leafId, inst);
 		notifyStats();
+		ensureDecayTimer();
 	} else if (inst.currentContainer !== container) {
 		// Move the existing xterm DOM element to the new container.
 		if (inst.xterm.element && inst.xterm.element.parentElement !== container) {
@@ -426,10 +509,17 @@ export const disposeTerminal = (leafId: string): void => {
 	try {
 		notifyStats();
 	} catch {}
+	// Drop the leaf's activity so the store prunes its entry and re-rolls the
+	// owning workspace's status.
+	notifyActivity({ kind: "dispose", leafId });
 };
 
 export const focusTerminal = (leafId: string): void => {
-	instances.get(leafId)?.xterm.focus();
+	const inst = instances.get(leafId);
+	if (!inst) return;
+	inst.xterm.focus();
+	// Focusing a pane acknowledges any latched done/needs-attention on it.
+	notifyActivity({ kind: "focus", leafId });
 };
 
 export const getSessionId = (leafId: string): string | null => {
