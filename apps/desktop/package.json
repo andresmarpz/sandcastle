@@ -4,6 +4,7 @@
 	"private": true,
 	"description": "Sandcastle desktop app",
 	"author": "andresmarpz",
+	"homepage": "https://github.com/andresmarpz/sandcastle",
 	"main": "./out/main/index.js",
 	"scripts": {
 		"format": "biome format --write .",

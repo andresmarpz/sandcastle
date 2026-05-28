@@ -106,24 +106,45 @@ jobs:
       - name: Build renderer & main (electron-vite)
         run: pnpm --filter desktop run build
 
+      # macOS signing & notarization are dormant until Apple secrets exist.
+      # When MAC_CSC_LINK is set we export the signing/notarization vars; when
+      # it is absent we disable identity discovery so electron-builder produces
+      # an unsigned build instead of choking on an empty CSC_LINK path.
+      # To enable signing later: add the secrets below and flip
+      # `mac.notarize: true` in apps/desktop/electron-builder.yml.
+      #   MAC_CSC_LINK                base64 of your Developer ID .p12
+      #   MAC_CSC_KEY_PASSWORD        password for that .p12
+      #   APPLE_ID                    Apple ID email
+      #   APPLE_APP_SPECIFIC_PASSWORD app-specific password for notarization
+      #   APPLE_TEAM_ID               Apple Developer Team ID
+      - name: Configure macOS signing
+        if: ${{ matrix.platform == 'mac' }}
+        env:
+          MAC_CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          MAC_CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          if [ -n "$MAC_CSC_LINK" ]; then
+            {
+              echo "CSC_LINK=$MAC_CSC_LINK"
+              echo "CSC_KEY_PASSWORD=$MAC_CSC_KEY_PASSWORD"
+              echo "APPLE_ID=$APPLE_ID"
+              echo "APPLE_APP_SPECIFIC_PASSWORD=$APPLE_APP_SPECIFIC_PASSWORD"
+              echo "APPLE_TEAM_ID=$APPLE_TEAM_ID"
+            } >> "$GITHUB_ENV"
+            echo "macOS signing: ENABLED"
+          else
+            echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> "$GITHUB_ENV"
+            echo "macOS signing: disabled (no MAC_CSC_LINK secret) — building unsigned"
+          fi
+
       - name: Package & publish (electron-builder)
         working-directory: apps/desktop
         run: pnpm exec electron-builder ${{ matrix.args }} --publish ${{ inputs.dry_run && 'never' || 'always' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # --- macOS code signing & notarization (dormant until secrets exist) ---
-          # Add these repo secrets, then flip `mac.notarize` to true in
-          # apps/desktop/electron-builder.yml to ship Gatekeeper-approved builds:
-          #   MAC_CSC_LINK                  base64 of your Developer ID .p12
-          #   MAC_CSC_KEY_PASSWORD          password for that .p12
-          #   APPLE_ID                      Apple ID email
-          #   APPLE_APP_SPECIFIC_PASSWORD   app-specific password for notarization
-          #   APPLE_TEAM_ID                 Apple Developer Team ID
-          CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
       - name: Upload artifacts (dry run only)
         if: ${{ inputs.dry_run }}
