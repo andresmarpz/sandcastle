@@ -1,75 +1,47 @@
 {
-	"$schema": "https://biomejs.dev/schemas/2.3.11/schema.json",
-	"vcs": {
-		"enabled": true,
-		"clientKind": "git",
-		"useIgnoreFile": true
-	},
+	"$schema": "https://biomejs.dev/schemas/2.4.15/schema.json",
 	"files": {
-		"includes": ["**", "!!**/dist"]
-	},
-	"overrides": [
-		{
-			"includes": ["**/tauri.conf.json"],
-			"formatter": {
-				"enabled": false
-			}
-		}
-	],
-	"formatter": {
-		"enabled": true,
-		"indentStyle": "tab",
-		"indentWidth": 2,
-		"lineWidth": 80,
-		"lineEnding": "lf"
-	},
-	"javascript": {
-		"formatter": {
-			"arrowParentheses": "always",
-			"bracketSameLine": false,
-			"bracketSpacing": true,
-			"jsxQuoteStyle": "double",
-			"quoteProperties": "asNeeded",
-			"semicolons": "always",
-			"trailingCommas": "all"
-		}
-	},
-	"json": {
-		"formatter": {
-			"trailingCommas": "none"
-		}
+		"includes": [
+			"**",
+			"!**/node_modules",
+			"!**/dist",
+			"!**/out",
+			"!**/build",
+			"!**/.turbo",
+			"!**/*.tsbuildinfo",
+			"!apps/desktop/resources",
+			"!pnpm-lock.yaml",
+			"!**/tsconfig*.json"
+		]
 	},
 	"linter": {
 		"enabled": true,
 		"rules": {
 			"recommended": true,
 			"style": {
-				"noNonNullAssertion": "warn"
-			},
-			"security": {
-				"noDangerouslySetInnerHtml": "off"
-			},
-			"complexity": {
-				"noImportantStyles": "off"
-			},
-			"suspicious": {
-				"noExplicitAny": "warn",
-				"noArrayIndexKey": "warn",
-				"noDocumentCookie": "warn"
+				"noNonNullAssertion": "off"
 			},
 			"a11y": {
-				"useAnchorContent": "warn",
-				"noSvgWithoutTitle": "warn",
-				"useSemanticElements": "warn",
-				"useKeyWithClickEvents": "warn",
-				"noLabelWithoutControl": "off",
-				"noNoninteractiveElementInteractions": "warn",
-				"noStaticElementInteractions": "warn"
-			},
-			"correctness": {
-				"noInvalidPositionAtImportRule": "off",
-				"useExhaustiveDependencies": "warn"
+				"useHtmlLang": "warn",
+				"noLabelWithoutControl": {
+					"level": "error",
+					"options": {
+						"inputComponents": ["Input"]
+					}
+				}
 			}
+		}
+	},
+	"formatter": {
+		"enabled": true,
+		"indentStyle": "tab",
+		"lineWidth": 100
+	},
+	"javascript": {
+		"formatter": {
+			"quoteStyle": "double",
+			"semicolons": "always",
+			"trailingCommas": "all"
 		}
 	},
 	"css": {
@@ -77,12 +49,27 @@
 			"tailwindDirectives": true
 		}
 	},
-	"assist": {
-		"enabled": true,
-		"actions": {
-			"source": {
-				"organizeImports": "on"
+	"overrides": [
+		{
+			"includes": ["apps/desktop/src/renderer/src/components/ui/**"],
+			"linter": {
+				"rules": {
+					"suspicious": {
+						"noExplicitAny": "off",
+						"noArrayIndexKey": "off",
+						"noDocumentCookie": "off"
+					},
+					"a11y": {
+						"useKeyWithClickEvents": "off",
+						"noStaticElementInteractions": "off",
+						"useSemanticElements": "off"
+					},
+					"correctness": {
+						"useUniqueElementIds": "off",
+						"useExhaustiveDependencies": "off"
+					}
+				}
 			}
 		}
-	}
+	]
 }
