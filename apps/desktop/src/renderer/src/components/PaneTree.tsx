@@ -5,7 +5,6 @@ import { Fragment, useCallback, useEffect, useRef } from "react";
 import type { GroupImperativeHandle } from "react-resizable-panels";
 
 import { registerPanelGroup, unregisterPanelGroup } from "@/lib/panelGroupRegistry";
-import { disposeTerminal, getTerminalCwd } from "@/lib/terminalRegistry";
 import {
 	collectLeafIds,
 	type Leaf,
@@ -15,6 +14,7 @@ import {
 	removeLeaf,
 	splitLeaf,
 } from "@/lib/paneTree";
+import { disposeTerminal, getTerminalCwd } from "@/lib/terminalRegistry";
 import { type TabId, useTabsStore } from "@/stores/tabs";
 
 import Terminal from "./Terminal";
@@ -68,12 +68,7 @@ function LeafPane({
 			onKeyDownCapture={handleKeyDown}
 			onFocusCapture={() => onFocus(leaf.id)}
 		>
-			<Terminal
-				leafId={leaf.id}
-				cwd={leaf.cwd}
-				corners={corners}
-				className="h-full w-full"
-			/>
+			<Terminal leafId={leaf.id} cwd={leaf.cwd} corners={corners} className="h-full w-full" />
 			<div className="pointer-events-none absolute top-1.5 right-1.5 z-10 flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
 				<button
 					type="button"

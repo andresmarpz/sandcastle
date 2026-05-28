@@ -7,6 +7,7 @@ import {
 	ProjectPathConflict,
 	ProjectPathInvalid,
 	ProjectPathNotFound,
+	ProjectReorderMismatch,
 	type Project as ProjectWire,
 } from "@sandcastle/contracts";
 import {
@@ -74,6 +75,9 @@ export interface ProjectServiceShape {
 		name: string,
 	) => Effect.Effect<ProjectWire, ProjectNotFound | InternalError>;
 	readonly delete: (projectId: ProjectId) => Effect.Effect<void, ProjectNotFound | InternalError>;
+	readonly reorder: (
+		projectIds: ReadonlyArray<ProjectId>,
+	) => Effect.Effect<void, ProjectReorderMismatch | InternalError>;
 }
 
 export class ProjectService extends Context.Service<ProjectService, ProjectServiceShape>()(
@@ -200,6 +204,19 @@ export const layer: Layer.Layer<ProjectService, never, ProjectsRepo | Workspaces
 					);
 				});
 
-			return ProjectService.of({ list, create, rename, delete: del });
+			const reorder: ProjectServiceShape["reorder"] = (projectIds) =>
+				projects.reorder(projectIds).pipe(
+					Effect.catchTag("ProjectReorderMismatch", (err) =>
+						Effect.fail(
+							new ProjectReorderMismatch({
+								expected: err.expected,
+								got: err.got,
+							}),
+						),
+					),
+					Effect.catchTag("SqliteError", (cause: SqliteError) => Effect.fail(toInternal(cause))),
+				);
+
+			return ProjectService.of({ list, create, rename, delete: del, reorder });
 		}),
 	);

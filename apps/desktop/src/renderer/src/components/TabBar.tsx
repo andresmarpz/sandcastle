@@ -1,5 +1,5 @@
-import type { WorkspaceId } from "@sandcastle/contracts";
 import { PlusIcon, XIcon } from "@phosphor-icons/react";
+import type { WorkspaceId } from "@sandcastle/contracts";
 import { useNavigate } from "@tanstack/react-router";
 
 import StackedIcons from "@/components/StackedIcons";
@@ -26,13 +26,7 @@ type TabItemProps = {
 	onClose: () => void;
 };
 
-function TabItem({
-	title,
-	tree,
-	isActive,
-	onSelect,
-	onClose,
-}: TabItemProps): React.JSX.Element {
+function TabItem({ title, tree, isActive, onSelect, onClose }: TabItemProps): React.JSX.Element {
 	// Active tab polls a bit faster — the user is most likely looking at it.
 	const procs = useTabProcesses({ tree, intervalMs: isActive ? 1000 : 2500 });
 
@@ -78,9 +72,7 @@ function TabItem({
 
 function TabBar({ workspaceId, activeTabId, defaultCwd }: Props): React.JSX.Element {
 	const navigate = useNavigate();
-	const tabs = useTabsStore(
-		(s) => s.byWorkspace[workspaceId as string]?.tabs ?? [],
-	);
+	const tabs = useTabsStore((s) => s.byWorkspace[workspaceId as string]?.tabs ?? []);
 	const createTab = useTabsStore((s) => s.createTab);
 	const closeTab = useTabsStore((s) => s.closeTab);
 	const getWorkspace = useTabsStore((s) => s.getWorkspace);

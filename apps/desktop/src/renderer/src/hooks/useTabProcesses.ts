@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { collectLeafIds, type Pane } from "@/lib/paneTree";
-import { classifyProc, type ProcKind } from "@/lib/procClassifier";
+import { pickProcKind, type ProcKind } from "@/lib/procClassifier";
 import { getSessionId, subscribeStats } from "@/lib/terminalRegistry";
 
 export type LeafProc = {
@@ -54,11 +54,11 @@ export const useTabProcesses = ({
 					);
 					if (cancelled) return;
 					const next: LeafProc[] = sessions.map(({ leafId, sessionId }) => {
-						const proc = byId[sessionId] ?? null;
+						const picked = pickProcKind(byId[sessionId] ?? []);
 						return {
 							leafId,
-							kind: classifyProc(proc),
-							comm: proc?.comm ?? null,
+							kind: picked?.kind ?? null,
+							comm: picked?.comm ?? null,
 						};
 					});
 					setProcs(next);

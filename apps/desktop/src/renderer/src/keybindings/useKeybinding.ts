@@ -1,8 +1,4 @@
-import {
-	type HotkeyCallback,
-	useHotkey,
-	type UseHotkeyOptions,
-} from "@tanstack/react-hotkeys";
+import { type HotkeyCallback, type UseHotkeyOptions, useHotkey } from "@tanstack/react-hotkeys";
 
 import { KEYBINDINGS, type KeybindingId } from "./registry";
 

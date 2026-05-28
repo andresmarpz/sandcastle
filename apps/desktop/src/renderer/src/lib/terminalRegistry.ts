@@ -162,14 +162,14 @@ export const setTerminalTheme = (mode: TerminalThemeMode): void => {
 const createXterm = (): { xterm: XTerm; fit: FitAddon; search: SearchAddon } => {
 	const xterm = new XTerm({
 		fontFamily: FONT_FAMILY,
-		fontSize: 13,
+		fontSize: 14,
 		fontWeight: 400,
 		fontWeightBold: 700,
 		lineHeight: 1,
 		letterSpacing: 0,
 		cursorBlink: false,
 		allowProposedApi: true,
-		customGlyphs: false,
+		customGlyphs: true,
 		scrollback: 10000,
 		scrollSensitivity: 3,
 		fastScrollSensitivity: 6,
@@ -279,6 +279,15 @@ const createInstance = (leafId: string, container: HTMLElement, opts: CreateOpti
 	// readline/ZLE control byte into the PTY ourselves.
 	xterm.attachCustomKeyEventHandler((e) => {
 		if (e.type !== "keydown") return true;
+		// Option+1..9 are global app shortcuts (switch project). With
+		// macOptionIsMeta, xterm would otherwise swallow them as a meta-escape
+		// written to the PTY. Returning false makes xterm ignore the event
+		// WITHOUT calling preventDefault, so it bubbles to the document-level
+		// hotkey handler — the same path that works when the terminal isn't
+		// focused. Match on `code` because Option+digit mangles `key` on macOS.
+		if (e.altKey && !e.ctrlKey && !e.metaKey && /^Digit[1-9]$/.test(e.code)) {
+			return false;
+		}
 		const sendSeq = (seq: string): boolean => {
 			e.preventDefault();
 			if (!inst.disposed) window.api.terminal.write(sessionId, seq);

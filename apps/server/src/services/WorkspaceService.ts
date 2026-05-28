@@ -140,9 +140,7 @@ export const layer: Layer.Layer<
 			Effect.gen(function* () {
 				const row = yield* workspaces.getById(workspaceId).pipe(Effect.mapError(toInternal));
 				if (row === null || row.deletedAt !== null) {
-					return yield* Effect.fail(
-						new WorkspaceNotFound({ workspaceId: workspaceId as string }),
-					);
+					return yield* Effect.fail(new WorkspaceNotFound({ workspaceId: workspaceId as string }));
 				}
 				return toWire(row);
 			});

@@ -52,8 +52,7 @@ export const useTabsStore = create<State & Actions>()(
 		(set, get) => ({
 			byWorkspace: {},
 
-			getWorkspace: (wsId) =>
-				get().byWorkspace[wsId as string] ?? { tabs: [], activeTabId: null },
+			getWorkspace: (wsId) => get().byWorkspace[wsId as string] ?? { tabs: [], activeTabId: null },
 
 			ensureTab: (wsId, cwd) => {
 				const key = wsId as string;

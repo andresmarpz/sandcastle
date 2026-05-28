@@ -34,15 +34,24 @@ function ProjectSwitchSlot({ id, projectId }: SlotProps): null {
 		),
 	);
 
-	useKeybinding(id, () => {
-		if (workspacesResult._tag !== "Success") return;
-		const ws = workspacesResult.value[0];
-		if (!ws) return;
-		void navigate({
-			to: "/workspaces/$wsId",
-			params: { wsId: ws.id as string },
-		});
-	});
+	useKeybinding(
+		id,
+		() => {
+			if (workspacesResult._tag !== "Success") return;
+			const ws = workspacesResult.value[0];
+			if (!ws) return;
+			void navigate({
+				to: "/workspaces/$wsId",
+				params: { wsId: ws.id as string },
+			});
+		},
+		// Option+N is an Alt combo, which @tanstack/hotkeys defaults to ignoring
+		// when focus is in an input (it only fires Ctrl/Meta combos there). The
+		// xterm terminal is focused via a hidden <textarea>, so without this the
+		// binding silently no-ops whenever a terminal pane has focus. Force it on
+		// so these stay truly global navigation shortcuts.
+		{ ignoreInputs: false },
+	);
 
 	return null;
 }

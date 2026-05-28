@@ -268,41 +268,50 @@ const commFromCommand = (command: string): string => {
 	return slash >= 0 ? first.slice(slash + 1) : first;
 };
 
-const pickForeground = (
+const collectForeground = (
 	shellPid: number,
 	childrenOf: Map<number, ProcRow[]>,
-): ForegroundProc | null => {
-	// Walk all descendants of the shell. Prefer the deepest descendant whose
-	// STAT contains '+' (member of the foreground process group). Falls back to
-	// the deepest descendant if none are marked foreground (rare; the shell is
-	// likely idle at the prompt then — return null so the UI shows no icon).
-	let best: { row: ProcRow; depth: number } | null = null;
+): ForegroundProc[] => {
+	// Every process in the terminal's foreground process group carries '+' in
+	// STAT — and that group is the launched job PLUS all the helpers it spawns
+	// (claude's shell/ripgrep calls, a Vite dev server's esbuild, lazygit's git).
+	// We return ALL of them, deepest-first, and let the renderer pick the most
+	// meaningful one by priority. The old code picked a single *deepest* '+'
+	// descendant here, which is what made the icon unreliable: it surfaced
+	// whatever transient helper happened to be running at poll time (esbuild, rg,
+	// a bash subshell) instead of the actual job, so the icon flickered as those
+	// children came and went, and dev servers showed "esbuild"/nothing instead
+	// of Vite/Next. An idle shell has no '+' children → empty array → no icon.
+	const found: Array<{ row: ProcRow; depth: number }> = [];
 	const stack: Array<{ pid: number; depth: number }> = [{ pid: shellPid, depth: 0 }];
 	while (stack.length > 0) {
 		const { pid, depth } = stack.pop()!;
 		for (const child of childrenOf.get(pid) ?? []) {
 			if (child.stat.includes("+")) {
-				if (!best || depth + 1 > best.depth) {
-					best = { row: child, depth: depth + 1 };
-				}
+				found.push({ row: child, depth: depth + 1 });
 			}
 			stack.push({ pid: child.pid, depth: depth + 1 });
 		}
 	}
-	if (!best) return null;
-	const { row } = best;
-	return { pid: row.pid, comm: commFromCommand(row.command), args: row.command };
+	// Deepest-first so the renderer's priority pick resolves same-tier ties to
+	// the innermost process (e.g. the real server below its npm/turbo wrappers).
+	found.sort((a, b) => b.depth - a.depth);
+	return found.map(({ row }) => ({
+		pid: row.pid,
+		comm: commFromCommand(row.command),
+		args: row.command,
+	}));
 };
 
 const getForegroundProcs = async (
 	ids: string[],
-): Promise<Record<string, ForegroundProc | null>> => {
-	const result: Record<string, ForegroundProc | null> = {};
+): Promise<Record<string, ForegroundProc[]>> => {
+	const result: Record<string, ForegroundProc[]> = {};
 	const targets: Array<{ id: string; shellPid: number }> = [];
 	for (const id of ids) {
 		const session = sessions.get(id);
 		if (!session) {
-			result[id] = null;
+			result[id] = [];
 			continue;
 		}
 		targets.push({ id, shellPid: session.pty.pid });
@@ -311,7 +320,7 @@ const getForegroundProcs = async (
 
 	if (process.platform === "win32") {
 		// node-pty on Windows uses ConPTY; no foreground-pgrp concept. Skip for now.
-		for (const t of targets) result[t.id] = null;
+		for (const t of targets) result[t.id] = [];
 		return result;
 	}
 
@@ -324,7 +333,7 @@ const getForegroundProcs = async (
 		});
 		stdout = r.stdout;
 	} catch {
-		for (const t of targets) result[t.id] = null;
+		for (const t of targets) result[t.id] = [];
 		return result;
 	}
 
@@ -336,7 +345,7 @@ const getForegroundProcs = async (
 		else childrenOf.set(row.ppid, [row]);
 	}
 	for (const t of targets) {
-		result[t.id] = pickForeground(t.shellPid, childrenOf);
+		result[t.id] = collectForeground(t.shellPid, childrenOf);
 	}
 	return result;
 };

@@ -13,9 +13,7 @@ function ProjectsIndex(): React.JSX.Element {
 		return <p className="p-4 text-xs text-muted-foreground">Loading projects…</p>;
 	}
 	if (projectsResult._tag === "Failure") {
-		return (
-			<p className="p-4 text-xs text-destructive">{Cause.pretty(projectsResult.cause)}</p>
-		);
+		return <p className="p-4 text-xs text-destructive">{Cause.pretty(projectsResult.cause)}</p>;
 	}
 
 	const projects = projectsResult.value;

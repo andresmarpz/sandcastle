@@ -25,7 +25,7 @@ const terminal = {
 	getCwd: (id: string): Promise<string | null> => ipcRenderer.invoke("terminal:get-cwd", id),
 	getForegroundProcs: (
 		ids: string[],
-	): Promise<Record<string, { pid: number; comm: string; args: string } | null>> =>
+	): Promise<Record<string, Array<{ pid: number; comm: string; args: string }>>> =>
 		ipcRenderer.invoke("terminal:get-foreground-procs", ids),
 	onData: (id: string, listener: (data: string) => void): (() => void) => {
 		const channel = `terminal:data:${id}`;

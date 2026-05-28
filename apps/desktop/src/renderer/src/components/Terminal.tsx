@@ -19,13 +19,7 @@ type TerminalProps = {
 	corners?: Corners;
 };
 
-function Terminal({
-	leafId,
-	cwd,
-	shell,
-	className,
-	corners,
-}: TerminalProps): React.JSX.Element {
+function Terminal({ leafId, cwd, shell, className, corners }: TerminalProps): React.JSX.Element {
 	const slotRef = useRef<HTMLDivElement>(null);
 	const { resolvedTheme } = useTheme();
 	const mode = resolvedTheme === "light" ? "light" : "dark";
@@ -62,10 +56,7 @@ function Terminal({
 	};
 
 	return (
-		<div
-			className={`relative bg-sidebar ${className ?? "h-full w-full"}`}
-			style={cornerRadii}
-		>
+		<div className={`relative bg-sidebar ${className ?? "h-full w-full"}`} style={cornerRadii}>
 			<div
 				ref={slotRef}
 				role="application"

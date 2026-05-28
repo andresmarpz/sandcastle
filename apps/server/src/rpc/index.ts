@@ -16,6 +16,8 @@ export const RpcHandlers = SandcastleRpc.toLayer(
 			"projects.rename": (payload) => projects.rename(payload.projectId, payload.name),
 			"projects.delete": (payload) =>
 				projects.delete(payload.projectId).pipe(Effect.map(() => ({}))),
+			"projects.reorder": (payload) =>
+				projects.reorder(payload.projectIds).pipe(Effect.map(() => ({}))),
 
 			"workspaces.list": (payload) => workspaces.list(payload.projectId),
 			"workspaces.get": (payload) => workspaces.get(payload.workspaceId),
