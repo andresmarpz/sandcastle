@@ -1,0 +1,152 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Build artifacts without publishing a release'
+        type: boolean
+        default: false
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Resolve the version/tag and create (or reuse) a DRAFT GitHub release up
+  # front, so the parallel build matrix all uploads into the same release
+  # instead of racing to create it.
+  # ---------------------------------------------------------------------------
+  prepare:
+    name: Prepare draft release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      tag: ${{ steps.meta.outputs.tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve version & tag
+        id: meta
+        run: |
+          VERSION=$(node -p "require('./apps/desktop/package.json').version")
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            TAG="${{ github.ref_name }}"
+          else
+            TAG="v${VERSION}"
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "Releasing version ${VERSION} as tag ${TAG}"
+
+      - name: Verify tag matches package version
+        if: ${{ github.ref_type == 'tag' }}
+        run: |
+          if [ "${{ steps.meta.outputs.tag }}" != "v${{ steps.meta.outputs.version }}" ]; then
+            echo "::error::Tag ${{ steps.meta.outputs.tag }} does not match apps/desktop/package.json version ${{ steps.meta.outputs.version }} (expected v${{ steps.meta.outputs.version }}). Bump the version before tagging."
+            exit 1
+          fi
+
+      - name: Create draft release if missing
+        if: ${{ !inputs.dry_run }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.meta.outputs.tag }}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists — reusing it."
+          else
+            gh release create "$TAG" \
+              --draft \
+              --title "$TAG" \
+              --generate-notes
+          fi
+
+  # ---------------------------------------------------------------------------
+  # Build & package on each native platform, uploading installers to the draft
+  # release. macOS is built on both Apple Silicon (arm64) and Intel (x64).
+  # ---------------------------------------------------------------------------
+  build:
+    name: Build (${{ matrix.os }})
+    needs: prepare
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14            # Apple Silicon
+            platform: mac
+            args: --mac --arm64
+          - os: macos-13            # Intel
+            platform: mac
+            args: --mac --x64
+          - os: windows-latest
+            platform: win
+            args: --win --x64
+          - os: ubuntu-latest
+            platform: linux
+            args: --linux --x64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        uses: ./.github/actions/setup
+        with:
+          turbo-cache-key: release-${{ matrix.platform }}
+
+      - name: Build renderer & main (electron-vite)
+        run: pnpm --filter desktop run build
+
+      - name: Package & publish (electron-builder)
+        working-directory: apps/desktop
+        run: pnpm exec electron-builder ${{ matrix.args }} --publish ${{ inputs.dry_run && 'never' || 'always' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # --- macOS code signing & notarization (dormant until secrets exist) ---
+          # Add these repo secrets, then flip `mac.notarize` to true in
+          # apps/desktop/electron-builder.yml to ship Gatekeeper-approved builds:
+          #   MAC_CSC_LINK                  base64 of your Developer ID .p12
+          #   MAC_CSC_KEY_PASSWORD          password for that .p12
+          #   APPLE_ID                      Apple ID email
+          #   APPLE_APP_SPECIFIC_PASSWORD   app-specific password for notarization
+          #   APPLE_TEAM_ID                 Apple Developer Team ID
+          CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+      - name: Upload artifacts (dry run only)
+        if: ${{ inputs.dry_run }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ matrix.os }}
+          path: |
+            apps/desktop/dist/*.dmg
+            apps/desktop/dist/*.exe
+            apps/desktop/dist/*.AppImage
+            apps/desktop/dist/*.deb
+          if-no-files-found: ignore
+
+  # ---------------------------------------------------------------------------
+  # All platforms built & uploaded — flip the draft release to published.
+  # ---------------------------------------------------------------------------
+  publish:
+    name: Publish release
+    needs: [prepare, build]
+    if: ${{ !inputs.dry_run }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mark release as published
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit "${{ needs.prepare.outputs.tag }}" --draft=false --repo "${{ github.repository }}"

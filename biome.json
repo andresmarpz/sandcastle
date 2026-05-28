@@ -22,7 +22,13 @@
 				"noNonNullAssertion": "off"
 			},
 			"a11y": {
-				"useHtmlLang": "warn"
+				"useHtmlLang": "warn",
+				"noLabelWithoutControl": {
+					"level": "error",
+					"options": {
+						"inputComponents": ["Input"]
+					}
+				}
 			}
 		}
 	},

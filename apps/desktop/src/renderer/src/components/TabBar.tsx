@@ -31,6 +31,7 @@ function TabItem({ title, tree, isActive, onSelect, onClose }: TabItemProps): Re
 	const procs = useTabProcesses({ tree, intervalMs: isActive ? 1000 : 2500 });
 
 	return (
+		// biome-ignore lint/a11y/useSemanticElements: tab wraps a nested close <button>, so a native <button> element cannot be used here
 		<div
 			role="button"
 			tabIndex={0}
