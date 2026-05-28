@@ -5,6 +5,7 @@ import DebugOverlay from "@/components/DebugOverlay";
 import SidebarResizeHandle from "@/components/SidebarResizeHandle";
 import TopBar from "@/components/TopBar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { useActivityBridge } from "@/hooks/useActivityBridge";
 import ProjectKeybindings from "@/keybindings/ProjectKeybindings";
 import SidebarKeybindings from "@/keybindings/SidebarKeybindings";
 import { cn } from "@/lib/utils";
@@ -18,6 +19,9 @@ type Props = {
 function Layout({ children }: Props): React.JSX.Element {
 	const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
 	const [isResizing, setIsResizing] = useState(false);
+
+	// Pump terminal + Claude-hook activity into the store for the app's lifetime.
+	useActivityBridge();
 
 	return (
 		<SidebarProvider

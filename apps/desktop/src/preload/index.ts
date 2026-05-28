@@ -83,7 +83,22 @@ const caffeinate = {
 	},
 };
 
-const api = { terminal, menu, caffeinate, dialog: fileDialog, window: browserWindow };
+type ClaudeHookEvent = { sessionId: string; event: "working" | "attention" | "done" };
+
+const claude = {
+	// Claude Code lifecycle events, relayed from main's hook receiver. Drives the
+	// workspace activity dot + notification sounds (see stores/activity).
+	onHookEvent: (listener: (event: ClaudeHookEvent) => void): (() => void) => {
+		const handler = (_: unknown, event: ClaudeHookEvent): void => listener(event);
+		ipcRenderer.on("claude:hook", handler);
+		return () => ipcRenderer.removeListener("claude:hook", handler);
+	},
+	getHooksEnabled: (): Promise<boolean> => ipcRenderer.invoke("claude:get-hooks-enabled"),
+	setHooksEnabled: (enabled: boolean): Promise<boolean> =>
+		ipcRenderer.invoke("claude:set-hooks-enabled", enabled),
+};
+
+const api = { terminal, menu, caffeinate, dialog: fileDialog, window: browserWindow, claude };
 
 if (process.contextIsolated) {
 	try {
