@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { collectLeafIds, type Pane } from "@/lib/paneTree";
-import { pickProcKind, type ProcKind } from "@/lib/procClassifier";
+import { type ProcKind, pickProcKind } from "@/lib/procClassifier";
 import { getSessionId, subscribeStats } from "@/lib/terminalRegistry";
 
 export type LeafProc = {

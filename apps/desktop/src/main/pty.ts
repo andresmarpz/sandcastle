@@ -303,9 +303,7 @@ const collectForeground = (
 	}));
 };
 
-const getForegroundProcs = async (
-	ids: string[],
-): Promise<Record<string, ForegroundProc[]>> => {
+const getForegroundProcs = async (ids: string[]): Promise<Record<string, ForegroundProc[]>> => {
 	const result: Record<string, ForegroundProc[]> = {};
 	const targets: Array<{ id: string; shellPid: number }> = [];
 	for (const id of ids) {

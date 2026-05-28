@@ -65,9 +65,7 @@ const KIND_PRIORITY: Record<ProcKind, number> = {
 // server stays "Vite" even though its deepest child is esbuild. `procs` arrives
 // deepest-first, so ties within a tier resolve to the innermost process (e.g.
 // the real server beneath its npm/turbo wrappers).
-export const pickProcKind = (
-	procs: ForegroundProc[],
-): { kind: ProcKind; comm: string } | null => {
+export const pickProcKind = (procs: ForegroundProc[]): { kind: ProcKind; comm: string } | null => {
 	let best: { kind: ProcKind; comm: string; prio: number } | null = null;
 	for (const proc of procs) {
 		const kind = classifyProc(proc);

@@ -1,8 +1,9 @@
 {
 	"name": "desktop",
-	"version": "0.0.1",
+	"version": "0.3.0",
 	"private": true,
 	"description": "Sandcastle desktop app",
+	"author": "andresmarpz",
 	"main": "./out/main/index.js",
 	"scripts": {
 		"format": "biome format --write .",

@@ -1,0 +1,32 @@
+name: Setup
+description: Checkout-free composite setup — pnpm, Node, dependency install, and Turbo cache
+
+inputs:
+  turbo-cache-key:
+    description: Suffix used to scope the Turbo cache (e.g. "quality", "build")
+    required: false
+    default: default
+
+runs:
+  using: composite
+  steps:
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22
+        cache: pnpm
+
+    - name: Cache Turbo
+      uses: actions/cache@v4
+      with:
+        path: .turbo
+        key: ${{ runner.os }}-turbo-${{ inputs.turbo-cache-key }}-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-turbo-${{ inputs.turbo-cache-key }}-
+
+    - name: Install dependencies
+      shell: bash
+      run: pnpm install --frozen-lockfile
