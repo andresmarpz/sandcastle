@@ -12,6 +12,7 @@ export type KeybindingId =
 	| "tab.switch.7"
 	| "tab.switch.8"
 	| "tab.switch.9"
+	| "tab.new"
 	| "project.switch.1"
 	| "project.switch.2"
 	| "project.switch.3"
@@ -68,6 +69,14 @@ export const KEYBINDINGS = {
 	"tab.switch.7": tabSwitch(7),
 	"tab.switch.8": tabSwitch(8),
 	"tab.switch.9": tabSwitch(9),
+
+	"tab.new": {
+		id: "tab.new",
+		hotkey: "Mod+T",
+		name: "New tab",
+		description: "Open a new tab in the current workspace",
+		group: "tabs",
+	},
 
 	"project.switch.1": projectSwitch(1),
 	"project.switch.2": projectSwitch(2),

@@ -5,6 +5,7 @@ import { useNavigate } from "@tanstack/react-router";
 import StackedIcons from "@/components/StackedIcons";
 import { Button } from "@/components/ui/button";
 import { useTabProcesses } from "@/hooks/useTabProcesses";
+import { useKeybinding } from "@/keybindings/useKeybinding";
 import { collectLeafIds, type Pane } from "@/lib/paneTree";
 import { disposeTerminal } from "@/lib/terminalRegistry";
 import { cn } from "@/lib/utils";
@@ -98,6 +99,8 @@ function TabBar({ workspaceId, activeTabId, defaultCwd }: Props): React.JSX.Elem
 			params: { wsId: workspaceId as string, tabId: id },
 		});
 	};
+
+	useKeybinding("tab.new", () => handleNew());
 
 	const handleClose = (tabId: TabId): void => {
 		const ws = getWorkspace(workspaceId);
