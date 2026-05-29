@@ -5,6 +5,7 @@ import { focusTerminal, getLeafIdBySession, getTerminalCwd } from "@/lib/termina
 import { router } from "@/router";
 import { workspacesListQuery } from "@/rpc/queries";
 import { appRegistry } from "@/rpc/registry";
+import { useActivityStore } from "@/stores/activity";
 import { useTabsStore } from "@/stores/tabs";
 
 // Derived from the globally-typed preload API so we don't import across bundles.
@@ -89,6 +90,13 @@ const handle = async (cmd: McpCommand): Promise<unknown> => {
 			const cur = currentRoute();
 			const onScreen = cur?.wsId === loc.wsId && cur?.tabId === loc.tabId;
 			const moved = store.moveTabToWorkspace(wsId, loc.tabId, WorkspaceId.make(target));
+			// The activity rollup is folded per-workspace from its tabs' leaves, but
+			// the move changes membership without touching any leaf's own status — so
+			// re-fold both ends, else the status dot would stay stranded on the old
+			// workspace and never light up on the new one.
+			if (moved) {
+				useActivityStore.getState().recomputeWorkspaces([loc.wsId, target]);
+			}
 			// The destination workspace may have just been created server-side by
 			// main's upsert, which posts straight to the relay and so never bumps the
 			// sidebar's ["workspaces", projectId] reactivity key. Refresh that exact

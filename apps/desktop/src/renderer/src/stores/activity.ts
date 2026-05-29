@@ -66,6 +66,7 @@ type ActivityState = {
 	acknowledgeLeaf: (leafId: string) => void;
 	acknowledgeWorkspace: (wsId: string) => void;
 	acknowledgeActivePane: () => void;
+	recomputeWorkspaces: (wsIds: string[]) => void;
 	pruneLeaf: (leafId: string) => void;
 };
 
@@ -229,6 +230,15 @@ export const useActivityStore = create<ActivityState>()((set, get) => {
 					s.done = false;
 				});
 			}
+		},
+
+		// Re-fold the rollups for a set of workspaces whose tab membership changed
+		// without any leaf's own status changing — e.g. a worktree teleport moves a
+		// tab between workspaces. The per-leaf signals/status are keyed by global
+		// leafId so they ride along untouched; only the workspace aggregation needs
+		// to follow the tab to its new home (and clear from the old one).
+		recomputeWorkspaces: (wsIds) => {
+			for (const wsId of new Set(wsIds)) recomputeWorkspace(wsId);
 		},
 
 		pruneLeaf: (leafId) => {
