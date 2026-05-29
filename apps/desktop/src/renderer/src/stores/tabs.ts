@@ -4,6 +4,21 @@ import { persist } from "zustand/middleware";
 
 import { makeLeaf, type Pane } from "@/lib/paneTree";
 
+// A pane's cwd is resolved at render time as `leaf.cwd ?? <workspace path>`, so a
+// leaf only stores a cwd when it's an *explicit* override (a split inheriting its
+// neighbour's live dir, or an MCP `cwd` arg). Root leaves carry none and follow
+// whatever workspace they currently live under — which keeps them correct even
+// after a tab is teleported between workspaces. Strip any baked-in cwd so a tab's
+// terminals re-resolve against their owning workspace.
+const stripLeafCwd = (node: Pane): Pane => {
+	if (node.kind === "leaf") {
+		if (node.cwd === undefined) return node;
+		const { cwd: _cwd, ...rest } = node;
+		return rest;
+	}
+	return { ...node, children: node.children.map(stripLeafCwd) };
+};
+
 export type TabId = string;
 
 export type Tab = {
@@ -24,8 +39,11 @@ type State = {
 
 type Actions = {
 	getWorkspace: (wsId: WorkspaceId) => WorkspaceTabsState;
-	ensureTab: (wsId: WorkspaceId, cwd: string) => TabId;
-	createTab: (wsId: WorkspaceId, cwd: string) => TabId;
+	ensureTab: (wsId: WorkspaceId) => TabId;
+	// `cwd` is an explicit override baked into the new tab's root leaf (MCP
+	// new-tab passes the calling pane's live dir). Omit it and the tab's
+	// terminals fall back to the owning workspace's path.
+	createTab: (wsId: WorkspaceId, cwd?: string) => TabId;
 	closeTab: (wsId: WorkspaceId, tabId: TabId) => TabId | null;
 	setActiveTab: (wsId: WorkspaceId, tabId: TabId) => void;
 	setActiveLeaf: (wsId: WorkspaceId, tabId: TabId, leafId: string) => void;
@@ -67,13 +85,13 @@ export const useTabsStore = create<State & Actions>()(
 
 			getWorkspace: (wsId) => get().byWorkspace[wsId as string] ?? { tabs: [], activeTabId: null },
 
-			ensureTab: (wsId, cwd) => {
+			ensureTab: (wsId) => {
 				const key = wsId as string;
 				const current = get().byWorkspace[key];
 				if (current && current.tabs.length > 0) {
 					return current.activeTabId ?? current.tabs[0].id;
 				}
-				return get().createTab(wsId, cwd);
+				return get().createTab(wsId);
 			},
 
 			createTab: (wsId, cwd) => {
@@ -245,6 +263,24 @@ export const useTabsStore = create<State & Actions>()(
 		{
 			name: "sandcastle.tabs.v1",
 			partialize: (s) => ({ byWorkspace: s.byWorkspace }),
+			// v1: leaves used to bake in their workspace's path at creation, which
+			// went stale once a tab was teleported into another workspace (the leaf
+			// kept the origin/project-root path and its PTY respawned there). Drop
+			// every persisted leaf cwd so panes re-resolve against their current
+			// workspace path.
+			version: 1,
+			migrate: (persisted, version) => {
+				const state = persisted as { byWorkspace?: Record<string, WorkspaceTabsState> };
+				if (version >= 1) return state as State;
+				const byWorkspace: Record<string, WorkspaceTabsState> = {};
+				for (const [wsId, ws] of Object.entries(state.byWorkspace ?? {})) {
+					byWorkspace[wsId] = {
+						...ws,
+						tabs: ws.tabs.map((t) => ({ ...t, tree: stripLeafCwd(t.tree) })),
+					};
+				}
+				return { byWorkspace } as State;
+			},
 		},
 	),
 );

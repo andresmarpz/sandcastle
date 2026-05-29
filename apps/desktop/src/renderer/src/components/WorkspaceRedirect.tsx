@@ -25,8 +25,9 @@ function WorkspaceRedirect({ workspaceId }: Props): React.JSX.Element {
 
 	useEffect(() => {
 		if (workspaceResult._tag !== "Success") return;
-		const path = workspaceResult.value.path as unknown as string;
-		const tabId = ensureTab(workspaceId, path);
+		// The tab's terminals resolve their cwd from the workspace path at render,
+		// so ensureTab doesn't need it — it just guarantees a tab exists.
+		const tabId = ensureTab(workspaceId);
 		void navigate({
 			to: "/workspaces/$wsId/tabs/$tabId",
 			params: { wsId: workspaceId as string, tabId },

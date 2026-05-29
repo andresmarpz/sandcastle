@@ -14,7 +14,6 @@ import { type TabId, useTabsStore } from "@/stores/tabs";
 type Props = {
 	workspaceId: WorkspaceId;
 	activeTabId: TabId;
-	defaultCwd: string;
 };
 
 type TabItemProps = {
@@ -71,7 +70,7 @@ function TabItem({ title, tree, isActive, onSelect, onClose }: TabItemProps): Re
 	);
 }
 
-function TabBar({ workspaceId, activeTabId, defaultCwd }: Props): React.JSX.Element {
+function TabBar({ workspaceId, activeTabId }: Props): React.JSX.Element {
 	const navigate = useNavigate();
 	const tabs = useTabsStore((s) => s.byWorkspace[workspaceId as string]?.tabs ?? []);
 	const createTab = useTabsStore((s) => s.createTab);
@@ -86,7 +85,8 @@ function TabBar({ workspaceId, activeTabId, defaultCwd }: Props): React.JSX.Elem
 	};
 
 	const handleNew = (): void => {
-		const id = createTab(workspaceId, defaultCwd);
+		// No explicit cwd — the new tab's terminal spawns at the workspace path.
+		const id = createTab(workspaceId);
 		void navigate({
 			to: "/workspaces/$wsId/tabs/$tabId",
 			params: { wsId: workspaceId as string, tabId: id },
