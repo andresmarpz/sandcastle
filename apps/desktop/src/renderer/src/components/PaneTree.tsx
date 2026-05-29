@@ -27,6 +27,7 @@ type LeafProps = {
 	leaf: Leaf;
 	corners: Corners;
 	workspaceId: WorkspaceId;
+	defaultCwd: string;
 	onSplit: (id: string, orientation: Orientation) => void;
 	onClose: (id: string) => void;
 	onFocus: (id: string) => void;
@@ -37,6 +38,7 @@ function LeafPane({
 	leaf,
 	corners,
 	workspaceId,
+	defaultCwd,
 	onSplit,
 	onClose,
 	onFocus,
@@ -72,7 +74,10 @@ function LeafPane({
 		>
 			<Terminal
 				leafId={leaf.id}
-				cwd={leaf.cwd}
+				// Root panes carry no cwd of their own and spawn at the workspace's
+				// path (a git worktree). Only explicit overrides — a split inheriting
+				// its neighbour's live dir, or an MCP `cwd` — set leaf.cwd.
+				cwd={leaf.cwd ?? defaultCwd}
 				workspaceId={workspaceId as string}
 				corners={corners}
 				className="h-full w-full"
@@ -111,6 +116,7 @@ function LeafPane({
 
 type RenderCtx = {
 	workspaceId: WorkspaceId;
+	defaultCwd: string;
 	onSplit: (id: string, orientation: Orientation) => void;
 	onClose: (id: string) => void;
 	onFocus: (id: string) => void;
@@ -183,6 +189,7 @@ function renderPane(node: Pane, ctx: RenderCtx, corners: Corners): React.ReactNo
 				leaf={node}
 				corners={corners}
 				workspaceId={ctx.workspaceId}
+				defaultCwd={ctx.defaultCwd}
 				onSplit={ctx.onSplit}
 				onClose={ctx.onClose}
 				onFocus={ctx.onFocus}
@@ -209,14 +216,16 @@ function PaneTree({ workspaceId, tabId, defaultCwd }: Props): React.JSX.Element 
 
 	const handleSplit = useCallback(
 		async (id: string, orientation: Orientation): Promise<void> => {
-			// A teleported pane's shell still sits in its origin dir, so prefer the
-			// teleport destination over the live PTY cwd (see setTeleportedCwd).
-			const cwd = getTeleportedCwd(id) ?? (await getTerminalCwd(id)) ?? defaultCwd;
+			// A split inherits the dir of the pane it grew from. A teleported pane's
+			// shell still sits in its origin dir, so prefer the teleport destination
+			// over the live PTY cwd (see setTeleportedCwd). If neither resolves, leave
+			// it unset so the new pane falls back to the workspace path at render.
+			const cwd = getTeleportedCwd(id) ?? (await getTerminalCwd(id)) ?? undefined;
 			const newLeaf = makeLeaf(cwd);
 			updateTree(workspaceId, tabId, (t) => splitLeaf(t, id, orientation, newLeaf));
 			setActiveLeaf(workspaceId, tabId, newLeaf.id);
 		},
-		[workspaceId, tabId, defaultCwd, updateTree, setActiveLeaf],
+		[workspaceId, tabId, updateTree, setActiveLeaf],
 	);
 
 	const handleFocus = useCallback(
@@ -238,7 +247,9 @@ function PaneTree({ workspaceId, tabId, defaultCwd }: Props): React.JSX.Element 
 				updateTree(workspaceId, tabId, (t) => {
 					const next = removeLeaf(t, id);
 					if (next === null) {
-						const replacement = makeLeaf(defaultCwd);
+						// Fresh root pane — no inherited dir, so it spawns at the
+						// workspace path (resolved at render from leaf.cwd ?? defaultCwd).
+						const replacement = makeLeaf();
 						fallbackLeafId = replacement.id;
 						return replacement;
 					}
@@ -270,13 +281,14 @@ function PaneTree({ workspaceId, tabId, defaultCwd }: Props): React.JSX.Element 
 				});
 			}
 		},
-		[workspaceId, tabId, defaultCwd, tree, tabs, updateTree, closeTab, setActiveLeaf, navigate],
+		[workspaceId, tabId, tree, tabs, updateTree, closeTab, setActiveLeaf, navigate],
 	);
 
 	if (!tree) return null;
 
 	const ctx: RenderCtx = {
 		workspaceId,
+		defaultCwd,
 		onSplit: handleSplit,
 		onClose: handleClose,
 		onFocus: handleFocus,
