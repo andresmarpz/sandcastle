@@ -162,6 +162,29 @@ function WorkspaceItem({
 	const hasTabs = useTabsStore((s) => (s.byWorkspace[wsIdStr]?.tabs.length ?? 0) > 0);
 	const status = useWorkspaceActivity(wsIdStr);
 	const [open, setOpen] = useState(false);
+	const [menuOpen, setMenuOpen] = useState(false);
+	const navigate = useNavigate();
+
+	const deleteWorkspace = useAtomSet(Client.mutation("workspaces.delete"), { mode: "promise" });
+
+	const handleDelete = (): void => {
+		void deleteWorkspace({
+			payload: { workspaceId: ws.id },
+			// Same key the sidebar's workspaces.list query subscribes to, so the
+			// row drops out as soon as the server confirms the delete.
+			reactivityKeys: ["workspaces", ws.projectId as string],
+		}).then(
+			() => {
+				// The deleted workspace is what we're viewing — fall back to the
+				// projects index so the route doesn't dangle on a dead id.
+				if (isActive) void navigate({ to: "/" });
+			},
+			() => {
+				// No inline surface on the row; the list reactivity key keeps the
+				// UI consistent with the server either way.
+			},
+		);
+	};
 
 	const label = STATUS_LABEL[status] ? `${ws.name} — ${STATUS_LABEL[status]}` : ws.name;
 
@@ -169,7 +192,7 @@ function WorkspaceItem({
 		<Collapsible open={open} onOpenChange={setOpen}>
 			<div
 				className={cn(
-					"flex h-[26px] w-full items-center gap-0.5 rounded-md border border-transparent text-xsm",
+					"group/workspace flex h-[26px] w-full items-center gap-0.5 rounded-md border border-transparent pr-0.5 text-xsm",
 					isActive
 						? ACTIVE_ROW_CLASSES
 						: "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground",
@@ -196,10 +219,33 @@ function WorkspaceItem({
 					type="button"
 					onClick={() => onSelect(wsIdStr)}
 					title={ws.name}
-					className="flex h-full min-w-0 flex-1 items-center pr-2 text-left"
+					className="flex h-full min-w-0 flex-1 items-center pr-1 text-left"
 				>
 					<span className="truncate">{ws.name}</span>
 				</button>
+				<DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+					<DropdownMenuTrigger
+						aria-label={`${ws.name} actions`}
+						className={cn(
+							"grid size-5 shrink-0 place-items-center rounded text-foreground-tertiary",
+							"opacity-0 group-hover/workspace:opacity-100 hover:bg-sidebar-accent/60 hover:text-foreground data-popup-open:opacity-100",
+							menuOpen && "opacity-100",
+						)}
+					>
+						<DotsThreeIcon className="size-4" weight="bold" />
+					</DropdownMenuTrigger>
+					<DropdownMenuContent align="end" sideOffset={4}>
+						<DropdownMenuItem
+							variant="destructive"
+							onClick={() => {
+								setMenuOpen(false);
+								handleDelete();
+							}}
+						>
+							Delete
+						</DropdownMenuItem>
+					</DropdownMenuContent>
+				</DropdownMenu>
 			</div>
 			<CollapsibleContent className="data-closed:hidden">
 				<WorkspaceTabList wsId={wsIdStr} activeTabId={isActive ? activeTabId : undefined} />
