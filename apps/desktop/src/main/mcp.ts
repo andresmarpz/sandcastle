@@ -177,6 +177,48 @@ const teleportToCwd = async (sessionId: string, newCwd: string): Promise<Telepor
 	return { ok: true, workspaceId: workspace.id, path: workspace.path, moved };
 };
 
+// ── Workspace removal (ExitWorktree action:"remove") ─────────────────────────
+
+/**
+ * Delete the Sandcastle workspace that tracked a now-removed git worktree, then
+ * tell the renderer to drop it from its tab state + sidebar. Best-effort: a path
+ * we don't track (or that resolves to a non-worktree workspace) is a quiet no-op.
+ */
+const removeWorkspaceForPath = async (sessionId: string, worktreePath: string): Promise<void> => {
+	if (!worktreePath) return;
+	let workspace: { id: string; projectId: string } | null = null;
+	try {
+		const resp = await fetch(`${SERVER_BASE_URL}/workspaces/delete-for-path`, {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify({ path: worktreePath }),
+		});
+		const json = (await resp.json()) as {
+			workspace: { id: string; projectId: string } | null;
+			reason?: string | null;
+		};
+		workspace = json.workspace;
+		if (!workspace) {
+			console.warn(
+				`[sandcastle] worktree hook: no workspace deleted for "${worktreePath}": ${json.reason ?? "unknown"}`,
+			);
+			return;
+		}
+	} catch (err) {
+		console.warn(`[sandcastle] worktree hook: delete relay unavailable: ${String(err)}`);
+		return;
+	}
+
+	// UI cleanup is best-effort — the row is already soft-deleted server-side, so
+	// a missing/closed renderer just means a stale entry until the next refresh.
+	await requestRenderer(sessionId, {
+		kind: "workspace-removed",
+		targetWorkspaceId: workspace.id,
+		targetProjectId: workspace.projectId,
+	});
+	console.log(`[sandcastle] worktree hook: removed workspace ${workspace.id} for ${worktreePath}`);
+};
+
 // ── MCP tools ────────────────────────────────────────────────────────────────
 
 const textResult = (text: string, isError = false) => ({
@@ -354,18 +396,22 @@ const handleRequest = async (req: IncomingMessage, res: ServerResponse): Promise
 
 		if (url.pathname === "/hook/teleport" && req.method === "POST") {
 			// The hook posts Claude Code's raw hook JSON. PostToolUse (EnterWorktree/
-			// ExitWorktree) carries `cwd` (= the new worktree path) plus
-			// `tool_response.worktreePath`; CwdChanged carries `new_cwd`.
+			// ExitWorktree) carries `cwd` plus `tool_response`; CwdChanged carries
+			// `new_cwd`. For EnterWorktree `cwd` is the new worktree path; for
+			// ExitWorktree `cwd` is the restored originalCwd and `tool_response`
+			// is `{ action, worktreePath, ... }`.
 			const body = (await readJsonBody(req)) as
 				| {
 						cwd?: string;
 						new_cwd?: string;
 						newCwd?: string;
-						tool_response?: { worktreePath?: string };
+						tool_response?: { worktreePath?: string; action?: "keep" | "remove" };
 				  }
 				| undefined;
-			const cwd =
-				body?.cwd ?? body?.new_cwd ?? body?.newCwd ?? body?.tool_response?.worktreePath ?? "";
+			const toolResponse = body?.tool_response;
+			const cwd = body?.cwd ?? body?.new_cwd ?? body?.newCwd ?? toolResponse?.worktreePath ?? "";
+			// Re-group the calling terminal to its current cwd. On ExitWorktree this is
+			// the restored originalCwd, so the tab moves back out of the worktree first.
 			const out = await teleportToCwd(sessionId, String(cwd));
 			// Surface the outcome — the hook discards our response, so without this a
 			// failed teleport (relay down, path not in a project, etc.) is invisible.
@@ -375,6 +421,14 @@ const handleRequest = async (req: IncomingMessage, res: ServerResponse): Promise
 				console.log(
 					`[sandcastle] worktree hook: teleported to workspace ${out.workspaceId} (moved=${out.moved})`,
 				);
+			}
+			// ExitWorktree({action:"remove"}) deleted the worktree on disk; mirror that
+			// by deleting its Sandcastle workspace (after the teleport above moved the
+			// tab out of it). Note: this only covers the mid-session ExitWorktree TOOL.
+			// The session-exit "Keep/Remove worktree" dialog fires no PostToolUse hook,
+			// so that removal path is not caught here.
+			if (toolResponse?.action === "remove" && toolResponse.worktreePath) {
+				await removeWorkspaceForPath(sessionId, toolResponse.worktreePath);
 			}
 			sendJson(res, 200, out);
 			return;

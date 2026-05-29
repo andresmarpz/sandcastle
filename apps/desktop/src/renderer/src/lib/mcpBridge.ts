@@ -58,8 +58,29 @@ const currentRoute = (): { wsId: string; tabId: string } | null => {
 
 const handle = async (cmd: McpCommand): Promise<unknown> => {
 	const loc = locate(cmd.sessionId);
-	if (!loc) throw new Error("calling terminal is not attached to any workspace tab");
 	const store = useTabsStore.getState();
+
+	// A deleted workspace (worktree removed) — drop its tab state and refresh the
+	// sidebar. Runs even when the calling terminal has already moved out or closed,
+	// so it must not depend on `loc`.
+	if (cmd.kind === "workspace-removed") {
+		const removed = cmd.targetWorkspaceId;
+		if (!removed) return { removed: false };
+		// If the user is looking at the workspace that just vanished, follow the
+		// calling terminal to wherever it now lives (teleported back to originalCwd).
+		const cur = currentRoute();
+		if (cur?.wsId === removed && loc) {
+			navigateToTab(loc.wsId, loc.tabId);
+			requestAnimationFrame(() => focusTerminal(loc.leafId));
+		}
+		store.removeWorkspace(WorkspaceId.make(removed));
+		if (cmd.targetProjectId) {
+			appRegistry.refresh(workspacesListQuery(ProjectId.make(cmd.targetProjectId)));
+		}
+		return { removed: true };
+	}
+
+	if (!loc) throw new Error("calling terminal is not attached to any workspace tab");
 	const wsId = WorkspaceId.make(loc.wsId);
 
 	switch (cmd.kind) {
