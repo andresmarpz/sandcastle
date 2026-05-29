@@ -13,14 +13,22 @@ import {
 	verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { useAtomSet, useAtomValue } from "@effect/atom-react";
-import { DotsSixVerticalIcon, DotsThreeIcon, GearIcon, QuestionIcon } from "@phosphor-icons/react";
+import {
+	DotsSixVerticalIcon,
+	DotsThreeIcon,
+	GearIcon,
+	PaletteIcon,
+	PlusIcon,
+	QuestionIcon,
+} from "@phosphor-icons/react";
 import type { Project, ProjectId, Workspace } from "@sandcastle/contracts";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { Cause } from "effect";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import NewProjectDialog from "@/components/NewProjectDialog";
 import NewWorkspaceDialog from "@/components/NewWorkspaceDialog";
+import PersonalizeProjectDialog from "@/components/PersonalizeProjectDialog";
 import StackedIcons from "@/components/StackedIcons";
 import StatusDot from "@/components/StatusDot";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -28,6 +36,7 @@ import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
+	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup } from "@/components/ui/sidebar";
@@ -302,13 +311,16 @@ function ProjectWorkspaces({
 function ProjectItem({
 	project,
 	color,
+	onColorChange,
 }: {
 	project: Project;
 	color: AvatarColorKey | undefined;
+	onColorChange: (color: AvatarColorKey) => void;
 }): React.JSX.Element {
 	const [open, setOpen] = useState(true);
 	const [menuOpen, setMenuOpen] = useState(false);
 	const [dialogOpen, setDialogOpen] = useState(false);
+	const [personalizeOpen, setPersonalizeOpen] = useState(false);
 	const params = useParams({ strict: false }) as { wsId?: string; tabId?: string };
 	const activeWsId = params.wsId;
 	const activeTabId = params.tabId;
@@ -381,7 +393,18 @@ function ProjectItem({
 									setDialogOpen(true);
 								}}
 							>
+								<PlusIcon />
 								Add workspace
+							</DropdownMenuItem>
+							<DropdownMenuSeparator />
+							<DropdownMenuItem
+								onClick={() => {
+									setMenuOpen(false);
+									setPersonalizeOpen(true);
+								}}
+							>
+								<PaletteIcon />
+								Personalize
 							</DropdownMenuItem>
 						</DropdownMenuContent>
 					</DropdownMenu>
@@ -425,12 +448,22 @@ function ProjectItem({
 					open={dialogOpen}
 					onOpenChange={setDialogOpen}
 				/>
+				<PersonalizeProjectDialog
+					projectName={project.name}
+					currentColor={color}
+					open={personalizeOpen}
+					onOpenChange={setPersonalizeOpen}
+					onSave={onColorChange}
+				/>
 			</Collapsible>
 		</div>
 	);
 }
 
-function useProjectAvatarColors(projectIds: readonly string[]): Record<string, AvatarColorKey> {
+function useProjectAvatarColors(projectIds: readonly string[]): {
+	colors: Record<string, AvatarColorKey>;
+	setColor: (projectId: string, color: AvatarColorKey) => void;
+} {
 	const [colors, setColors] = useState<Record<string, AvatarColorKey>>(() => loadColorMap());
 
 	useEffect(() => {
@@ -442,7 +475,18 @@ function useProjectAvatarColors(projectIds: readonly string[]): Record<string, A
 		});
 	}, [projectIds]);
 
-	return colors;
+	// User-chosen colors are written straight into the same persisted map.
+	// assignColors only fills gaps, so an explicit pick is never overwritten.
+	const setColor = useCallback((projectId: string, color: AvatarColorKey) => {
+		setColors((prev) => {
+			if (prev[projectId] === color) return prev;
+			const next = { ...prev, [projectId]: color };
+			saveColorMap(next);
+			return next;
+		});
+	}, []);
+
+	return { colors, setColor };
 }
 
 function ProjectList(): React.JSX.Element {
@@ -453,7 +497,7 @@ function ProjectList(): React.JSX.Element {
 	const projects =
 		projectsResult._tag === "Success" ? projectsResult.value : ([] as readonly Project[]);
 	const serverIds = useMemo(() => projects.map((p) => p.id as string), [projects]);
-	const colors = useProjectAvatarColors(serverIds);
+	const { colors, setColor } = useProjectAvatarColors(serverIds);
 
 	// Optimistic local ordering. Stays in sync with the server's set of IDs
 	// (handles create/delete), but allows us to reflect a drag-drop immediately
@@ -533,9 +577,17 @@ function ProjectList(): React.JSX.Element {
 		<DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
 			<SortableContext items={localOrder as string[]} strategy={verticalListSortingStrategy}>
 				<div className="flex flex-col">
-					{orderedProjects.map((project) => (
-						<ProjectItem key={project.id} project={project} color={colors[project.id as string]} />
-					))}
+					{orderedProjects.map((project) => {
+						const projectId = project.id as string;
+						return (
+							<ProjectItem
+								key={project.id}
+								project={project}
+								color={colors[projectId]}
+								onColorChange={(next) => setColor(projectId, next)}
+							/>
+						);
+					})}
 				</div>
 			</SortableContext>
 		</DndContext>
