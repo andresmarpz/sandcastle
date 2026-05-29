@@ -60,7 +60,7 @@ const STATUS_LABEL: Record<string, string> = {
 	"needs-attention": "needs attention",
 };
 
-const ACTIVE_ROW_CLASSES = "bg-sidebar text-foreground shadow-elevated";
+const ACTIVE_ROW_CLASSES = "bg-sidebar text-foreground shadow-elevated dark:border-border/50";
 
 function ProjectAvatar({
 	name,
