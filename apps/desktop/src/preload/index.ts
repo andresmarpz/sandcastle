@@ -111,7 +111,7 @@ const claude = {
 export type McpCommand = {
 	requestId: string;
 	sessionId: string;
-	kind: "whoami" | "split" | "new-tab" | "teleport";
+	kind: "whoami" | "split" | "new-tab" | "teleport" | "workspace-removed";
 	orientation?: "horizontal" | "vertical";
 	cwd?: string;
 	focus?: boolean;

@@ -123,6 +123,15 @@ export interface WorkspaceServiceShape {
 	readonly upsertForPath: (
 		path: string,
 	) => Effect.Effect<WorkspaceWire, WorkspacePathUnresolved | InternalError>;
+	/**
+	 * Delete the worktree workspace that owns an absolute path, by exact stored
+	 * path (no git introspection — the directory is typically already gone). The
+	 * mirror of {@link upsertForPath}: powers cleanup when a `claude` session runs
+	 * `ExitWorktree` with `action:"remove"`. Refuses to touch a `local` workspace.
+	 */
+	readonly deleteForPath: (
+		path: string,
+	) => Effect.Effect<WorkspaceWire, WorkspacePathUnresolved | InternalError>;
 }
 
 export class WorkspaceService extends Context.Service<WorkspaceService, WorkspaceServiceShape>()(
@@ -441,6 +450,31 @@ export const layer: Layer.Layer<
 				return toWire(inserted);
 			});
 
-		return WorkspaceService.of({ list, get, create, delete: del, upsertForPath });
+		const deleteForPath: WorkspaceServiceShape["deleteForPath"] = (inputPath) =>
+			Effect.gen(function* () {
+				// Match by the exact stored path. By the time an ExitWorktree("remove")
+				// hook reaches us git has already removed the worktree dir, so we can't
+				// re-resolve via `git rev-parse` the way upsertForPath does — the stored
+				// path (= the worktree root captured at upsert) is all we have to go on.
+				const existing = yield* workspaces
+					.getActiveByPath(AbsolutePath.make(inputPath))
+					.pipe(Effect.mapError(toInternal));
+				if (existing === null) {
+					return yield* unresolved(inputPath, "no active workspace tracks this path");
+				}
+				// Guard: this path-based entrypoint exists only to mirror removal of a git
+				// worktree. Never let it soft-delete the project's local workspace.
+				if (existing.kind !== "worktree") {
+					return yield* unresolved(inputPath, "path is not a worktree workspace");
+				}
+				const wire = toWire(existing);
+				yield* del(WorkspaceId.make(existing.id as unknown as string)).pipe(
+					// A concurrent caller may have removed it already — idempotent success.
+					Effect.catchTag("WorkspaceNotFound", () => Effect.void),
+				);
+				return wire;
+			});
+
+		return WorkspaceService.of({ list, get, create, delete: del, upsertForPath, deleteForPath });
 	}),
 );
