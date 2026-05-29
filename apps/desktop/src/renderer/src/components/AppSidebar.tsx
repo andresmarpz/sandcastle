@@ -41,6 +41,7 @@ import {
 } from "@/lib/avatarColors";
 import { cn } from "@/lib/utils";
 import { Client } from "@/rpc/client";
+import { workspacesListQuery } from "@/rpc/queries";
 import { useActivityStore, useWorkspaceActivity } from "@/stores/activity";
 import { type Tab, useTabsStore } from "@/stores/tabs";
 
@@ -276,13 +277,7 @@ function ProjectItem({
 		isDragging,
 	} = useSortable({ id: project.id as string });
 
-	const workspacesResult = useAtomValue(
-		Client.query(
-			"workspaces.list",
-			{ projectId: project.id },
-			{ reactivityKeys: ["workspaces", project.id as string] },
-		),
-	);
+	const workspacesResult = useAtomValue(workspacesListQuery(project.id));
 	const workspaces =
 		workspacesResult._tag === "Success" ? workspacesResult.value : ([] as readonly Workspace[]);
 

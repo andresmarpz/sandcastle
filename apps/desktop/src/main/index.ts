@@ -15,6 +15,7 @@ import {
 import icon from "../../resources/icon.png?asset";
 import { disposeCaffeinate, registerCaffeinateHandlers } from "./caffeinate";
 import { disposeClaudeHooks, registerClaudeHookHandlers } from "./claudeHooks";
+import { disposeMcp, registerMcpServer } from "./mcp";
 import { disposeAllSessions, registerPtyHandlers } from "./pty";
 import { captureUserEnv } from "./userEnv";
 
@@ -204,7 +205,7 @@ function createWindow(): void {
 	}
 }
 
-void app.whenReady().then(() => {
+void app.whenReady().then(async () => {
 	electronApp.setAppUserModelId(APP_ID);
 
 	if (process.platform === "darwin") {
@@ -265,6 +266,14 @@ void app.whenReady().then(() => {
 	void registerClaudeHookHandlers().catch((err) =>
 		console.warn("[claudeHooks] failed to register:", err),
 	);
+	// Start the in-process MCP server before the first PTY can spawn so the
+	// per-session injection env is ready for any `claude` launched in a pane.
+	// Never let an MCP startup failure block the window / terminals.
+	try {
+		await registerMcpServer();
+	} catch (err) {
+		console.error("[sandcastle] MCP server init failed; continuing without it:", err);
+	}
 
 	installApplicationMenu();
 	createWindow();
@@ -291,4 +300,5 @@ app.on("before-quit", () => {
 	disposeAllSessions();
 	disposeCaffeinate();
 	disposeClaudeHooks();
+	disposeMcp();
 });

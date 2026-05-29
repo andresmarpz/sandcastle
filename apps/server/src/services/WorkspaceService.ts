@@ -1,4 +1,5 @@
-import { join } from "node:path";
+import { realpath } from "node:fs/promises";
+import { basename, dirname, join } from "node:path";
 import {
 	AbsolutePath,
 	InternalError,
@@ -10,6 +11,7 @@ import {
 	WorkspaceLocalConflict,
 	WorkspaceNotFound,
 	WorkspaceNotGit,
+	WorkspacePathUnresolved,
 	type Workspace as WorkspaceWire,
 	WorktreeCreateFailed,
 } from "@sandcastle/contracts";
@@ -110,6 +112,17 @@ export interface WorkspaceServiceShape {
 	readonly delete: (
 		workspaceId: WorkspaceId,
 	) => Effect.Effect<void, WorkspaceNotFound | InternalError>;
+	/**
+	 * Find-or-create the workspace that owns an absolute filesystem path,
+	 * WITHOUT touching the git working copy (no `git worktree add`). Resolves
+	 * the path to its git worktree root, matches the owning Sandcastle project
+	 * via the shared git-common-dir, and idempotently returns (or inserts) the
+	 * matching workspace row. Powers the MCP "teleport" flow: when a terminal's
+	 * cwd moves into a worktree, Sandcastle re-groups it under this workspace.
+	 */
+	readonly upsertForPath: (
+		path: string,
+	) => Effect.Effect<WorkspaceWire, WorkspacePathUnresolved | InternalError>;
 }
 
 export class WorkspaceService extends Context.Service<WorkspaceService, WorkspaceServiceShape>()(
@@ -290,6 +303,144 @@ export const layer: Layer.Layer<
 				);
 			});
 
-		return WorkspaceService.of({ list, get, create, delete: del });
+		const unresolved = (path: string, reason: string) =>
+			Effect.fail(new WorkspacePathUnresolved({ path, reason }));
+
+		// git always reports canonical (symlink-resolved) paths, but Project.rootPath
+		// is stored verbatim from what the user picked/typed. Canonicalize both sides
+		// before comparing so e.g. /tmp vs /private/tmp (macOS) or a symlinked repo
+		// dir still match. Falls back to the raw path if realpath fails.
+		const canonical = (p: string): Effect.Effect<string> =>
+			Effect.promise(() => realpath(p).catch(() => p));
+
+		const upsertForPath: WorkspaceServiceShape["upsertForPath"] = (inputPath) =>
+			Effect.gen(function* () {
+				// 1. The path must live inside a git work tree.
+				const inside = yield* runGit(inputPath, ["rev-parse", "--is-inside-work-tree"]);
+				if (inside.code !== 0 || inside.stdout.trim() !== "true") {
+					return yield* unresolved(inputPath, "not inside a git work tree");
+				}
+
+				// 2. Resolve this worktree's own root and the shared (main) git dir.
+				const top = yield* runGit(inputPath, ["rev-parse", "--show-toplevel"]);
+				if (top.code !== 0) {
+					return yield* unresolved(inputPath, "could not resolve worktree root");
+				}
+				const worktreeRoot = top.stdout.trim();
+
+				const commonDir = yield* runGit(inputPath, [
+					"rev-parse",
+					"--path-format=absolute",
+					"--git-common-dir",
+				]);
+				if (commonDir.code !== 0) {
+					return yield* unresolved(inputPath, "could not resolve git-common-dir");
+				}
+				const commonDirPath = commonDir.stdout.trim();
+				// Candidate project roots, all canonical (git output): for a normal repo
+				// the common dir is `<root>/.git` so the root is its parent; for a BARE
+				// repo the common dir IS the repo dir; and the project may have been
+				// registered at the worktree root itself. Try them in that order.
+				const rootCandidates = [...new Set([dirname(commonDirPath), commonDirPath, worktreeRoot])];
+
+				// 3. Match the owning project. Exact root_path match first (fast path),
+				//    then a canonical (realpath) comparison to tolerate symlinked roots.
+				const project = yield* Effect.gen(function* () {
+					for (const candidate of rootCandidates) {
+						const p = yield* projects
+							.getActiveByRootPath(AbsolutePath.make(candidate))
+							.pipe(Effect.mapError(toInternal));
+						if (p !== null) return p;
+					}
+					const candidateSet = new Set(rootCandidates);
+					const all = yield* projects.list().pipe(Effect.mapError(toInternal));
+					for (const p of all) {
+						const real = yield* canonical(p.rootPath as unknown as string);
+						if (candidateSet.has(real)) return p;
+					}
+					return null;
+				});
+				if (project === null) {
+					return yield* unresolved(inputPath, `no Sandcastle project owns ${commonDirPath}`);
+				}
+
+				// 4. Idempotent: a workspace already tracks this worktree root.
+				const existing = yield* workspaces
+					.getActiveByPath(AbsolutePath.make(worktreeRoot))
+					.pipe(Effect.mapError(toInternal));
+				if (existing !== null) {
+					return toWire(existing);
+				}
+
+				const projectRootReal = yield* canonical(project.rootPath as unknown as string);
+				const isLocal = worktreeRoot === projectRootReal;
+
+				// The local workspace may already exist with a non-canonical stored path
+				// (so the getActiveByPath check above missed it); return it instead of
+				// inserting a duplicate.
+				if (isLocal) {
+					const siblings = yield* workspaces
+						.list({ projectId: ProjectId.make(project.id as unknown as string) })
+						.pipe(Effect.mapError(toInternal));
+					const localExisting = siblings.find((w) => w.kind === "local");
+					if (localExisting) return toWire(localExisting);
+				}
+
+				// Branch metadata is best-effort; a detached HEAD reports "HEAD".
+				let branch: string | null = null;
+				const head = yield* runGit(worktreeRoot, ["rev-parse", "--abbrev-ref", "HEAD"]);
+				if (head.code === 0) {
+					const b = head.stdout.trim();
+					branch = b.length > 0 && b !== "HEAD" ? b : null;
+				}
+				let baseBranch: string | null = null;
+				const upstream = yield* runGit(worktreeRoot, [
+					"rev-parse",
+					"--abbrev-ref",
+					"--symbolic-full-name",
+					"@{upstream}",
+				]);
+				if (upstream.code === 0) {
+					const u = upstream.stdout.trim();
+					baseBranch = u.length > 0 ? u : null;
+				}
+
+				const name = isLocal ? project.name : (branch ?? basename(worktreeRoot));
+
+				const inserted = yield* workspaces
+					.create({
+						id: newWorkspaceId(),
+						projectId: ProjectId.make(project.id as unknown as string),
+						name,
+						kind: isLocal ? "local" : "worktree",
+						path: AbsolutePath.make(worktreeRoot),
+						branch,
+						baseBranch,
+					})
+					.pipe(
+						// A concurrent caller may have inserted the same path between our
+						// getActiveByPath check and here — fetch and return theirs. We did
+						// NOT create the worktree on disk, so never remove it on failure.
+						Effect.catchTag("WorkspacePathConflict", () =>
+							workspaces.getActiveByPath(AbsolutePath.make(worktreeRoot)).pipe(
+								Effect.mapError(toInternal),
+								Effect.flatMap((row) =>
+									row === null
+										? Effect.fail(
+												toInternal(
+													new Error(`workspace path conflict but row missing: ${worktreeRoot}`),
+												),
+											)
+										: Effect.succeed(row),
+								),
+							),
+						),
+						Effect.catchTag("SqliteError", (cause: SqliteError) => Effect.fail(toInternal(cause))),
+					);
+
+				return toWire(inserted);
+			});
+
+		return WorkspaceService.of({ list, get, create, delete: del, upsertForPath });
 	}),
 );

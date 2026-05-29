@@ -5,6 +5,7 @@ import process from "node:process";
 import { promisify } from "node:util";
 import { ipcMain, webContents } from "electron";
 import * as nodePty from "node-pty";
+import { registerSession, unregisterSession } from "./mcp";
 import { userEnvReady } from "./userEnv";
 
 const execFileAsync = promisify(execFile);
@@ -48,6 +49,9 @@ type CreateOptions = {
 	cwd?: string;
 	shell?: string;
 	env?: Record<string, string>;
+	// Workspace this pane belongs to, threaded from the renderer so the MCP
+	// server can teleport/identify the terminal. Injected into the shell env.
+	workspaceId?: string;
 };
 
 // Grace window we give a shell + its foreground job (e.g. a TUI like Claude)
@@ -114,6 +118,7 @@ const disposeSession = (id: string): void => {
 	const session = sessions.get(id);
 	if (!session) return;
 	sessions.delete(id);
+	unregisterSession(id);
 	killTree(session.pty);
 };
 
@@ -121,6 +126,7 @@ const disposeSessionsForRenderer = (webContentsId: number): void => {
 	for (const [id, session] of sessions) {
 		if (session.webContentsId === webContentsId) {
 			sessions.delete(id);
+			unregisterSession(id);
 			killTree(session.pty);
 		}
 	}
@@ -151,6 +157,7 @@ const wireSessionEvents = (session: Session): void => {
 			wc.send(`terminal:exit:${session.id}`, { exitCode, signal });
 		}
 		sessions.delete(session.id);
+		unregisterSession(session.id);
 	});
 };
 
@@ -158,14 +165,25 @@ const createSession = (sender: Electron.WebContents, opts: CreateOptions): void 
 	const shell = opts.shell ?? defaultShell();
 	const cwd = opts.cwd ?? homeDir();
 
-	const pty = nodePty.spawn(shell, shellArgs(shell), {
+	// Register with the MCP server first so we can inject the per-session env
+	// (token, MCP url) + shell args that wrap `claude` (a shell function, so it
+	// survives the user's rc) and let it drive the app.
+	const { env: mcpEnv, args: mcpArgs } = registerSession(
+		opts.id,
+		sender.id,
+		opts.workspaceId,
+		shell,
+	);
+
+	const pty = nodePty.spawn(shell, [...shellArgs(shell), ...mcpArgs], {
 		name: "xterm-256color",
 		cols: opts.cols ?? 80,
 		rows: opts.rows ?? 24,
 		cwd,
 		// Tag every Sandcastle PTY so the Claude Code activity hook can report
-		// which session fired (and no-op in shells we didn't spawn).
-		env: buildEnv({ ...opts.env, SANDCASTLE_SESSION_ID: opts.id }),
+		// which session fired (and no-op in shells we didn't spawn). `mcpEnv` adds
+		// the per-session MCP token/url + shell-wrapper vars.
+		env: buildEnv({ ...opts.env, ...mcpEnv, SANDCASTLE_SESSION_ID: opts.id }),
 		useConpty: process.platform === "win32",
 	});
 
@@ -230,6 +248,14 @@ export const registerPtyHandlers = (): void => {
 
 	ipcMain.on("terminal:dispose", (_event, id: string) => {
 		disposeSession(id);
+	});
+
+	// On a soft reload the WebContents is reused (no 'destroyed' event), so the
+	// previous page's PTYs/tokens would leak and its sessionIds go stale. The
+	// reloaded page signals readiness before creating any terminals; reclaim the
+	// old ones here so nothing orphans.
+	ipcMain.on("terminal:renderer-ready", (event) => {
+		disposeSessionsForRenderer(event.sender.id);
 	});
 
 	ipcMain.handle("terminal:get-cwd", async (_event, id: string) => {
