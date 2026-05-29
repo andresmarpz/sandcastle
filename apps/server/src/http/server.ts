@@ -91,7 +91,44 @@ const WorkspaceUpsertRoute = HttpRouter.add(
 	),
 );
 
-const Routes = Layer.mergeAll(HealthRoute, RpcRoute, WorkspaceUpsertRoute);
+/**
+ * `POST /workspaces/delete-for-path` — soft-delete the worktree workspace owning
+ * an absolute path. The mirror of upsert-for-path: the Electron MAIN process
+ * calls this (bare `fetch`) when a `claude` session removes its worktree via
+ * `ExitWorktree({action:"remove"})`. Always 200; an unmatched/non-worktree path
+ * returns `{ workspace: null, reason }`.
+ */
+const DeleteForPathBody = Schema.Struct({ path: Schema.String });
+
+const WorkspaceDeleteForPathRoute = HttpRouter.add(
+	"POST",
+	"/workspaces/delete-for-path",
+	Effect.gen(function* () {
+		const workspaces = yield* WorkspaceService;
+		const body = yield* HttpServerRequest.schemaBodyJson(DeleteForPathBody);
+		const result = yield* workspaces.deleteForPath(body.path).pipe(
+			Effect.map((workspace) => ({ workspace, reason: null as string | null })),
+			Effect.catchTag("WorkspacePathUnresolved", (e) =>
+				Effect.succeed({ workspace: null, reason: e.reason }),
+			),
+			Effect.catchTag("InternalError", (e) =>
+				Effect.succeed({ workspace: null, reason: e.message }),
+			),
+		);
+		return HttpServerResponse.jsonUnsafe(result);
+	}).pipe(
+		Effect.catchCause(() =>
+			Effect.succeed(HttpServerResponse.jsonUnsafe({ workspace: null, reason: "bad request" })),
+		),
+	),
+);
+
+const Routes = Layer.mergeAll(
+	HealthRoute,
+	RpcRoute,
+	WorkspaceUpsertRoute,
+	WorkspaceDeleteForPathRoute,
+);
 
 /**
  * Discard layer that logs the listening address once the server is up.

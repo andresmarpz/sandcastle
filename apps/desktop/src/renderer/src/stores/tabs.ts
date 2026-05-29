@@ -38,6 +38,12 @@ type Actions = {
 	 * tab under a different workspace key. Powers MCP worktree teleport.
 	 */
 	moveTabToWorkspace: (fromWs: WorkspaceId, tabId: TabId, toWs: WorkspaceId) => boolean;
+	/**
+	 * Drop a workspace's entire tab state. Used when a workspace is deleted (e.g.
+	 * its git worktree was removed via ExitWorktree) so stale tabs don't linger in
+	 * the persisted store. Any live PTYs should be moved out first.
+	 */
+	removeWorkspace: (wsId: WorkspaceId) => void;
 };
 
 let tabCounter = 0;
@@ -224,6 +230,16 @@ export const useTabsStore = create<State & Actions>()(
 					};
 				});
 				return true;
+			},
+
+			removeWorkspace: (wsId) => {
+				const key = wsId as string;
+				set((s) => {
+					if (!(key in s.byWorkspace)) return s;
+					const next = { ...s.byWorkspace };
+					delete next[key];
+					return { byWorkspace: next };
+				});
 			},
 		}),
 		{
