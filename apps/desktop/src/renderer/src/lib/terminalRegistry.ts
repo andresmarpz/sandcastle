@@ -30,6 +30,13 @@ type Instance = {
 	disposed: boolean;
 	lastSentCols: number;
 	lastSentRows: number;
+	// Set when this pane is teleported into another workspace (e.g. a Claude
+	// session enters a git worktree). The shell PTY's own cwd does NOT follow
+	// Claude into the worktree — only Claude (a child process) cd's — so
+	// getProcessCwd(pty.pid) keeps reporting the stale origin dir. We remember
+	// the teleport destination here and spawn splits / new tabs from THIS pane
+	// there instead. null until a teleport happens.
+	teleportedCwd: string | null;
 	// Byte-path Claude activity detection (see activityDetector + stores/activity).
 	activityTail: string;
 	lastWorkingAt: number;
@@ -407,6 +414,7 @@ const createInstance = (leafId: string, container: HTMLElement, opts: CreateOpti
 		disposed: false,
 		lastSentCols: xterm.cols,
 		lastSentRows: xterm.rows,
+		teleportedCwd: null,
 		activityTail: "",
 		lastWorkingAt: 0,
 		byteWorking: false,
@@ -541,6 +549,18 @@ export const getTerminalCwd = async (leafId: string): Promise<string | null> => 
 	const inst = instances.get(leafId);
 	if (!inst) return null;
 	return window.api.terminal.getCwd(inst.sessionId);
+};
+
+// Record where this pane was teleported to so subsequent splits / new tabs
+// spawn their shell there rather than at the PTY's (now-stale) origin cwd.
+// See the `teleportedCwd` note on Instance.
+export const setTeleportedCwd = (leafId: string, cwd: string): void => {
+	const inst = instances.get(leafId);
+	if (inst) inst.teleportedCwd = cwd;
+};
+
+export const getTeleportedCwd = (leafId: string): string | null => {
+	return instances.get(leafId)?.teleportedCwd ?? null;
 };
 
 export const searchTerminal = (

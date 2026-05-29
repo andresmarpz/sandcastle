@@ -14,7 +14,7 @@ import {
 	removeLeaf,
 	splitLeaf,
 } from "@/lib/paneTree";
-import { disposeTerminal, getTerminalCwd } from "@/lib/terminalRegistry";
+import { disposeTerminal, getTeleportedCwd, getTerminalCwd } from "@/lib/terminalRegistry";
 import { type TabId, useTabsStore } from "@/stores/tabs";
 
 import Terminal from "./Terminal";
@@ -209,7 +209,9 @@ function PaneTree({ workspaceId, tabId, defaultCwd }: Props): React.JSX.Element 
 
 	const handleSplit = useCallback(
 		async (id: string, orientation: Orientation): Promise<void> => {
-			const cwd = (await getTerminalCwd(id)) ?? defaultCwd;
+			// A teleported pane's shell still sits in its origin dir, so prefer the
+			// teleport destination over the live PTY cwd (see setTeleportedCwd).
+			const cwd = getTeleportedCwd(id) ?? (await getTerminalCwd(id)) ?? defaultCwd;
 			const newLeaf = makeLeaf(cwd);
 			updateTree(workspaceId, tabId, (t) => splitLeaf(t, id, orientation, newLeaf));
 			setActiveLeaf(workspaceId, tabId, newLeaf.id);
