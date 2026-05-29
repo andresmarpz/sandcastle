@@ -1,7 +1,13 @@
 import { ProjectId, WorkspaceId } from "@sandcastle/contracts";
 
 import { collectLeafIds, makeLeaf, splitLeaf } from "@/lib/paneTree";
-import { focusTerminal, getLeafIdBySession, getTerminalCwd } from "@/lib/terminalRegistry";
+import {
+	focusTerminal,
+	getLeafIdBySession,
+	getTeleportedCwd,
+	getTerminalCwd,
+	setTeleportedCwd,
+} from "@/lib/terminalRegistry";
 import { router } from "@/router";
 import { workspacesListQuery } from "@/rpc/queries";
 import { appRegistry } from "@/rpc/registry";
@@ -64,7 +70,11 @@ const handle = async (cmd: McpCommand): Promise<unknown> => {
 
 		case "split": {
 			const orientation = cmd.orientation ?? "horizontal";
-			const cwd = cmd.cwd ?? (await getTerminalCwd(loc.leafId)) ?? undefined;
+			// Prefer a teleport destination over the live PTY cwd: after a worktree
+			// teleport the shell still sits in the origin dir, so the live cwd would
+			// drag the split back there. See setTeleportedCwd.
+			const cwd =
+				cmd.cwd ?? getTeleportedCwd(loc.leafId) ?? (await getTerminalCwd(loc.leafId)) ?? undefined;
 			const newLeaf = makeLeaf(cwd);
 			store.updateTree(wsId, loc.tabId, (tree) =>
 				splitLeaf(tree, loc.leafId, orientation, newLeaf),
@@ -74,7 +84,9 @@ const handle = async (cmd: McpCommand): Promise<unknown> => {
 		}
 
 		case "new-tab": {
-			const cwd = cmd.cwd ?? (await getTerminalCwd(loc.leafId));
+			// Same teleport-aware resolution as split: a new tab from a teleported
+			// pane should open in the workspace it was teleported into.
+			const cwd = cmd.cwd ?? getTeleportedCwd(loc.leafId) ?? (await getTerminalCwd(loc.leafId));
 			if (!cwd) throw new Error("could not resolve a working directory for the new tab");
 			const tabId = store.createTab(wsId, cwd);
 			if (cmd.focus !== false) navigateToTab(loc.wsId, tabId);
@@ -97,6 +109,10 @@ const handle = async (cmd: McpCommand): Promise<unknown> => {
 			if (moved) {
 				useActivityStore.getState().recomputeWorkspaces([loc.wsId, target]);
 			}
+			// The shell PTY doesn't follow Claude into the worktree, so its live cwd
+			// would resolve splits/new-tabs back to the origin workspace. Remember
+			// where we teleported so those spawn in the destination instead.
+			if (moved && cmd.targetPath) setTeleportedCwd(loc.leafId, cmd.targetPath);
 			// The destination workspace may have just been created server-side by
 			// main's upsert, which posts straight to the relay and so never bumps the
 			// sidebar's ["workspaces", projectId] reactivity key. Refresh that exact
