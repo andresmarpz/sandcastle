@@ -1,5 +1,32 @@
-export const AVATAR_COLOR_KEYS = ["pink", "mint", "orange", "purple", "cyan", "lime"] as const;
+// Ordered around the color wheel so the picker reads as a smooth rainbow.
+// Order is display-only; assignment is random, and saved colors key off the
+// string name, so reordering never disturbs existing projects.
+export const AVATAR_COLOR_KEYS = [
+	"pink",
+	"red",
+	"orange",
+	"amber",
+	"lime",
+	"grass",
+	"mint",
+	"cyan",
+	"indigo",
+	"purple",
+] as const;
 export type AvatarColorKey = (typeof AVATAR_COLOR_KEYS)[number];
+
+export const AVATAR_COLOR_LABELS: Record<AvatarColorKey, string> = {
+	pink: "Pink",
+	red: "Red",
+	orange: "Orange",
+	amber: "Amber",
+	lime: "Lime",
+	grass: "Grass",
+	mint: "Mint",
+	cyan: "Cyan",
+	indigo: "Indigo",
+	purple: "Purple",
+};
 
 const STORAGE_KEY = "sandcastle:project-avatar-colors";
 

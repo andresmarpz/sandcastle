@@ -113,6 +113,14 @@
 	--avatar-text-cyan: #0894b3;
 	--avatar-background-lime: #eefadc;
 	--avatar-text-lime: #5d770d;
+	--avatar-background-red: #ffefef;
+	--avatar-text-red: #cd2b31;
+	--avatar-background-amber: #fff4d5;
+	--avatar-text-amber: #ad5700;
+	--avatar-background-grass: #ebf9eb;
+	--avatar-text-grass: #297c3b;
+	--avatar-background-indigo: #f0f4ff;
+	--avatar-text-indigo: #3451b2;
 }
 
 .dark {
@@ -163,6 +171,14 @@
 	--avatar-text-cyan: #369eff;
 	--avatar-background-lime: #2b3711;
 	--avatar-text-lime: #c4f042;
+	--avatar-background-red: #49181a;
+	--avatar-text-red: #f5474d;
+	--avatar-background-amber: #463110;
+	--avatar-text-amber: #fab22e;
+	--avatar-background-grass: #17361d;
+	--avatar-text-grass: #4dcb64;
+	--avatar-background-indigo: #1b2750;
+	--avatar-text-indigo: #6988ec;
 }
 
 @layer base {
