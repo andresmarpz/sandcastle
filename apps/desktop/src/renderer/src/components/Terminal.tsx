@@ -15,11 +15,19 @@ type TerminalProps = {
 	leafId: string;
 	cwd?: string;
 	shell?: string;
+	workspaceId?: string;
 	className?: string;
 	corners?: Corners;
 };
 
-function Terminal({ leafId, cwd, shell, className, corners }: TerminalProps): React.JSX.Element {
+function Terminal({
+	leafId,
+	cwd,
+	shell,
+	workspaceId,
+	className,
+	corners,
+}: TerminalProps): React.JSX.Element {
 	const slotRef = useRef<HTMLDivElement>(null);
 	const { resolvedTheme } = useTheme();
 	const mode = resolvedTheme === "light" ? "light" : "dark";
@@ -31,9 +39,9 @@ function Terminal({ leafId, cwd, shell, className, corners }: TerminalProps): Re
 	useEffect(() => {
 		const container = slotRef.current;
 		if (!container) return;
-		attachTerminal(leafId, container, { cwd, shell });
+		attachTerminal(leafId, container, { cwd, shell, workspaceId });
 		return () => detachTerminal(leafId, container);
-	}, [leafId, cwd, shell]);
+	}, [leafId, cwd, shell, workspaceId]);
 
 	const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>): void => {
 		const mod = e.metaKey || e.ctrlKey;

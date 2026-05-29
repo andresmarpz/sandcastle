@@ -61,6 +61,18 @@ export class WorktreeCreateFailed extends Schema.TaggedErrorClass<WorktreeCreate
 	},
 ) {}
 
+// Raised by workspaces.upsertForPath when a filesystem path can't be mapped to a
+// known project/worktree (not a git work tree, or its repo isn't a Sandcastle
+// project). Used by the MCP "teleport" flow to decide a terminal can't be
+// re-grouped — a soft, expected outcome rather than a crash.
+export class WorkspacePathUnresolved extends Schema.TaggedErrorClass<WorkspacePathUnresolved>()(
+	"WorkspacePathUnresolved",
+	{
+		path: Schema.String,
+		reason: Schema.String,
+	},
+) {}
+
 // catch-all
 export class InternalError extends Schema.TaggedErrorClass<InternalError>()("InternalError", {
 	message: Schema.String,

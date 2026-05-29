@@ -8,6 +8,7 @@ type CreateOptions = {
 	cwd?: string;
 	shell?: string;
 	env?: Record<string, string>;
+	workspaceId?: string;
 };
 
 const terminal = {
@@ -23,6 +24,12 @@ const terminal = {
 		ipcRenderer.send("terminal:dispose", id);
 	},
 	getCwd: (id: string): Promise<string | null> => ipcRenderer.invoke("terminal:get-cwd", id),
+	// Signal sent once on every page load. Lets main reclaim terminal sessions
+	// orphaned by a soft reload (the WebContents is reused, so 'destroyed' never
+	// fires) before the reloaded page registers fresh ones.
+	rendererReady: (): void => {
+		ipcRenderer.send("terminal:renderer-ready");
+	},
 	getForegroundProcs: (
 		ids: string[],
 	): Promise<Record<string, Array<{ pid: number; comm: string; args: string }>>> =>
@@ -98,7 +105,33 @@ const claude = {
 		ipcRenderer.invoke("claude:set-hooks-enabled", enabled),
 };
 
-const api = { terminal, menu, caffeinate, dialog: fileDialog, window: browserWindow, claude };
+// Command dispatched by the in-process MCP server (main) to the renderer that
+// owns the calling terminal. The renderer applies the UI mutation and replies
+// via `mcp.respond(requestId, ...)`.
+export type McpCommand = {
+	requestId: string;
+	sessionId: string;
+	kind: "whoami" | "split" | "new-tab" | "teleport";
+	orientation?: "horizontal" | "vertical";
+	cwd?: string;
+	focus?: boolean;
+	targetWorkspaceId?: string;
+	targetProjectId?: string;
+	targetPath?: string;
+};
+
+const mcp = {
+	onCommand: (listener: (cmd: McpCommand) => void): (() => void) => {
+		const handler = (_: unknown, cmd: McpCommand): void => listener(cmd);
+		ipcRenderer.on("mcp:command", handler);
+		return () => ipcRenderer.removeListener("mcp:command", handler);
+	},
+	respond: (requestId: string, ok: boolean, data?: unknown, reason?: string): void => {
+		ipcRenderer.send("mcp:response", { requestId, ok, data, reason });
+	},
+};
+
+const api = { terminal, menu, caffeinate, dialog: fileDialog, window: browserWindow, claude, mcp };
 
 if (process.contextIsolated) {
 	try {

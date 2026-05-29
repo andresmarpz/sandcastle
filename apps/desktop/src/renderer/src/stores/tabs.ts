@@ -31,6 +31,13 @@ type Actions = {
 	setActiveLeaf: (wsId: WorkspaceId, tabId: TabId, leafId: string) => void;
 	renameTab: (wsId: WorkspaceId, tabId: TabId, title: string) => void;
 	updateTree: (wsId: WorkspaceId, tabId: TabId, updater: (tree: Pane) => Pane) => void;
+	/**
+	 * Move a whole tab (and its live terminals) from one workspace to another.
+	 * Leaf ids are global UUIDs and terminals are tracked by leafId in the
+	 * registry, so the running PTYs survive untouched — this just re-files the
+	 * tab under a different workspace key. Powers MCP worktree teleport.
+	 */
+	moveTabToWorkspace: (fromWs: WorkspaceId, tabId: TabId, toWs: WorkspaceId) => boolean;
 };
 
 let tabCounter = 0;
@@ -185,6 +192,38 @@ export const useTabsStore = create<State & Actions>()(
 						},
 					};
 				});
+			},
+
+			moveTabToWorkspace: (fromWs, tabId, toWs) => {
+				const fromKey = fromWs as string;
+				const toKey = toWs as string;
+				if (fromKey === toKey) return false;
+				const from = get().byWorkspace[fromKey];
+				const idx = from?.tabs.findIndex((t) => t.id === tabId) ?? -1;
+				if (!from || idx < 0) return false;
+				const tab = from.tabs[idx];
+
+				set((s) => {
+					const src = s.byWorkspace[fromKey];
+					if (!src) return s;
+					const srcTabs = src.tabs.filter((t) => t.id !== tabId);
+					let srcActive: TabId | null = src.activeTabId;
+					if (srcActive === tabId) {
+						srcActive = srcTabs.length === 0 ? null : srcTabs[Math.min(idx, srcTabs.length - 1)].id;
+					}
+					const dst = s.byWorkspace[toKey] ?? { tabs: [], activeTabId: null };
+					// Idempotent: if the tab is somehow already in the destination, just
+					// focus it rather than duplicating.
+					const dstTabs = dst.tabs.some((t) => t.id === tabId) ? dst.tabs : [...dst.tabs, tab];
+					return {
+						byWorkspace: {
+							...s.byWorkspace,
+							[fromKey]: { tabs: srcTabs, activeTabId: srcActive },
+							[toKey]: { tabs: dstTabs, activeTabId: tabId },
+						},
+					};
+				});
+				return true;
 			},
 		}),
 		{

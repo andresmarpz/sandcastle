@@ -26,6 +26,7 @@ const ALL_CORNERS: Corners = { tl: true, tr: true, bl: true, br: true };
 type LeafProps = {
 	leaf: Leaf;
 	corners: Corners;
+	workspaceId: WorkspaceId;
 	onSplit: (id: string, orientation: Orientation) => void;
 	onClose: (id: string) => void;
 	onFocus: (id: string) => void;
@@ -35,6 +36,7 @@ type LeafProps = {
 function LeafPane({
 	leaf,
 	corners,
+	workspaceId,
 	onSplit,
 	onClose,
 	onFocus,
@@ -68,7 +70,13 @@ function LeafPane({
 			onKeyDownCapture={handleKeyDown}
 			onFocusCapture={() => onFocus(leaf.id)}
 		>
-			<Terminal leafId={leaf.id} cwd={leaf.cwd} corners={corners} className="h-full w-full" />
+			<Terminal
+				leafId={leaf.id}
+				cwd={leaf.cwd}
+				workspaceId={workspaceId as string}
+				corners={corners}
+				className="h-full w-full"
+			/>
 			<div className="pointer-events-none absolute top-1.5 right-1.5 z-10 flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
 				<button
 					type="button"
@@ -102,6 +110,7 @@ function LeafPane({
 }
 
 type RenderCtx = {
+	workspaceId: WorkspaceId;
 	onSplit: (id: string, orientation: Orientation) => void;
 	onClose: (id: string) => void;
 	onFocus: (id: string) => void;
@@ -173,6 +182,7 @@ function renderPane(node: Pane, ctx: RenderCtx, corners: Corners): React.ReactNo
 			<LeafPane
 				leaf={node}
 				corners={corners}
+				workspaceId={ctx.workspaceId}
 				onSplit={ctx.onSplit}
 				onClose={ctx.onClose}
 				onFocus={ctx.onFocus}
@@ -264,6 +274,7 @@ function PaneTree({ workspaceId, tabId, defaultCwd }: Props): React.JSX.Element 
 	if (!tree) return null;
 
 	const ctx: RenderCtx = {
+		workspaceId,
 		onSplit: handleSplit,
 		onClose: handleClose,
 		onFocus: handleFocus,

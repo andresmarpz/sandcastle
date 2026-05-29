@@ -4,7 +4,17 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "electron-vite";
 
 export default defineConfig({
-	main: {},
+	main: {
+		build: {
+			// electron-vite externalizes all package.json deps by default, which
+			// would `require()` these at runtime — but the MCP SDK is ESM-only and
+			// the main bundle is CJS, so it must be bundled (transpiled) instead.
+			// node-pty (native) stays externalized as usual.
+			externalizeDeps: {
+				exclude: ["@modelcontextprotocol/sdk", "zod"],
+			},
+		},
+	},
 	preload: {},
 	renderer: {
 		resolve: {

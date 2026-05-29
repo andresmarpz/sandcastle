@@ -10,6 +10,7 @@ import { DECAY_MS, scanWorking } from "@/lib/activityDetector";
 type CreateOptions = {
 	cwd?: string;
 	shell?: string;
+	workspaceId?: string;
 };
 
 export type RendererType = "webgl" | "canvas" | "dom";
@@ -437,6 +438,7 @@ const createInstance = (leafId: string, container: HTMLElement, opts: CreateOpti
 			rows: xterm.rows,
 			cwd: opts.cwd,
 			shell: opts.shell,
+			workspaceId: opts.workspaceId,
 		})
 		.catch((err: unknown) => {
 			xterm.writeln(`\r\n\x1b[31mFailed to start terminal: ${String(err)}\x1b[0m`);
@@ -524,6 +526,15 @@ export const focusTerminal = (leafId: string): void => {
 
 export const getSessionId = (leafId: string): string | null => {
 	return instances.get(leafId)?.sessionId ?? null;
+};
+
+// Reverse of getSessionId: the MCP bridge receives a PTY sessionId from main and
+// needs the leafId to locate the pane/tab in the store.
+export const getLeafIdBySession = (sessionId: string): string | null => {
+	for (const inst of instances.values()) {
+		if (inst.sessionId === sessionId) return inst.leafId;
+	}
+	return null;
 };
 
 export const getTerminalCwd = async (leafId: string): Promise<string | null> => {
