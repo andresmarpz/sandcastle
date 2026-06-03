@@ -137,9 +137,7 @@ function SettingsRoute(): React.JSX.Element {
 	const changeKeepAlive = (key: string): void => {
 		const next = minutesForPresetKey(key);
 		setKeepAliveMinutes(next);
-		void window.api.terminal
-			.setKeepAliveMinutes(next)
-			.then((value) => setKeepAliveMinutes(value));
+		void window.api.terminal.setKeepAliveMinutes(next).then((value) => setKeepAliveMinutes(value));
 	};
 
 	const keepAliveLoaded = keepAliveMinutes !== undefined;
@@ -225,9 +223,7 @@ function SettingsRoute(): React.JSX.Element {
 				<div className="flex items-center justify-between">
 					<span className="text-xs">
 						Keep alive after quit
-						{!keepAliveLoaded ? (
-							<span className="ml-2 text-foreground-tertiary">…</span>
-						) : null}
+						{!keepAliveLoaded ? <span className="ml-2 text-foreground-tertiary">…</span> : null}
 					</span>
 					<DropdownMenu>
 						<DropdownMenuTrigger
