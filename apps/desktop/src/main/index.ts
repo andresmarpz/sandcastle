@@ -17,7 +17,16 @@ import { disposeCaffeinate, registerCaffeinateHandlers } from "./caffeinate";
 import { disposeClaudeHooks, registerClaudeHookHandlers } from "./claudeHooks";
 import { disposeGitHub, registerGitHubHandlers } from "./github";
 import { disposeMcp, registerMcpServer } from "./mcp";
-import { disposeAllSessions, registerPtyHandlers } from "./pty";
+import {
+	detachAllSessions,
+	disposeAllSessions,
+	lastHeartbeatAgeMs,
+	reapExpiredOnStartup,
+	registerPtyHandlers,
+	startHeartbeat,
+	stopHeartbeat,
+} from "./pty";
+import { getKeepAliveMinutes, loadPtySettings } from "./ptySettings";
 import { captureUserEnv } from "./userEnv";
 
 // Use a distinct identity for unpackaged (dev / preview) runs so a packaged
@@ -278,6 +287,16 @@ void app.whenReady().then(async () => {
 	}
 
 	installApplicationMenu();
+
+	// Load the main-readable PTY keepalive setting, then run the lazy reap
+	// (§2.2) BEFORE the renderer reattaches: if persistence is off or the app
+	// was down longer than the TTL, kill our stale abduco servers + sweep
+	// sockets so we start clean. Then begin touching the heartbeat file so the
+	// next launch can estimate downtime.
+	await loadPtySettings();
+	await reapExpiredOnStartup(lastHeartbeatAgeMs());
+	startHeartbeat();
+
 	createWindow();
 
 	app.on("activate", () => {
@@ -299,7 +318,15 @@ app.on("window-all-closed", () => {
 });
 
 app.on("before-quit", () => {
-	disposeAllSessions();
+	// keepalive off (0) → no persistence: full-kill every shell as today.
+	// Otherwise detach only the abduco clients, leaving servers+shells alive to
+	// reattach next launch. Stop the heartbeat so its mtime marks ~last-alive.
+	if (getKeepAliveMinutes() === 0) {
+		disposeAllSessions();
+	} else {
+		detachAllSessions();
+	}
+	stopHeartbeat();
 	disposeCaffeinate();
 	disposeClaudeHooks();
 	disposeMcp();
