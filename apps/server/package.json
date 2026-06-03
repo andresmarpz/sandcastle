@@ -7,6 +7,7 @@
 	"scripts": {
 		"dev": "bun --hot ./src/main.ts",
 		"start": "bun ./src/main.ts",
+		"build:binary": "node scripts/build-binary.mjs",
 		"test": "bun --bun vitest run",
 		"test:watch": "bun --bun vitest",
 		"typecheck": "tsc --noEmit",

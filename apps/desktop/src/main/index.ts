@@ -17,6 +17,7 @@ import { disposeCaffeinate, registerCaffeinateHandlers } from "./caffeinate";
 import { disposeClaudeHooks, registerClaudeHookHandlers } from "./claudeHooks";
 import { disposeMcp, registerMcpServer } from "./mcp";
 import { disposeAllSessions, registerPtyHandlers } from "./pty";
+import { disposeServerSidecar, startServerSidecar } from "./server";
 import { captureUserEnv } from "./userEnv";
 
 // Use a distinct identity for unpackaged (dev / preview) runs so a packaged
@@ -208,6 +209,14 @@ function createWindow(): void {
 void app.whenReady().then(async () => {
 	electronApp.setAppUserModelId(APP_ID);
 
+	// Boot the backend relay as early as possible so it's racing to /health while
+	// we wire up the rest; we await it just before creating the window so the
+	// renderer's first RPC WebSocket connect lands on a live server.
+	const serverReady = startServerSidecar().catch((err) => {
+		console.error("[sandcastle] backend server startup error:", err);
+		return false;
+	});
+
 	if (process.platform === "darwin") {
 		const dockIcon = nativeImage.createFromPath(icon);
 		if (!dockIcon.isEmpty()) app.dock?.setIcon(dockIcon);
@@ -275,6 +284,11 @@ void app.whenReady().then(async () => {
 		console.error("[sandcastle] MCP server init failed; continuing without it:", err);
 	}
 
+	// Gate the window on relay readiness (bounded by startServerSidecar's own
+	// timeout) so the renderer doesn't open its RPC socket before the server can
+	// accept it. A failed/timed-out start resolves false — we open anyway, degraded.
+	await serverReady;
+
 	installApplicationMenu();
 	createWindow();
 
@@ -301,4 +315,5 @@ app.on("before-quit", () => {
 	disposeCaffeinate();
 	disposeClaudeHooks();
 	disposeMcp();
+	disposeServerSidecar();
 });
