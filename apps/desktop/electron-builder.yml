@@ -1,5 +1,10 @@
 appId: com.sandcastle.desktop
 productName: Sandcastle
+# Build the bundled abduco binary (PTY persistence, docs/pty-persistence.md §7) for
+# the target arch before packing, so both `pnpm install:mac` and the release CI
+# matrix ship it without a manual scripts/build-abduco.sh step. No-ops on Windows
+# and when the binary already exists.
+beforePack: scripts/before-pack.cjs
 directories:
   buildResources: build
 files:

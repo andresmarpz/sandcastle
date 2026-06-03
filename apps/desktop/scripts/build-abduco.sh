@@ -31,7 +31,8 @@ FALLBACK_URL="https://github.com/martanne/abduco/archive/refs/tags/v${ABDUCO_VER
 
 # Known-good SHA-256 for abduco-0.6.tar.gz from brain-dump.org. Only enforced when
 # the pinned version is 0.6; override the version and this check self-disables.
-EXPECTED_SHA256_0_6="00b1cb39a1130d839a17222eb40b738e75a6ef41ef0e8364c8e928241d40c772"
+# Verified against the brain-dump.org tarball and void-linux's pinned checksum.
+EXPECTED_SHA256_0_6="c90909e13fa95770b5afc3b59f311b3d3d2fdfae23f9569fa4f96a3e192a35f4"
 
 # --- Paths --------------------------------------------------------------------
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -136,15 +137,33 @@ fi
 echo "==> Extracting"
 tar -xzf "${TARBALL_PATH}" -C "${WORK_DIR}"
 # Upstream tarball extracts to abduco-<version>/; the GitHub archive does too.
-SRC_DIR="$(find "${WORK_DIR}" -maxdepth 1 -type d -name 'abduco-*' | head -n 1)"
+# -mindepth 1 so we never match WORK_DIR itself (mktemp names it abduco-build.*,
+# which also matches 'abduco-*' and would otherwise win head -n 1 → no Makefile).
+SRC_DIR="$(find "${WORK_DIR}" -mindepth 1 -maxdepth 1 -type d -name 'abduco-*' | head -n 1)"
 if [[ -z "${SRC_DIR}" ]]; then
   echo "ERROR: could not locate extracted abduco source dir" >&2
   exit 1
 fi
 
 echo "==> Building (make) in ${SRC_DIR}"
+# Per-target make overrides. On macOS, abduco 0.6's strict -D_POSIX_C_SOURCE hides
+# the BSD symbol SIGWINCH (server.c/abduco.c) and the build fails; -D_DARWIN_C_SOURCE
+# re-exposes it. config.mk sets CPPFLAGS with `=`, so overriding it here preserves
+# abduco's POSIX/XOPEN defines while adding the Darwin one (CFLAGS picks it up). Linux
+# builds with the stock flags, matching how distros package it.
+MAKE_OVERRIDES=()
+case "${TARGET}" in
+  darwin-*)
+    MAKE_OVERRIDES+=("CPPFLAGS=-D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=700 -D_DARWIN_C_SOURCE")
+    ;;
+esac
 make -C "${SRC_DIR}" clean >/dev/null 2>&1 || true
-make -C "${SRC_DIR}"
+# Guarded expansion: "${arr[@]}" on an empty array trips `set -u` on bash 3.2 (macOS).
+if [[ ${#MAKE_OVERRIDES[@]} -gt 0 ]]; then
+  make -C "${SRC_DIR}" "${MAKE_OVERRIDES[@]}"
+else
+  make -C "${SRC_DIR}"
+fi
 
 echo "==> Installing to ${OUT_BIN}"
 mkdir -p "${OUT_DIR}"
