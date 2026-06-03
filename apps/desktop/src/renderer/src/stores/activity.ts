@@ -21,6 +21,21 @@ export const STATUS_PRIORITY: Record<LeafStatus, number> = {
 /** The status reported by a Claude Code hook (see main/claudeHooks.ts). */
 export type HookStatus = "working" | "attention" | "done";
 
+/**
+ * Ground-truth process state for a leaf, gathered by the reconcile probe (see
+ * lib/activityReconcile.ts). `claudePresent` means a `claude` process is in the
+ * pane's foreground process group — i.e. Claude is alive (whether generating or
+ * idle at its prompt). It can't tell those two apart; the byte-path spinner does.
+ */
+export type LeafLiveness = { claudePresent: boolean };
+
+// A destructive reconcile correction (clearing a stuck "working"/"needs-attention")
+// only fires once a leaf has held that live status continuously for this long.
+// A genuinely stuck turn has been live for minutes; a just-spawned or just-
+// teleported Claude that the process probe hasn't caught up with yet has not —
+// so this grace floor is what keeps reconcile from clobbering a real, fresh turn.
+export const STUCK_MIN_MS = 10_000;
+
 // Raw per-leaf signals. The effective LeafStatus is derived from these so the
 // two producers (hooks + byte path) and the acknowledge path can each mutate
 // just the fields they own without stomping the others.
@@ -66,6 +81,7 @@ type ActivityState = {
 	acknowledgeLeaf: (leafId: string) => void;
 	acknowledgeWorkspace: (wsId: string) => void;
 	acknowledgeActivePane: () => void;
+	reconcileWorkspace: (wsId: string, liveness: Record<string, LeafLiveness>) => void;
 	recomputeWorkspaces: (wsIds: string[]) => void;
 	pruneLeaf: (leafId: string) => void;
 };
@@ -74,6 +90,23 @@ type ActivityState = {
 // chimes. Kept outside the store — it's incidental, not rendered state.
 const COOLDOWN_MS = 3000;
 const lastCueAt = new Map<string, number>();
+
+// When each leaf last *entered* a live status ("working"/"needs-attention"),
+// used by reconcile's STUCK_MIN_MS grace floor. Kept outside the store like
+// lastCueAt — it's bookkeeping that drives corrections, not rendered state.
+const liveSince = new Map<string, number>();
+
+// Record a leaf's latest derived status so liveSince tracks one continuous live
+// span: the timestamp is stamped on the transition *into* a live status and held
+// (working↔needs-attention stays one span), and cleared the moment it goes
+// idle/done. Call this from every path that writes leafStatus.
+const noteStatus = (leafId: string, status: LeafStatus): void => {
+	if (status === "working" || status === "needs-attention") {
+		if (!liveSince.has(leafId)) liveSince.set(leafId, Date.now());
+	} else {
+		liveSince.delete(leafId);
+	}
+};
 
 const findWorkspaceForLeaf = (leafId: string): string | null => {
 	const { byWorkspace } = useTabsStore.getState();
@@ -147,6 +180,7 @@ export const useActivityStore = create<ActivityState>()((set, get) => {
 			signals: { ...state.signals, [leafId]: nextSignals },
 			leafStatus: { ...state.leafStatus, [leafId]: nextStatus },
 		}));
+		noteStatus(leafId, nextStatus);
 		if (nextStatus === prevStatus) return;
 		const wsId = findWorkspaceForLeaf(leafId);
 		if (wsId) recomputeWorkspace(wsId);
@@ -205,8 +239,10 @@ export const useActivityStore = create<ActivityState>()((set, get) => {
 				const cur = signals[leafId];
 				if (!cur || (!cur.attention && !cur.done)) continue;
 				const updated = { ...cur, attention: false, done: false };
+				const updatedStatus = effectiveStatus(updated);
 				nextSignals[leafId] = updated;
-				nextLeafStatus[leafId] = effectiveStatus(updated);
+				nextLeafStatus[leafId] = updatedStatus;
+				noteStatus(leafId, updatedStatus);
 				changed = true;
 			}
 			if (!changed) return;
@@ -232,6 +268,78 @@ export const useActivityStore = create<ActivityState>()((set, get) => {
 			}
 		},
 
+		// Safeguard against status that drifted out of sync with reality (a Stop
+		// hook that never arrived because the session died/crashed; a "working"
+		// dropped during a worktree teleport). `liveness` is the ground truth from
+		// the process probe (see lib/activityReconcile.ts): for each leaf, whether a
+		// claude process is alive in its pane. Combined with the byte-path spinner
+		// (which the process can't tell us — it only says claude is *running*, not
+		// *generating*) we correct in both directions. Batched like
+		// acknowledgeWorkspace, and deliberately CUE-FREE: this is a correction, not
+		// a fresh event, so it must never chime.
+		reconcileWorkspace: (wsId, liveness) => {
+			const ws = useTabsStore.getState().byWorkspace[wsId];
+			if (!ws) return;
+			const leafIds = ws.tabs.flatMap((t) => collectLeafIds(t.tree));
+			const { signals, leafStatus } = get();
+			const now = Date.now();
+			let changed = false;
+			const nextSignals = { ...signals };
+			const nextLeafStatus = { ...leafStatus };
+			for (const leafId of leafIds) {
+				const live = liveness[leafId];
+				const cur = signals[leafId];
+				// No probe result (pane not attached yet) or nothing tracked → leave it.
+				if (!live || !cur) continue;
+				const since = liveSince.get(leafId);
+				const liveLongEnough = since !== undefined && now - since >= STUCK_MIN_MS;
+				const next = { ...cur };
+				if (live.claudePresent && cur.byteWorking) {
+					// B — restore: claude is alive and the spinner is painting, so it's
+					// genuinely working. Re-assert it in case a teleport dropped it.
+					if (cur.hookSeen) {
+						next.turnActive = true;
+						next.done = false;
+					}
+				} else if (!live.claudePresent) {
+					// A — dead: claude isn't running, so any working/attention is stale.
+					// Gated on the grace floor so a just-spawned claude the probe hasn't
+					// caught yet isn't cleared. `done` is left to the acknowledge path.
+					if (liveLongEnough) {
+						next.turnActive = false;
+						next.byteWorking = false;
+						next.attention = false;
+					}
+				} else if (cur.hookSeen && cur.turnActive && !cur.byteWorking && liveLongEnough) {
+					// C — lost Stop: claude is alive but the spinner is long gone, yet a
+					// hook turn never closed. The turn ended; the Stop hook was lost.
+					next.turnActive = false;
+					next.done = true;
+				}
+				// Never latch done/attention on the pane being viewed (mirrors mutateLeaf).
+				if ((next.done || next.attention) && isLeafFocused(leafId)) {
+					next.done = false;
+					next.attention = false;
+				}
+				if (
+					next.turnActive === cur.turnActive &&
+					next.byteWorking === cur.byteWorking &&
+					next.attention === cur.attention &&
+					next.done === cur.done
+				) {
+					continue;
+				}
+				const nextStatus = effectiveStatus(next);
+				nextSignals[leafId] = next;
+				nextLeafStatus[leafId] = nextStatus;
+				noteStatus(leafId, nextStatus);
+				changed = true;
+			}
+			if (!changed) return;
+			set({ signals: nextSignals, leafStatus: nextLeafStatus });
+			recomputeWorkspace(wsId);
+		},
+
 		// Re-fold the rollups for a set of workspaces whose tab membership changed
 		// without any leaf's own status changing — e.g. a worktree teleport moves a
 		// tab between workspaces. The per-leaf signals/status are keyed by global
@@ -244,6 +352,7 @@ export const useActivityStore = create<ActivityState>()((set, get) => {
 		pruneLeaf: (leafId) => {
 			const wsId = findWorkspaceForLeaf(leafId);
 			lastCueAt.delete(leafId);
+			liveSince.delete(leafId);
 			set((state) => {
 				if (!(leafId in state.signals) && !(leafId in state.leafStatus)) return state;
 				const signals = { ...state.signals };
