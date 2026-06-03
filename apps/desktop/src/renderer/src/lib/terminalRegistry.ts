@@ -454,18 +454,32 @@ const createInstance = (leafId: string, container: HTMLElement, opts: CreateOpti
 			workspaceId: opts.workspaceId,
 		})
 		.then(() => {
-			// Repaint on (re)attach. When this create reattaches to an existing
-			// abduco server, abduco (unlike `dtach -r winch`) does NOT auto-redraw,
-			// so a running TUI (claude, htop, lazygit) stays blank until something
-			// forces a repaint. Nudging one resize delivers a SIGWINCH that makes
-			// the foreground program redraw. Harmless on a fresh shell. The 1×1
-			// guard in scheduleResize bails on bogus dims, and a no-op when cols/rows
-			// match lastSent would skip the send, so force a real delta by
-			// transiently dropping a column before scheduling the reconcile.
+			// Repaint on (re)attach. abduco does NOT replay the screen (unlike tmux),
+			// so a reattached TUI (claude, htop, lazygit) stays blank until the program
+			// redraws — which it does on SIGWINCH. The catch: the reattached xterm fits
+			// the same container, so it's the SAME size the server's pty already has,
+			// and resizing a pty to its current size is a kernel no-op (no SIGWINCH
+			// fires) — which is why a plain reconcile left the pane blank until the user
+			// forced a redraw by hand. Force a REAL winsize delta instead: shrink the
+			// pty by one row, then restore it a tick later. Two genuine SIGWINCHes make
+			// the foreground program re-lay-out and fully repaint. We resize only the
+			// PTY (not xterm), so there's no canvas churn; harmless on a fresh shell.
 			if (inst.disposed) return;
-			inst.lastSentCols = 0;
-			inst.lastSentRows = 0;
-			scheduleResize(inst);
+			// Small delay so the abduco client has connected and forwarded the initial
+			// winsize before we jiggle it.
+			setTimeout(() => {
+				if (inst.disposed || !inst.currentContainer) return;
+				safeFit(inst);
+				const { cols, rows } = inst.xterm;
+				if (cols < 2 || rows < 2) return;
+				window.api.terminal.resize(inst.sessionId, cols, rows - 1);
+				setTimeout(() => {
+					if (inst.disposed) return;
+					window.api.terminal.resize(inst.sessionId, cols, rows);
+					inst.lastSentCols = cols;
+					inst.lastSentRows = rows;
+				}, 80);
+			}, 150);
 		})
 		.catch((err: unknown) => {
 			xterm.writeln(`\r\n\x1b[31mFailed to start terminal: ${String(err)}\x1b[0m`);
