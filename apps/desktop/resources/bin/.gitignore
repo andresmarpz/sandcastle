@@ -1,0 +1,7 @@
+# Built native helpers are produced by scripts/build-abduco.sh in CI / before
+# packaging — they are NOT committed (they're large, arch-specific, and rebuilt).
+# Only this dir's README.md, .gitkeep, and .gitignore are tracked.
+abduco-*
+!.gitkeep
+!.gitignore
+!README.md

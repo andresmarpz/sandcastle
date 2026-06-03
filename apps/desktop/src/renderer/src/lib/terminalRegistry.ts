@@ -303,7 +303,11 @@ const scheduleResize = (inst: Instance): void => {
 
 const createInstance = (leafId: string, container: HTMLElement, opts: CreateOptions): Instance => {
 	const { xterm, fit, search } = createXterm();
-	const sessionId = `term-${leafId}-${Date.now()}`;
+	// Durable per-leaf id (no Date.now()): the socket key derived from leafId in
+	// main must be stable across restarts so a relaunched pane reattaches to its
+	// still-alive abduco server. terminal:create early-returns on a known id, so
+	// reusing the id across soft reloads is safe. See docs/pty-persistence.md §3.
+	const sessionId = `term-${leafId}`;
 
 	xterm.open(container);
 	let rendererType: RendererType = "dom";
@@ -442,11 +446,26 @@ const createInstance = (leafId: string, container: HTMLElement, opts: CreateOpti
 	void window.api.terminal
 		.create({
 			id: sessionId,
+			leafId,
 			cols: xterm.cols,
 			rows: xterm.rows,
 			cwd: opts.cwd,
 			shell: opts.shell,
 			workspaceId: opts.workspaceId,
+		})
+		.then(() => {
+			// Repaint on (re)attach. abduco doesn't replay the screen, and a TUI like
+			// Claude only fully repaints on a real dimension CHANGE — a same-size
+			// SIGWINCH yields an empty differential redraw, leaving the fresh xterm
+			// blank. We make the change real WITHOUT timing hacks: main spawns the
+			// abduco client one row short (see createSession), so abduco's attach
+			// handshake leaves the server's pty at rows-1. This reconcile to the true
+			// fitted size is therefore always a genuine resize → SIGWINCH → full
+			// repaint. Reset the dedup so the reconcile is actually sent.
+			if (inst.disposed) return;
+			inst.lastSentCols = 0;
+			inst.lastSentRows = 0;
+			scheduleResize(inst);
 		})
 		.catch((err: unknown) => {
 			xterm.writeln(`\r\n\x1b[31mFailed to start terminal: ${String(err)}\x1b[0m`);
