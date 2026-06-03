@@ -205,17 +205,28 @@ function WorkspaceItem({
 		<Collapsible open={open} onOpenChange={setOpen}>
 			<div
 				className={cn(
-					"group/workspace flex w-full items-center gap-0.5 rounded-md border border-transparent py-0.5 pr-0.5 text-xsm",
+					"group/workspace relative flex w-full items-center gap-0.5 rounded-md border border-transparent py-0.5 pr-0.5 text-xsm",
 					isActive
 						? ACTIVE_ROW_CLASSES
 						: "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground",
 				)}
 			>
+				{/* Full-row navigation hit area. It sits beneath the interactive
+				    controls (collapse trigger, PR badge, actions menu), which are
+				    each lifted with `relative z-10` so their own clicks land on
+				    them rather than falling through to navigation. */}
+				<button
+					type="button"
+					onClick={() => onSelect(wsIdStr)}
+					aria-label={ws.name}
+					title={ws.name}
+					className="absolute inset-0 rounded-md"
+				/>
 				<CollapsibleTrigger
 					aria-label={open ? "Collapse tabs" : "Expand tabs"}
 					disabled={!hasTabs}
 					className={cn(
-						"grid w-5 shrink-0 place-items-center self-stretch rounded text-foreground-tertiary",
+						"relative z-10 grid w-5 shrink-0 place-items-center self-stretch rounded text-foreground-tertiary disabled:pointer-events-none",
 						hasTabs ? "hover:text-foreground" : "opacity-40",
 					)}
 				>
@@ -229,16 +240,14 @@ function WorkspaceItem({
 					</span>
 				</CollapsibleTrigger>
 				<div className="flex min-h-[26px] min-w-0 flex-1 flex-col justify-center">
-					<button
-						type="button"
-						onClick={() => onSelect(wsIdStr)}
-						title={ws.name}
-						className="flex min-w-0 items-center pr-1 text-left"
-					>
-						<span className="truncate">{ws.name}</span>
-					</button>
+					{/* Decorative: the overlay button above carries the name as its
+					    accessible label, so the visible text is hidden from AT to
+					    avoid a duplicate announcement. */}
+					<span aria-hidden className="min-w-0 truncate pr-1">
+						{ws.name}
+					</span>
 					{pr ? (
-						<div className="-mt-px -ml-1 flex items-center">
+						<div className="relative z-10 -mt-px -ml-1 flex w-fit items-center">
 							<PrStatusIndicator status={pr} />
 						</div>
 					) : null}
@@ -247,7 +256,7 @@ function WorkspaceItem({
 					<DropdownMenuTrigger
 						aria-label={`${ws.name} actions`}
 						className={cn(
-							"grid size-5 shrink-0 place-items-center rounded text-foreground-tertiary",
+							"relative z-10 grid size-5 shrink-0 place-items-center rounded text-foreground-tertiary",
 							"opacity-0 group-hover/workspace:opacity-100 hover:bg-sidebar-accent/60 hover:text-foreground data-popup-open:opacity-100",
 							menuOpen && "opacity-100",
 						)}
