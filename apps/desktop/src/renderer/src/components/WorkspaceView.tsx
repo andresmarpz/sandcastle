@@ -7,7 +7,7 @@ import PaneTree from "@/components/PaneTree";
 import WorkspaceKeybindings from "@/keybindings/WorkspaceKeybindings";
 import { collectLeafIds } from "@/lib/paneTree";
 import { focusTerminal } from "@/lib/terminalRegistry";
-import { Client } from "@/rpc/client";
+import { workspaceGetQuery } from "@/rpc/queries";
 import { useActivityStore } from "@/stores/activity";
 import { type TabId, useTabsStore } from "@/stores/tabs";
 
@@ -17,13 +17,7 @@ type Props = {
 };
 
 function WorkspaceView({ workspaceId, tabId }: Props): React.JSX.Element {
-	const workspaceResult = useAtomValue(
-		Client.query(
-			"workspaces.get",
-			{ workspaceId },
-			{ reactivityKeys: ["workspaces", workspaceId as string] },
-		),
-	);
+	const workspaceResult = useAtomValue(workspaceGetQuery(workspaceId));
 
 	const tab = useTabsStore((s) =>
 		s.byWorkspace[workspaceId as string]?.tabs.find((t) => t.id === tabId),

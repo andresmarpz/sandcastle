@@ -2,12 +2,10 @@ import { useAtomValue } from "@effect/atom-react";
 import { FolderIcon } from "@phosphor-icons/react";
 import { Cause } from "effect";
 
-import { Client } from "@/rpc/client";
+import { projectsListQuery } from "@/rpc/queries";
 
 function ProjectsIndex(): React.JSX.Element {
-	const projectsResult = useAtomValue(
-		Client.query("projects.list", {}, { reactivityKeys: ["projects"] }),
-	);
+	const projectsResult = useAtomValue(projectsListQuery());
 
 	if (projectsResult._tag === "Initial") {
 		return <p className="p-4 text-xs text-muted-foreground">Loading projects…</p>;

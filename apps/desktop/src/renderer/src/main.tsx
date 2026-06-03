@@ -8,6 +8,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
 import { installMcpBridge } from "./lib/mcpBridge";
+import { startPrefetch } from "./lib/prefetch";
 import { router } from "./router";
 import { appRegistry } from "./rpc/registry";
 
@@ -17,6 +18,10 @@ window.api?.terminal?.rendererReady?.();
 
 // Listen for MCP-driven UI commands (split / new tab / teleport) from main.
 installMcpBridge();
+
+// Warm the projects/workspaces cache before first paint so navigating into a
+// workspace never blocks on a fetch (no "Opening workspace…" loader).
+startPrefetch();
 
 createRoot(document.getElementById("root")!).render(
 	<StrictMode>

@@ -4,7 +4,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { Cause } from "effect";
 import { useEffect } from "react";
 
-import { Client } from "@/rpc/client";
+import { workspaceGetQuery } from "@/rpc/queries";
 import { useTabsStore } from "@/stores/tabs";
 
 type Props = {
@@ -15,13 +15,7 @@ function WorkspaceRedirect({ workspaceId }: Props): React.JSX.Element {
 	const navigate = useNavigate();
 	const ensureTab = useTabsStore((s) => s.ensureTab);
 
-	const workspaceResult = useAtomValue(
-		Client.query(
-			"workspaces.get",
-			{ workspaceId },
-			{ reactivityKeys: ["workspaces", workspaceId as string] },
-		),
-	);
+	const workspaceResult = useAtomValue(workspaceGetQuery(workspaceId));
 
 	useEffect(() => {
 		if (workspaceResult._tag !== "Success") return;
