@@ -454,32 +454,18 @@ const createInstance = (leafId: string, container: HTMLElement, opts: CreateOpti
 			workspaceId: opts.workspaceId,
 		})
 		.then(() => {
-			// Repaint on (re)attach. abduco does NOT replay the screen (unlike tmux),
-			// so a reattached TUI (claude, htop, lazygit) stays blank until the program
-			// redraws — which it does on SIGWINCH. The catch: the reattached xterm fits
-			// the same container, so it's the SAME size the server's pty already has,
-			// and resizing a pty to its current size is a kernel no-op (no SIGWINCH
-			// fires) — which is why a plain reconcile left the pane blank until the user
-			// forced a redraw by hand. Force a REAL winsize delta instead: shrink the
-			// pty by one row, then restore it a tick later. Two genuine SIGWINCHes make
-			// the foreground program re-lay-out and fully repaint. We resize only the
-			// PTY (not xterm), so there's no canvas churn; harmless on a fresh shell.
+			// Repaint on (re)attach. abduco doesn't replay the screen, and a TUI like
+			// Claude only fully repaints on a real dimension CHANGE — a same-size
+			// SIGWINCH yields an empty differential redraw, leaving the fresh xterm
+			// blank. We make the change real WITHOUT timing hacks: main spawns the
+			// abduco client one row short (see createSession), so abduco's attach
+			// handshake leaves the server's pty at rows-1. This reconcile to the true
+			// fitted size is therefore always a genuine resize → SIGWINCH → full
+			// repaint. Reset the dedup so the reconcile is actually sent.
 			if (inst.disposed) return;
-			// Small delay so the abduco client has connected and forwarded the initial
-			// winsize before we jiggle it.
-			setTimeout(() => {
-				if (inst.disposed || !inst.currentContainer) return;
-				safeFit(inst);
-				const { cols, rows } = inst.xterm;
-				if (cols < 2 || rows < 2) return;
-				window.api.terminal.resize(inst.sessionId, cols, rows - 1);
-				setTimeout(() => {
-					if (inst.disposed) return;
-					window.api.terminal.resize(inst.sessionId, cols, rows);
-					inst.lastSentCols = cols;
-					inst.lastSentRows = rows;
-				}, 80);
-			}, 150);
+			inst.lastSentCols = 0;
+			inst.lastSentRows = 0;
+			scheduleResize(inst);
 		})
 		.catch((err: unknown) => {
 			xterm.writeln(`\r\n\x1b[31mFailed to start terminal: ${String(err)}\x1b[0m`);

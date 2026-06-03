@@ -316,10 +316,19 @@ const createSession = async (sender: Electron.WebContents, opts: CreateOptions):
 		args = [...shellArgs(shell), ...mcpArgs];
 	}
 
+	// On the abduco path, spawn the client ONE ROW SHORT. abduco forwards the
+	// client's winsize to the server as part of the attach handshake, so on
+	// reattach this leaves the server's pty at rows-1; the renderer's first
+	// reconcile to the true fitted size is then always a genuine dimension change.
+	// That matters because a reattached TUI (e.g. Claude) only fully repaints on a
+	// real resize — a same-size SIGWINCH yields an empty differential redraw and a
+	// blank pane. The offset makes the repaint deterministic without timing hacks;
+	// it's invisible (corrected within a frame) and a no-op for plain shells.
+	const baseRows = opts.rows ?? 24;
 	const pty = nodePty.spawn(file, args, {
 		name: "xterm-256color",
 		cols: opts.cols ?? 80,
-		rows: opts.rows ?? 24,
+		rows: PERSISTENCE_SUPPORTED ? Math.max(1, baseRows - 1) : baseRows,
 		cwd,
 		env,
 		useConpty: process.platform === "win32",
