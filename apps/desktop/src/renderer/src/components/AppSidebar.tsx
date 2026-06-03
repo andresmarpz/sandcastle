@@ -29,6 +29,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import NewProjectDialog from "@/components/NewProjectDialog";
 import NewWorkspaceDialog from "@/components/NewWorkspaceDialog";
 import PersonalizeProjectDialog from "@/components/PersonalizeProjectDialog";
+import PrStatusIndicator from "@/components/PrStatusIndicator";
 import StackedIcons from "@/components/StackedIcons";
 import StatusDot from "@/components/StatusDot";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -40,6 +41,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup } from "@/components/ui/sidebar";
+import { usePrStatus } from "@/hooks/usePrStatus";
 import { useTabProcesses } from "@/hooks/useTabProcesses";
 import {
 	type AvatarColorKey,
@@ -171,6 +173,7 @@ function WorkspaceItem({
 	const wsIdStr = ws.id as string;
 	const hasTabs = useTabsStore((s) => (s.byWorkspace[wsIdStr]?.tabs.length ?? 0) > 0);
 	const status = useWorkspaceActivity(wsIdStr);
+	const pr = usePrStatus(ws);
 	const [open, setOpen] = useState(false);
 	const [menuOpen, setMenuOpen] = useState(false);
 	const navigate = useNavigate();
@@ -202,7 +205,7 @@ function WorkspaceItem({
 		<Collapsible open={open} onOpenChange={setOpen}>
 			<div
 				className={cn(
-					"group/workspace flex h-[26px] w-full items-center gap-0.5 rounded-md border border-transparent pr-0.5 text-xsm",
+					"group/workspace flex w-full items-center gap-0.5 rounded-md border border-transparent py-0.5 pr-0.5 text-xsm",
 					isActive
 						? ACTIVE_ROW_CLASSES
 						: "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground",
@@ -212,7 +215,7 @@ function WorkspaceItem({
 					aria-label={open ? "Collapse tabs" : "Expand tabs"}
 					disabled={!hasTabs}
 					className={cn(
-						"grid size-5 shrink-0 place-items-center rounded text-foreground-tertiary",
+						"grid w-5 shrink-0 place-items-center self-stretch rounded text-foreground-tertiary",
 						hasTabs ? "hover:text-foreground" : "opacity-40",
 					)}
 				>
@@ -225,14 +228,21 @@ function WorkspaceItem({
 						<StatusDot status={status} />
 					</span>
 				</CollapsibleTrigger>
-				<button
-					type="button"
-					onClick={() => onSelect(wsIdStr)}
-					title={ws.name}
-					className="flex h-full min-w-0 flex-1 items-center pr-1 text-left"
-				>
-					<span className="truncate">{ws.name}</span>
-				</button>
+				<div className="flex min-h-[26px] min-w-0 flex-1 flex-col justify-center">
+					<button
+						type="button"
+						onClick={() => onSelect(wsIdStr)}
+						title={ws.name}
+						className="flex min-w-0 items-center pr-1 text-left"
+					>
+						<span className="truncate">{ws.name}</span>
+					</button>
+					{pr ? (
+						<div className="-mt-px -ml-1 flex items-center">
+							<PrStatusIndicator status={pr} />
+						</div>
+					) : null}
+				</div>
 				<DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
 					<DropdownMenuTrigger
 						aria-label={`${ws.name} actions`}

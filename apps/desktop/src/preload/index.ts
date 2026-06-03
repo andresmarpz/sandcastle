@@ -1,5 +1,6 @@
 import { electronAPI } from "@electron-toolkit/preload";
 import { contextBridge, ipcRenderer } from "electron";
+import type { PrStatus, PrStatusInput } from "../main/github";
 
 type CreateOptions = {
 	id: string;
@@ -134,7 +135,23 @@ const mcp = {
 	},
 };
 
-const api = { terminal, menu, caffeinate, dialog: fileDialog, window: browserWindow, claude, mcp };
+const github = {
+	// Resolve the open/draft/merged PR for a worktree. Main owns the `gh` call
+	// plus its cache; the renderer just paints whatever comes back (or nothing).
+	prStatus: (input: PrStatusInput): Promise<PrStatus | null> =>
+		ipcRenderer.invoke("github:pr-status", input),
+};
+
+const api = {
+	terminal,
+	menu,
+	caffeinate,
+	dialog: fileDialog,
+	window: browserWindow,
+	claude,
+	mcp,
+	github,
+};
 
 if (process.contextIsolated) {
 	try {

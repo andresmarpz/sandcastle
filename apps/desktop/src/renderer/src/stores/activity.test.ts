@@ -116,6 +116,7 @@ describe("reconcileWorkspace", () => {
 					attention: false,
 					done: false,
 					byteWorking: true,
+					cronActive: false,
 				},
 			},
 			leafStatus: { b1: "idle" },
