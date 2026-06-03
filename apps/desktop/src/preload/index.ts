@@ -90,7 +90,10 @@ const caffeinate = {
 	},
 };
 
-type ClaudeHookEvent = { sessionId: string; event: "working" | "attention" | "done" };
+type ClaudeHookEvent = {
+	sessionId: string;
+	event: "working" | "attention" | "done" | "cron-start" | "cron-stop" | "session-end";
+};
 
 const claude = {
 	// Claude Code lifecycle events, relayed from main's hook receiver. Drives the

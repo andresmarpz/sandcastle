@@ -24,18 +24,31 @@ const SCRIPT_FILE = path.join(HOOKS_DIR, "notify.sh");
 const INTEGRATION_FILE = path.join(SANDCASTLE_DIR, "integration.json");
 const CLAUDE_SETTINGS_FILE = path.join(os.homedir(), ".claude", "settings.json");
 
-// Claude Code hook event -> the status arg passed to notify.sh. Kept minimal so
-// the hooks fire only a few times per turn (no per-tool-call chatter):
-//   UserPromptSubmit -> a turn started (working)
-//   Notification     -> Claude is blocked waiting on the user (needs-attention)
-//   Stop             -> the turn finished (done)
-const HOOK_EVENTS: Record<string, "working" | "attention" | "done"> = {
-	UserPromptSubmit: "working",
-	Notification: "attention",
-	Stop: "done",
-};
+// Wire events POSTed by notify.sh back to main. Most map a Claude Code lifecycle
+// hook to a per-turn status; the cron trio tracks /loop (and /schedule) crons,
+// which supersede the turn status in the activity store (see stores/activity).
+// Kept minimal so the per-turn hooks fire only a few times per turn:
+//   UserPromptSubmit        -> a turn started (working)
+//   Notification            -> Claude is blocked waiting on the user (attention)
+//   Stop                    -> the turn finished (done)
+//   PostToolUse[CronCreate] -> a session-scoped cron was created (cron-start)
+//   PostToolUse[CronDelete] -> that cron was deleted (cron-stop)
+//   SessionEnd              -> the session exited; its in-memory crons die with
+//                              it (CronCreate jobs are session-scoped) (session-end)
+type WireEvent = "working" | "attention" | "done" | "cron-start" | "cron-stop" | "session-end";
 
-const HOOK_STATUSES = new Set(["working", "attention", "done"]);
+// `matcher` is set only for PreToolUse/PostToolUse hooks (matched against the
+// tool name); the lifecycle hooks register without one.
+const HOOK_REGISTRATIONS: ReadonlyArray<{ hook: string; matcher?: string; arg: WireEvent }> = [
+	{ hook: "UserPromptSubmit", arg: "working" },
+	{ hook: "Notification", arg: "attention" },
+	{ hook: "Stop", arg: "done" },
+	{ hook: "PostToolUse", matcher: "CronCreate", arg: "cron-start" },
+	{ hook: "PostToolUse", matcher: "CronDelete", arg: "cron-stop" },
+	{ hook: "SessionEnd", arg: "session-end" },
+];
+
+const VALID_EVENTS = new Set<string>(HOOK_REGISTRATIONS.map((r) => r.arg));
 
 const SCRIPT_CONTENT = `#!/bin/sh
 # Sandcastle <-> Claude Code activity hook. No-op outside Sandcastle.
@@ -115,7 +128,7 @@ const startServer = async (): Promise<void> => {
 				if (
 					typeof parsed.sessionId === "string" &&
 					typeof parsed.event === "string" &&
-					HOOK_STATUSES.has(parsed.event)
+					VALID_EVENTS.has(parsed.event)
 				) {
 					broadcast(parsed.sessionId, parsed.event);
 				}
@@ -192,10 +205,14 @@ const mergeHooks = async (): Promise<void> => {
 	const hooks = (settings.hooks as Record<string, unknown> | undefined) ?? {};
 	// Re-install cleanly: drop any prior Sandcastle entries first (idempotent).
 	stripOurHooks(hooks);
-	for (const [event, arg] of Object.entries(HOOK_EVENTS)) {
-		const groups = Array.isArray(hooks[event]) ? (hooks[event] as HookGroup[]) : [];
-		groups.push({ hooks: [{ type: "command", command: `sh "${SCRIPT_FILE}" ${arg}` }] });
-		hooks[event] = groups;
+	for (const reg of HOOK_REGISTRATIONS) {
+		const groups = Array.isArray(hooks[reg.hook]) ? (hooks[reg.hook] as HookGroup[]) : [];
+		const group: HookGroup = {
+			hooks: [{ type: "command", command: `sh "${SCRIPT_FILE}" ${reg.arg}` }],
+		};
+		if (reg.matcher) group.matcher = reg.matcher;
+		groups.push(group);
+		hooks[reg.hook] = groups;
 	}
 	settings.hooks = hooks;
 	if (!present) await fs.mkdir(path.dirname(CLAUDE_SETTINGS_FILE), { recursive: true });

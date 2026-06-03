@@ -58,6 +58,7 @@ const STATUS_LABEL: Record<string, string> = {
 	working: "working",
 	done: "done",
 	"needs-attention": "needs attention",
+	cron: "cron running",
 };
 
 const ACTIVE_ROW_CLASSES = "bg-sidebar text-foreground shadow-elevated dark:border-border/50";
