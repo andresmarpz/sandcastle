@@ -15,6 +15,7 @@ import {
 import icon from "../../resources/icon.png?asset";
 import { disposeCaffeinate, registerCaffeinateHandlers } from "./caffeinate";
 import { disposeClaudeHooks, registerClaudeHookHandlers } from "./claudeHooks";
+import { disposeGitHub, registerGitHubHandlers } from "./github";
 import { disposeMcp, registerMcpServer } from "./mcp";
 import { disposeAllSessions, registerPtyHandlers } from "./pty";
 import { captureUserEnv } from "./userEnv";
@@ -263,6 +264,7 @@ void app.whenReady().then(async () => {
 
 	registerPtyHandlers();
 	registerCaffeinateHandlers();
+	registerGitHubHandlers();
 	void registerClaudeHookHandlers().catch((err) =>
 		console.warn("[claudeHooks] failed to register:", err),
 	);
@@ -301,4 +303,5 @@ app.on("before-quit", () => {
 	disposeCaffeinate();
 	disposeClaudeHooks();
 	disposeMcp();
+	disposeGitHub();
 });
