@@ -14,6 +14,7 @@ import {
 } from "@dnd-kit/sortable";
 import { useAtomSet, useAtomValue } from "@effect/atom-react";
 import {
+	ClockIcon,
 	DotsSixVerticalIcon,
 	DotsThreeIcon,
 	GearIcon,
@@ -22,7 +23,7 @@ import {
 	QuestionIcon,
 } from "@phosphor-icons/react";
 import type { Project, ProjectId, Workspace } from "@sandcastle/contracts";
-import { useNavigate, useParams } from "@tanstack/react-router";
+import { Link, useNavigate, useParams } from "@tanstack/react-router";
 import { Cause } from "effect";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -631,6 +632,14 @@ function AppSidebar(): React.JSX.Element {
 				<FooterIconButton label="Settings" onClick={() => void navigate({ to: "/settings" })}>
 					<GearIcon className="size-4" />
 				</FooterIconButton>
+				<Link
+					to="/automations"
+					aria-label="Automations"
+					title="Automations"
+					className={FOOTER_ICON_CLASSES}
+				>
+					<ClockIcon className="size-4" />
+				</Link>
 				<a
 					href="https://github.com/andresmarpz/sandcastle"
 					target="_blank"

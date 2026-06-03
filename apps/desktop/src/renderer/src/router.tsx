@@ -7,6 +7,7 @@ import {
 	Outlet,
 } from "@tanstack/react-router";
 
+import AutomationsRoute from "@/components/AutomationsRoute";
 import Layout from "@/components/Layout";
 import ProjectsIndex from "@/components/ProjectsIndex";
 import SettingsRoute from "@/components/SettingsRoute";
@@ -51,7 +52,19 @@ const settingsRoute = createRoute({
 	component: SettingsRoute,
 });
 
-const routeTree = rootRoute.addChildren([indexRoute, workspaceRoute, tabRoute, settingsRoute]);
+const automationsRoute = createRoute({
+	getParentRoute: () => rootRoute,
+	path: "/automations",
+	component: AutomationsRoute,
+});
+
+const routeTree = rootRoute.addChildren([
+	indexRoute,
+	workspaceRoute,
+	tabRoute,
+	settingsRoute,
+	automationsRoute,
+]);
 
 export const router = createRouter({
 	routeTree,
