@@ -6,9 +6,11 @@ import { collectLeafIds } from "@/lib/paneTree";
 import { useTabsStore } from "@/stores/tabs";
 
 // A workspace is "colored" by the highest-precedence status among any of its
-// panes (leaves) across every tab/split — needs-attention beats working beats
-// done beats idle. Mirrors superset's STATUS_PRIORITY fold.
-export type LeafStatus = "idle" | "working" | "done" | "needs-attention";
+// panes (leaves) across every tab/split — cron beats needs-attention beats
+// working beats done beats idle. Mirrors superset's STATUS_PRIORITY fold.
+// "cron" tops the order on purpose: an active /loop cron is the headline state
+// and supersedes the per-turn dot for the whole workspace.
+export type LeafStatus = "idle" | "working" | "done" | "needs-attention" | "cron";
 export type WorkspaceStatus = LeafStatus;
 
 export const STATUS_PRIORITY: Record<LeafStatus, number> = {
@@ -16,10 +18,17 @@ export const STATUS_PRIORITY: Record<LeafStatus, number> = {
 	done: 1,
 	working: 2,
 	"needs-attention": 3,
+	cron: 4,
 };
 
-/** The status reported by a Claude Code hook (see main/claudeHooks.ts). */
-export type HookStatus = "working" | "attention" | "done";
+/** A wire event reported by a Claude Code hook (see main/claudeHooks.ts). */
+export type HookStatus =
+	| "working"
+	| "attention"
+	| "done"
+	| "cron-start"
+	| "cron-stop"
+	| "session-end";
 
 /**
  * Ground-truth process state for a leaf, gathered by the reconcile probe (see
@@ -54,6 +63,11 @@ type LeafSignals = {
 	// Byte path: the "esc to interrupt" spinner was seen recently. Fallback
 	// "working" signal when no hook has fired for this leaf.
 	byteWorking: boolean;
+	// Hook PostToolUse[CronCreate]: a session-scoped cron (/loop, /schedule) is
+	// live in this leaf's session. Latches until the cron is deleted or the
+	// session exits (both end the cron), independent of focus — a running cron is
+	// surfaced regardless of which pane you're looking at.
+	cronActive: boolean;
 };
 
 const emptySignals = (): LeafSignals => ({
@@ -62,9 +76,11 @@ const emptySignals = (): LeafSignals => ({
 	attention: false,
 	done: false,
 	byteWorking: false,
+	cronActive: false,
 });
 
 const effectiveStatus = (s: LeafSignals): LeafStatus => {
+	if (s.cronActive) return "cron";
 	if (s.attention) return "needs-attention";
 	const working = s.hookSeen ? s.turnActive : s.byteWorking;
 	if (working) return "working";
@@ -201,18 +217,39 @@ export const useActivityStore = create<ActivityState>()((set, get) => {
 		applyHook: (leafId, status) => {
 			mutateLeaf(leafId, (s) => {
 				s.hookSeen = true;
-				if (status === "working") {
-					// A new turn started — supersedes any latched done/attention.
-					s.turnActive = true;
-					s.done = false;
-					s.attention = false;
-				} else if (status === "attention") {
-					s.attention = true;
-				} else {
-					// done
-					s.turnActive = false;
-					s.done = true;
-					s.attention = false;
+				switch (status) {
+					case "working":
+						// A new turn started — supersedes any latched done/attention.
+						// A cron firing its prompt looks like a normal turn; the
+						// cronActive latch is left untouched so the clock rides through.
+						s.turnActive = true;
+						s.done = false;
+						s.attention = false;
+						break;
+					case "attention":
+						s.attention = true;
+						break;
+					case "done":
+						s.turnActive = false;
+						s.done = true;
+						s.attention = false;
+						break;
+					case "cron-start":
+						s.cronActive = true;
+						break;
+					case "cron-stop":
+					case "session-end":
+						// The cron was deleted, or the session that owned it exited
+						// (session-scoped crons die with it). Resolve to a "done"
+						// workspace rather than dropping silently back to idle.
+						if (s.cronActive) {
+							s.cronActive = false;
+							s.done = true;
+						}
+						// A session exit also ends any in-flight turn, so a session
+						// killed mid-turn doesn't leave a stuck "working" dot.
+						if (status === "session-end") s.turnActive = false;
+						break;
 				}
 			});
 		},
