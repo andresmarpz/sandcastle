@@ -19,7 +19,7 @@
 		"check:fix": "biome check --write ."
 	},
 	"dependencies": {
-		"effect": "^4.0.0-beta.57"
+		"effect": "^4.0.0-beta.76"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.4.15",

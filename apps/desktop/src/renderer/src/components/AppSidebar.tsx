@@ -50,7 +50,7 @@ import {
 } from "@/lib/avatarColors";
 import { cn } from "@/lib/utils";
 import { Client } from "@/rpc/client";
-import { workspacesListQuery } from "@/rpc/queries";
+import { projectsListQuery, workspacesListQuery } from "@/rpc/queries";
 import { useActivityStore, useWorkspaceActivity } from "@/stores/activity";
 import { type Tab, useTabsStore } from "@/stores/tabs";
 
@@ -490,9 +490,7 @@ function useProjectAvatarColors(projectIds: readonly string[]): {
 }
 
 function ProjectList(): React.JSX.Element {
-	const projectsResult = useAtomValue(
-		Client.query("projects.list", {}, { reactivityKeys: ["projects"] }),
-	);
+	const projectsResult = useAtomValue(projectsListQuery());
 
 	const projects =
 		projectsResult._tag === "Success" ? projectsResult.value : ([] as readonly Project[]);
