@@ -137,7 +137,7 @@ function SettingsRoute(): React.JSX.Element {
 
 			<Section
 				title="Claude Code integration"
-				description="Installs lifecycle hooks in ~/.claude/settings.json so Sandcastle can show precise working / needs-attention / done status and play sounds. The hook is a no-op outside Sandcastle. Disabling removes the hooks."
+				description="Installs lifecycle hooks in ~/.claude/settings.json so Sandcastle can show precise working / needs-attention / done status, flag workspaces with an active /loop cron, and play sounds. The hook is a no-op outside Sandcastle. Disabling removes the hooks."
 			>
 				<div className="flex items-center justify-between">
 					<span className="text-xs">
