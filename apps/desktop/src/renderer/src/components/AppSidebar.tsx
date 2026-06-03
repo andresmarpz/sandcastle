@@ -243,7 +243,19 @@ function WorkspaceItem({
 					{/* Decorative: the overlay button above carries the name as its
 					    accessible label, so the visible text is hidden from AT to
 					    avoid a duplicate announcement. */}
-					<span aria-hidden className="min-w-0 truncate pr-1">
+					<span
+						aria-hidden
+						className={cn(
+							"min-w-0 truncate pr-1",
+							// The actions button floats over the row's right edge, so it
+							// reserves no width while idle — the name uses the full row.
+							// Only once the button is visible (hover or menu open) do we
+							// pad the name so it truncates before the button instead of
+							// running underneath it.
+							"group-hover/workspace:pr-6",
+							menuOpen && "pr-6",
+						)}
+					>
 						{ws.name}
 					</span>
 					{pr ? (
@@ -256,7 +268,9 @@ function WorkspaceItem({
 					<DropdownMenuTrigger
 						aria-label={`${ws.name} actions`}
 						className={cn(
-							"relative z-10 grid size-5 shrink-0 place-items-center rounded text-foreground-tertiary",
+							// Floated out of flow so it reserves no width while hidden —
+							// the name row gets the space back and stops truncating early.
+							"absolute top-1/2 right-0.5 z-10 grid size-5 -translate-y-1/2 place-items-center rounded text-foreground-tertiary",
 							"opacity-0 group-hover/workspace:opacity-100 hover:bg-sidebar-accent/60 hover:text-foreground data-popup-open:opacity-100",
 							menuOpen && "opacity-100",
 						)}
