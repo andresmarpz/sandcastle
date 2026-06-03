@@ -6,7 +6,7 @@ import process from "node:process";
 import { promisify } from "node:util";
 import { ipcMain, webContents } from "electron";
 import * as nodePty from "node-pty";
-import { abducoBin, PERSISTENCE_SUPPORTED, sessionName, socketDir, socketPath } from "./abduco";
+import { abducoBin, PERSISTENCE_SUPPORTED, sessionName, socketDir } from "./abduco";
 import { registerSession, unregisterSession } from "./mcp";
 import { getKeepAliveMinutes, setKeepAliveMinutes } from "./ptySettings";
 import { userEnvReady } from "./userEnv";
@@ -20,11 +20,13 @@ type Session = {
 	leafId: string;
 	pty: nodePty.IPty;
 	// With abduco, pty.pid is the throwaway CLIENT. The real shell is a child of
-	// the detached abduco SERVER. We resolve it lazily from the ps snapshot and
-	// cache it here (stable for the session's life) so cwd / foreground-process
-	// detection / kill target the shell, not the client. null until resolved (and
-	// on the non-persistence path, where pty.pid IS the shell).
+	// the detached abduco SERVER. We resolve both lazily from the ps snapshot and
+	// cache them here (stable for the session's life): shellPid drives cwd /
+	// foreground-process detection; serverPid is the SIGTERM target for a clean
+	// teardown (abduco then kills its command + unlinks its own socket). Both null
+	// until resolved (and on the non-persistence path, where pty.pid IS the shell).
 	shellPid: number | null;
+	serverPid: number | null;
 	webContentsId: number;
 };
 
@@ -152,23 +154,40 @@ const killShellGroup = (shellPid: number): void => {
 	}, KILL_GRACE_MS);
 };
 
-// User closed the pane (or its window) → destroy the real session: kill the
-// shell living under the abduco SERVER (NOT pty.pid, which is the client) + its
-// group, drop the client, and remove the stale socket. On the non-persistence
-// path this is the classic killTree.
+// SIGTERM the abduco SERVER. abduco's handler exits via atexit, which kills its
+// command (the shell, whose pty closes) AND unlinks its own socket — the clean,
+// correct teardown. (We can't reliably unlink the socket ourselves: abduco nests
+// it at <dir>/<argv0>/<user>/<name>@<host>, not a path we can cheaply compute.)
+const killServer = (serverPid: number): void => {
+	try {
+		process.kill(serverPid, "SIGTERM");
+	} catch {
+		// already gone
+	}
+};
+
+// User explicitly destroyed the pane (terminal:dispose) or persistence is off →
+// tear the real session down. Prefer SIGTERM to the resolved abduco server (it
+// cleans up its command + socket); fall back to killing the shell group if we
+// never resolved the server; always drop the client. Non-persistence path is the
+// classic killTree.
 const killSession = (session: Session): void => {
 	if (!PERSISTENCE_SUPPORTED) {
 		killTree(session.pty);
 		return;
 	}
-	const shellPid = session.shellPid;
-	if (shellPid) killShellGroup(shellPid);
+	if (session.serverPid) {
+		killServer(session.serverPid);
+	} else if (session.shellPid) {
+		// Server pid not resolved yet — kill the shell group directly so its pty
+		// closes; the orphaned server then exits on its command's death.
+		killShellGroup(session.shellPid);
+	}
 	try {
-		session.pty.kill(); // detach/kill the client
+		session.pty.kill(); // drop the client too
 	} catch {
 		// already gone
 	}
-	void fs.rm(socketPath(session.leafId), { force: true }).catch(() => {});
 };
 
 // App quitting with persistence on → DETACH ONLY: kill just the abduco client,
@@ -190,8 +209,6 @@ const disposeSession = (id: string): void => {
 };
 
 const disposeSessionsForRenderer = (webContentsId: number): void => {
-	// A window genuinely closing should reap its shells — otherwise every closed
-	// window orphans an abduco server. Only the app-level before-quit detaches.
 	for (const [id, session] of sessions) {
 		if (session.webContentsId === webContentsId) {
 			sessions.delete(id);
@@ -201,11 +218,34 @@ const disposeSessionsForRenderer = (webContentsId: number): void => {
 	}
 };
 
+// Detach (don't kill) every session owned by a renderer, leaving the abduco
+// servers + shells alive to reattach. Used when the window goes away but the app
+// lives on (macOS window close) or the renderer crashes — NOT a reason to lose
+// running processes.
+const detachSessionsForRenderer = (webContentsId: number): void => {
+	for (const [id, session] of sessions) {
+		if (session.webContentsId === webContentsId) {
+			sessions.delete(id);
+			unregisterSession(id);
+			detachSession(session);
+		}
+	}
+};
+
 const watchRenderer = (wc: Electron.WebContents): void => {
 	if (watchedRenderers.has(wc.id)) return;
 	watchedRenderers.add(wc.id);
 	const cleanup = (): void => {
-		disposeSessionsForRenderer(wc.id);
+		// A window closing is NOT a reason to kill shells: on macOS the app stays
+		// alive and the user reopens; a renderer crash should reload + reattach. So
+		// DETACH and let the servers survive (this was the bug that lost sessions on
+		// close). App quit detaches up-front in before-quit, leaving this a no-op.
+		// Only when persistence is off do we hard-kill here.
+		if (PERSISTENCE_SUPPORTED && getKeepAliveMinutes() !== 0) {
+			detachSessionsForRenderer(wc.id);
+		} else {
+			disposeSessionsForRenderer(wc.id);
+		}
 		watchedRenderers.delete(wc.id);
 	};
 	wc.once("destroyed", cleanup);
@@ -290,6 +330,7 @@ const createSession = async (sender: Electron.WebContents, opts: CreateOptions):
 		leafId: opts.leafId,
 		pty,
 		shellPid: null, // resolved lazily from the ps snapshot, see §5
+		serverPid: null,
 		webContentsId: sender.id,
 	};
 	sessions.set(opts.id, session);
@@ -423,26 +464,33 @@ const commFromCommand = (command: string): string => {
 };
 
 // The abduco SERVER for a session is an `abduco` process that is NOT our client
-// (pty.pid) and whose argv carries the session name. The real shell is its
-// child. Returns the shell pid, or null if the server/child isn't visible yet.
-const resolveShellPidFrom = (session: Session, rows: ProcRow[]): number | null => {
+// (pty.pid) and whose argv carries the session name. The real shell is its child.
+// Returns both pids (shell may be null if the child isn't visible yet), or null
+// if the server itself isn't visible yet.
+const resolveAbducoPidsFrom = (
+	session: Session,
+	rows: ProcRow[],
+): { serverPid: number; shellPid: number | null } | null => {
 	const name = sessionName(session.leafId);
 	const server = rows.find(
 		(r) => r.command.includes("abduco") && r.command.includes(name) && r.pid !== session.pty.pid,
 	);
 	if (!server) return null;
 	const child = rows.find((r) => r.ppid === server.pid);
-	return child?.pid ?? null;
+	return { serverPid: server.pid, shellPid: child?.pid ?? null };
 };
 
-// Take a one-shot ps snapshot and resolve+cache the shell pid for a session.
-// Best-effort: a transient miss just leaves shellPid null for this attempt.
+// Take a one-shot ps snapshot and resolve+cache the server/shell pids for a
+// session. Best-effort: a transient miss just leaves them null for this attempt.
 const resolveShellPid = async (session: Session): Promise<void> => {
-	if (session.shellPid) return;
+	if (session.serverPid && session.shellPid) return;
 	const rows = await psSnapshot();
 	if (!rows) return;
-	const pid = resolveShellPidFrom(session, rows);
-	if (pid) session.shellPid = pid;
+	const r = resolveAbducoPidsFrom(session, rows);
+	if (r) {
+		session.serverPid = r.serverPid;
+		session.shellPid = r.shellPid;
+	}
 };
 
 const collectForeground = (
@@ -527,12 +575,14 @@ const getForegroundProcs = async (ids: string[]): Promise<Record<string, Foregro
 		else childrenOf.set(row.ppid, [row]);
 	}
 	for (const t of targets) {
-		// Resolve the shell pid (abduco server's child) from the same snapshot and
-		// cache it; fall back to pty.pid on the non-persistence path / before the
-		// server is visible.
-		if (PERSISTENCE_SUPPORTED && !t.session.shellPid) {
-			const pid = resolveShellPidFrom(t.session, rows);
-			if (pid) t.session.shellPid = pid;
+		// Resolve the server/shell pids from the same snapshot and cache them; fall
+		// back to pty.pid on the non-persistence path / before the server is visible.
+		if (PERSISTENCE_SUPPORTED && (!t.session.shellPid || !t.session.serverPid)) {
+			const r = resolveAbducoPidsFrom(t.session, rows);
+			if (r) {
+				t.session.serverPid = r.serverPid;
+				if (r.shellPid) t.session.shellPid = r.shellPid;
+			}
 		}
 		result[t.id] = collectForeground(t.session.shellPid ?? t.session.pty.pid, childrenOf);
 	}
@@ -573,11 +623,12 @@ const discoverAbducoServers = (rows: ProcRow[]): AbducoServer[] => {
 	return servers;
 };
 
-// Kill an abduco server: SIGHUP→SIGKILL its shell group (the server exits when
-// its child dies) and remove its socket file by name.
+// Kill an abduco server cleanly: SIGTERM it so it kills its command and unlinks
+// its own socket (atexit). Belt-and-suspenders: also kill the shell group if we
+// have it, in case the server is wedged.
 const killAbducoServer = (server: AbducoServer): void => {
+	killServer(server.serverPid);
 	if (server.shellPid) killShellGroup(server.shellPid);
-	void fs.rm(path.join(socketDir(), server.name), { force: true }).catch(() => {});
 };
 
 // terminal:active-leaves handler: kill our servers whose session name matches
@@ -656,9 +707,10 @@ export const lastHeartbeatAgeMs = (): number => {
 
 // Lazy reap on launch (§2.2). Runs BEFORE the renderer reattaches. If
 // persistence is off (keepalive=0) or the app was down longer than the TTL,
-// kill ALL our abduco servers (scan ps, SIGHUP→SIGKILL each shell group) and
-// sweep their sockets, so we start from a clean slate instead of reattaching
-// stale junk. Under the TTL (or "forever"), leave servers alive to reattach.
+// SIGTERM ALL our abduco servers — each unlinks its own socket on exit — so we
+// start from a clean slate instead of reattaching stale junk. Under the TTL (or
+// "forever"), leave servers alive to reattach. (abduco also auto-unlinks any
+// truly-dead socket on the next connect attempt, so no manual sweep is needed.)
 export const reapExpiredOnStartup = async (downtimeMs: number): Promise<void> => {
 	if (!PERSISTENCE_SUPPORTED) return;
 	const minutes = getKeepAliveMinutes();
@@ -675,15 +727,5 @@ export const reapExpiredOnStartup = async (downtimeMs: number): Promise<void> =>
 	const rows = await psSnapshot();
 	if (rows) {
 		for (const server of discoverAbducoServers(rows)) killAbducoServer(server);
-	}
-	// Sweep any leftover socket files (e.g. servers already dead, or whose shell
-	// child wasn't visible) so the dir is clean for fresh sessions.
-	try {
-		const entries = await fs.readdir(socketDir());
-		await Promise.all(
-			entries.map((e) => fs.rm(path.join(socketDir(), e), { force: true }).catch(() => {})),
-		);
-	} catch {
-		// socket dir doesn't exist yet — nothing to sweep
 	}
 };

@@ -383,3 +383,17 @@ All of the above is gated on `PERSISTENCE_SUPPORTED` (`process.platform !== "win
 3. **Ship Phase 1 alone first** (terminals survive; reattached `claude` loses MCP until relaunch), or hold for Phase 2 so the `claude` experience is seamless?
 4. **Confirm exact abduco flags / `ABDUCO_SOCKET_DIR` behavior** against the pinned version before coding §4.2.
 5. **TTL policy (§2.2 / §2.3):** the TTL is now a user setting (Off/5m/30m/1h/Forever, default 30m). Remaining calls: ship **lazy-reap-on-launch only** (simple, no daemon — note "Forever" then means processes truly run until you reopen), or also the **active watchdog** so the chosen TTL is enforced *during* downtime? And confirm the preset list.
+
+---
+
+## 15. Fixes from first dev test (supersede earlier guidance)
+
+First in-app test (spawn terminal → open claude → close window → reopen) failed with `session terminated with exit status 1`. Two bugs, both root-caused empirically against the bundled binary and fixed in `pty.ts` / `abduco.ts`:
+
+**Bug A — window-close killed the shell.** §4.3 said to *keep* `disposeSessionsForRenderer` as a kill on `webContents 'destroyed'` / `'render-process-gone'`. **That was wrong.** On macOS, closing the window does not quit the app (`window-all-closed` only quits off-darwin), so that handler fired and `killSession`'d the live shells. Empirically, SIGHUP'ing the shell's process group makes zsh exit with status **1** (not a signal-coded 0 as assumed), and abduco then reports the terminated session on reattach — exactly the symptom.
+**Fix:** when persistence is on, the renderer-gone handler **detaches** (`detachSessionsForRenderer`, client-only kill, servers survive) instead of killing. App quit still detaches via `before-quit`; only `keepalive === 0` hard-kills here. (Verified: detach keeps the shell alive and reattach shows it live.)
+
+**Bug B — `socketPath()` was wrong, so teardown never removed the real socket.** abduco does **not** name its socket `<dir>/<name>`. It nests it at `<ABDUCO_SOCKET_DIR>/<argv0-basename>/<user>/<name>@<host>` (`abduco.c:270-367`), so `killSession`'s `fs.rm(socketPath(...))` and the reaper sweeps all targeted nonexistent paths, leaving dead sockets that make a later reattach report "session terminated."
+**Fix:** don't compute/unlink abduco's socket at all. Tear sessions down by **SIGTERM-ing the abduco server pid** — its `atexit` handler kills the command *and* unlinks its own socket (`server.c:156-170`). `Session` now caches `serverPid` (resolved from the same `ps` snapshot as `shellPid`); `killSession` and `killAbducoServer` SIGTERM it; `reapExpiredOnStartup`'s manual socket sweep is dropped (abduco also auto-unlinks stale sockets on the next connect). `socketPath()` is removed from `abduco.ts`. (Verified: SIGTERM-server teardown → clean fresh reattach, no "session terminated".)
+
+**Also corrected from the plan:** the §10 / §4.4 "startup sweep removes the dead socket" and "fresh shell on shell-exit-during-downtime" notes assumed our own socket removal — they now rely on abduco's own unlink-on-exit instead.

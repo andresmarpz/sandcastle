@@ -9,8 +9,14 @@ import { app } from "electron";
 // We wrap every shell in a detachable abduco session so the shell (and the
 // processes inside it) survive a full quit + relaunch and re-attach to their
 // original pane. This module is the pure helper layer: it resolves the bundled
-// binary, picks a short socket path, and derives a stable session name from the
+// binary, picks the socket dir, and derives a stable session name from the
 // durable leafId. No process spawning or IPC lives here.
+//
+// NOTE: abduco does NOT name its socket "<dir>/<name>". It nests them as
+// <ABDUCO_SOCKET_DIR>/<argv0-basename>/<user>/<name>@<host>. So there is no
+// simple socketPath() to compute — we never unlink abduco's socket directly.
+// Teardown SIGTERMs the abduco server pid instead, and abduco unlinks its own
+// socket via its atexit handler (see pty.ts killServer / killSession).
 
 // abduco is unix-only. Windows falls back to a plain shell (no persistence).
 export const PERSISTENCE_SUPPORTED = process.platform !== "win32";
@@ -33,5 +39,3 @@ export const socketDir = (): string => join(os.tmpdir(), "sandcastle-pty");
 // short, filesystem-safe name so the socket path stays well under the limit.
 export const sessionName = (leafId: string): string =>
 	createHash("sha256").update(leafId).digest("hex").slice(0, 16);
-
-export const socketPath = (leafId: string): string => join(socketDir(), sessionName(leafId));
