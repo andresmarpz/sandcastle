@@ -19,6 +19,14 @@ runs:
         node-version: 22
         cache: pnpm
 
+    # Bun is the backend's runtime AND build tool: electron-builder's beforePack
+    # hook compiles the sidecar with `bun build --compile`, so packaging fails
+    # without it on a runner. Pinned to the toolchain version.
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v2
+      with:
+        bun-version: 1.3.14
+
     - name: Cache Turbo
       uses: actions/cache@v4
       with:
