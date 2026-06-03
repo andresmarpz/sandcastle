@@ -142,9 +142,11 @@ export const abducoBin = (): string => {
     : join(app.getAppPath(), "resources", "bin", name);
 };
 
-// Sockets in $TMPDIR keep sun_path short (~104-byte limit on macOS) AND get
-// cleared on reboot — which matches process lifetime (reboot kills the servers).
-export const socketDir = (): string => join(os.tmpdir(), "sandcastle-pty");
+// abduco nests sockets as <ABDUCO_SOCKET_DIR>/<argv0-basename>/<user>/<name>@<host>
+// and sun_path caps at ~104 bytes on macOS. os.tmpdir() looks short but on macOS
+// is /var/folders/<hash>/T (~48 bytes), which overflowed once abduco appended its
+// own nesting → "create-session: File name too long". Anchor at a short fixed root.
+export const socketDir = (): string => "/tmp/sandcastle";
 
 // abduco addresses sessions by NAME inside ABDUCO_SOCKET_DIR. Hash leafId to a
 // short, filesystem-safe name so the socket path stays well under the limit.
@@ -295,10 +297,10 @@ Cache the result on `session.shellPid` (stable for the session's life). `getProc
 
 Unix domain socket paths are capped at ~104 bytes (`sun_path`) on macOS. `userData` (`~/Library/Application Support/com.sandcastle.desktop/…`) plus a UUID-named socket can blow that. Mitigations (both applied):
 
-- **Short dir:** `$TMPDIR/sandcastle-pty` (set via `ABDUCO_SOCKET_DIR`), not `userData`.
+- **Short dir:** a fixed `/tmp/sandcastle` (set via `ABDUCO_SOCKET_DIR`), not `userData` and **not** `os.tmpdir()` — on macOS the latter is `/var/folders/<hash>/T` (~48 bytes), which overflowed `sun_path` once abduco appended its own `/<argv0-basename>/<user>/<name>@<host>` nesting and produced `create-session: File name too long`.
 - **Short name:** 16 hex chars of `sha256(leafId)`, not the raw 36-char UUID.
 
-Tmp also clears on reboot — correctly matching the fact that servers die on reboot anyway.
+We don't depend on tmp's reboot-clearing for correctness: abduco unlinks dead sockets on the next connect, and the startup reaper kills stale servers.
 
 ---
 

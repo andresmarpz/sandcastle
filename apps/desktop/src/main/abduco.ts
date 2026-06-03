@@ -1,5 +1,4 @@
 import { createHash } from "node:crypto";
-import os from "node:os";
 import { join } from "node:path";
 import process from "node:process";
 import { app } from "electron";
@@ -31,9 +30,21 @@ export const abducoBin = (): string => {
 		: join(app.getAppPath(), "resources", "bin", name);
 };
 
-// Sockets in $TMPDIR keep sun_path short (~104-byte limit on macOS) AND get
-// cleared on reboot — which matches process lifetime (reboot kills the servers).
-export const socketDir = (): string => join(os.tmpdir(), "sandcastle-pty");
+// abduco builds the socket path as
+//   <ABDUCO_SOCKET_DIR>/<argv0-basename>/<user>/<name>@<host>
+// (see the nesting note above) and AF_UNIX caps sun_path at ~104 bytes on macOS.
+// The first cut of this used os.tmpdir() — but on macOS that's
+// /var/folders/<hash>/T (~48 bytes), not the short "/tmp" the name implies. Once
+// abduco appended the bundled binary's basename (abduco-darwin-arm64), the user,
+// the 16-hex name, and @<hostname>, the path blew past 104 → bind() ENAMETOOLONG,
+// surfaced to the user as "create-session: File name too long".
+//
+// So anchor sockets at a SHORT, fixed root instead. "/tmp" is safe here
+// (persistence is gated off on win32, so this is unix-only) and is in fact
+// abduco's own default socket root. We don't depend on $TMPDIR's reboot-clearing
+// for correctness: abduco unlinks dead sockets on the next connect, and the
+// startup reaper kills stale servers.
+export const socketDir = (): string => "/tmp/sandcastle";
 
 // abduco addresses sessions by NAME inside ABDUCO_SOCKET_DIR. Hash leafId to a
 // short, filesystem-safe name so the socket path stays well under the limit.
