@@ -623,11 +623,21 @@ function AppSidebar(): React.JSX.Element {
 	return (
 		<Sidebar collapsible="offcanvas" variant="sidebar">
 			<SidebarContent>
-				<SidebarGroup>
+				{/* Extra bottom padding lets the last row scroll clear of the fade
+				    below so nothing stays permanently hidden under the gradient. */}
+				<SidebarGroup className="pb-10">
 					<ProjectList />
 				</SidebarGroup>
 			</SidebarContent>
-			<SidebarFooter className="flex-row items-center gap-1 px-2">
+			{/* Floating fade that softens the clip where scrollable content meets
+			    the footer. It sits over the bottom of the content (and the footer,
+			    which is lifted above it via z-index) and fades from the sidebar
+			    background up to transparent. */}
+			<div
+				aria-hidden
+				className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-20 bg-linear-to-t from-sidebar to-sidebar/0"
+			/>
+			<SidebarFooter className="relative z-20 flex-row items-center gap-1 px-2">
 				<FooterIconButton label="Settings" onClick={() => void navigate({ to: "/settings" })}>
 					<GearIcon className="size-4" />
 				</FooterIconButton>
