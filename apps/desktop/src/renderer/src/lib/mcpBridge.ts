@@ -1,5 +1,6 @@
 import { ProjectId, WorkspaceId } from "@sandcastle/contracts";
 
+import { reconcileWorkspaceActivity } from "@/lib/activityReconcile";
 import { collectLeafIds, makeLeaf, splitLeaf } from "@/lib/paneTree";
 import {
 	focusTerminal,
@@ -129,6 +130,11 @@ const handle = async (cmd: McpCommand): Promise<unknown> => {
 			// workspace and never light up on the new one.
 			if (moved) {
 				useActivityStore.getState().recomputeWorkspaces([loc.wsId, target]);
+				// Entering a worktree often coincides with claude re-rooting / tool
+				// churn that drops the "working" signal at exactly the wrong moment.
+				// Verify the destination against process ground truth shortly after so
+				// its dot reflects reality rather than the value at the move instant.
+				setTimeout(() => void reconcileWorkspaceActivity(target), 600);
 			}
 			// The shell PTY doesn't follow Claude into the worktree, so its live cwd
 			// would resolve splits/new-tabs back to the origin workspace. Remember

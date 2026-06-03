@@ -16,6 +16,8 @@
 		"typecheck:node": "tsc --noEmit -p tsconfig.node.json",
 		"typecheck:web": "tsc --noEmit -p tsconfig.web.json",
 		"typecheck": "pnpm run typecheck:node && pnpm run typecheck:web",
+		"test": "vitest run",
+		"test:watch": "vitest",
 		"start": "electron-vite preview",
 		"dev": "rm -rf out && electron-vite dev",
 		"postinstall": "electron-rebuild -f -w node-pty",
@@ -83,6 +85,7 @@
 		"react": "^19.2.1",
 		"react-dom": "^19.2.1",
 		"typescript": "^5.9.3",
-		"vite": "^7.2.6"
+		"vite": "^7.2.6",
+		"vitest": "^4.1.7"
 	}
 }
