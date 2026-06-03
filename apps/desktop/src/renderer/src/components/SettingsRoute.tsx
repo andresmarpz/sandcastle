@@ -1,8 +1,47 @@
+import { CaretDownIcon } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 
+import { Button } from "@/components/ui/button";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuRadioGroup,
+	DropdownMenuRadioItem,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { playCue } from "@/lib/activitySounds";
 import { cn } from "@/lib/utils";
 import { useSoundSettings } from "@/stores/soundSettings";
+
+// Background-terminal keep-alive presets. The persisted value is
+// `number | null` (0 = off, N = minutes, null = forever); we key the radio
+// items by a stable string since a radio value cannot round-trip `null`.
+const KEEP_ALIVE_PRESETS: ReadonlyArray<{
+	key: string;
+	label: string;
+	minutes: number | null;
+}> = [
+	{ key: "off", label: "Off", minutes: 0 },
+	{ key: "5", label: "5 min", minutes: 5 },
+	{ key: "30", label: "30 min", minutes: 30 },
+	{ key: "60", label: "1 hour", minutes: 60 },
+	{ key: "forever", label: "Forever", minutes: null },
+];
+
+const presetKeyForMinutes = (minutes: number | null): string => {
+	const match = KEEP_ALIVE_PRESETS.find((p) => p.minutes === minutes);
+	return match?.key ?? "30";
+};
+
+const minutesForPresetKey = (key: string): number | null => {
+	const match = KEEP_ALIVE_PRESETS.find((p) => p.key === key);
+	return match ? match.minutes : 30;
+};
+
+const labelForMinutes = (minutes: number | null): string => {
+	const match = KEEP_ALIVE_PRESETS.find((p) => p.minutes === minutes);
+	return match?.label ?? "30 min";
+};
 
 function Section({
 	title,
@@ -82,6 +121,30 @@ function SettingsRoute(): React.JSX.Element {
 		void window.api.claude.setHooksEnabled(next).then((value) => setHooksEnabled(value));
 	};
 
+	// `undefined` = not yet loaded; `number | null` = loaded keep-alive value.
+	const [keepAliveMinutes, setKeepAliveMinutes] = useState<number | null | undefined>(undefined);
+
+	useEffect(() => {
+		let active = true;
+		void window.api.terminal.getKeepAliveMinutes().then((value) => {
+			if (active) setKeepAliveMinutes(value);
+		});
+		return () => {
+			active = false;
+		};
+	}, []);
+
+	const changeKeepAlive = (key: string): void => {
+		const next = minutesForPresetKey(key);
+		setKeepAliveMinutes(next);
+		void window.api.terminal
+			.setKeepAliveMinutes(next)
+			.then((value) => setKeepAliveMinutes(value));
+	};
+
+	const keepAliveLoaded = keepAliveMinutes !== undefined;
+	const keepAliveKey = keepAliveLoaded ? presetKeyForMinutes(keepAliveMinutes) : "30";
+
 	return (
 		<div className="flex h-full min-h-0 w-full flex-col gap-4 overflow-y-auto p-6">
 			<header className="space-y-1">
@@ -152,6 +215,45 @@ function SettingsRoute(): React.JSX.Element {
 						onChange={toggleHooks}
 						label="Enable Claude Code activity hooks"
 					/>
+				</div>
+			</Section>
+
+			<Section
+				title="Background terminals"
+				description="When you quit Sandcastle, terminals and their running processes stay alive in the background and reattach next launch. Choose how long to keep them before cleanup."
+			>
+				<div className="flex items-center justify-between">
+					<span className="text-xs">
+						Keep alive after quit
+						{!keepAliveLoaded ? (
+							<span className="ml-2 text-foreground-tertiary">…</span>
+						) : null}
+					</span>
+					<DropdownMenu>
+						<DropdownMenuTrigger
+							render={
+								<Button
+									variant="outline"
+									size="sm"
+									disabled={!keepAliveLoaded}
+									aria-label="Background terminal keep-alive duration"
+									className="min-w-24 justify-between"
+								>
+									{keepAliveLoaded ? labelForMinutes(keepAliveMinutes) : "…"}
+									<CaretDownIcon className="text-muted-foreground" />
+								</Button>
+							}
+						/>
+						<DropdownMenuContent align="end">
+							<DropdownMenuRadioGroup value={keepAliveKey} onValueChange={changeKeepAlive}>
+								{KEEP_ALIVE_PRESETS.map((preset) => (
+									<DropdownMenuRadioItem key={preset.key} value={preset.key}>
+										{preset.label}
+									</DropdownMenuRadioItem>
+								))}
+							</DropdownMenuRadioGroup>
+						</DropdownMenuContent>
+					</DropdownMenu>
 				</div>
 			</Section>
 		</div>

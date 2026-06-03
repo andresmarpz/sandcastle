@@ -3,6 +3,7 @@ import { contextBridge, ipcRenderer } from "electron";
 
 type CreateOptions = {
 	id: string;
+	leafId: string;
 	cols?: number;
 	rows?: number;
 	cwd?: string;
@@ -24,6 +25,16 @@ const terminal = {
 		ipcRenderer.send("terminal:dispose", id);
 	},
 	getCwd: (id: string): Promise<string | null> => ipcRenderer.invoke("terminal:get-cwd", id),
+	// Background-terminal TTL setting (~/.sandcastle/settings.json, main-owned).
+	// null = forever, 0 = off (kill on quit), N = minutes. See ptySettings.ts.
+	getKeepAliveMinutes: (): Promise<number | null> => ipcRenderer.invoke("terminal:get-keepalive"),
+	setKeepAliveMinutes: (minutes: number | null): Promise<number | null> =>
+		ipcRenderer.invoke("terminal:set-keepalive", minutes),
+	// Report the leafIds still present in the pane tree so main can reap orphaned
+	// abduco servers (leaves closed while the app was down).
+	reportActiveLeaves: (leafIds: string[]): void => {
+		ipcRenderer.send("terminal:active-leaves", leafIds);
+	},
 	// Signal sent once on every page load. Lets main reclaim terminal sessions
 	// orphaned by a soft reload (the WebContents is reused, so 'destroyed' never
 	// fires) before the reloaded page registers fresh ones.

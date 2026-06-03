@@ -303,7 +303,11 @@ const scheduleResize = (inst: Instance): void => {
 
 const createInstance = (leafId: string, container: HTMLElement, opts: CreateOptions): Instance => {
 	const { xterm, fit, search } = createXterm();
-	const sessionId = `term-${leafId}-${Date.now()}`;
+	// Durable per-leaf id (no Date.now()): the socket key derived from leafId in
+	// main must be stable across restarts so a relaunched pane reattaches to its
+	// still-alive abduco server. terminal:create early-returns on a known id, so
+	// reusing the id across soft reloads is safe. See docs/pty-persistence.md §3.
+	const sessionId = `term-${leafId}`;
 
 	xterm.open(container);
 	let rendererType: RendererType = "dom";
@@ -442,11 +446,26 @@ const createInstance = (leafId: string, container: HTMLElement, opts: CreateOpti
 	void window.api.terminal
 		.create({
 			id: sessionId,
+			leafId,
 			cols: xterm.cols,
 			rows: xterm.rows,
 			cwd: opts.cwd,
 			shell: opts.shell,
 			workspaceId: opts.workspaceId,
+		})
+		.then(() => {
+			// Repaint on (re)attach. When this create reattaches to an existing
+			// abduco server, abduco (unlike `dtach -r winch`) does NOT auto-redraw,
+			// so a running TUI (claude, htop, lazygit) stays blank until something
+			// forces a repaint. Nudging one resize delivers a SIGWINCH that makes
+			// the foreground program redraw. Harmless on a fresh shell. The 1×1
+			// guard in scheduleResize bails on bogus dims, and a no-op when cols/rows
+			// match lastSent would skip the send, so force a real delta by
+			// transiently dropping a column before scheduling the reconcile.
+			if (inst.disposed) return;
+			inst.lastSentCols = 0;
+			inst.lastSentRows = 0;
+			scheduleResize(inst);
 		})
 		.catch((err: unknown) => {
 			xterm.writeln(`\r\n\x1b[31mFailed to start terminal: ${String(err)}\x1b[0m`);

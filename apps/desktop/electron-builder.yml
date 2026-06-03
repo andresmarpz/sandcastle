@@ -12,6 +12,15 @@ files:
 asarUnpack:
   - resources/**
   - "**/node_modules/node-pty/**"
+# The bundled abduco binaries (PTY persistence, see docs/pty-persistence.md §7) are
+# not imported by vite, so they are not in the app bundle. Copy them verbatim into
+# the packaged app's Resources/bin so src/main/abduco.ts can resolve them at
+# join(process.resourcesPath, "bin", "abduco-<platform>-<arch>").
+extraResources:
+  - from: resources/bin
+    to: bin
+    filter:
+      - "abduco-*"
 win:
   executableName: Sandcastle
 nsis:

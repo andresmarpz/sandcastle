@@ -1,5 +1,7 @@
 import { randomBytes, randomUUID } from "node:crypto";
+import { promises as fs } from "node:fs";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import os from "node:os";
 import { join } from "node:path";
 import process from "node:process";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -32,6 +34,23 @@ const SERVER_BASE_URL = process.env.SANDCASTLE_SERVER_URL ?? "http://127.0.0.1:7
 // giving up — generous enough for hydration, short enough not to hang a tool.
 const RENDERER_TIMEOUT_MS = 8000;
 
+// The loopback HTTP port is PINNED (not ephemeral) so the SANDCASTLE_MCP_URL
+// baked into a PTY's env (mcpInjection) stays correct across an app restart —
+// a reattached shell's `claude` reconnects to the same endpoint (Phase 2).
+// Overridable via env for dev/multi-instance setups.
+const MCP_PORT = ((): number => {
+	const raw = process.env.SANDCASTLE_MCP_PORT;
+	const parsed = raw ? Number.parseInt(raw, 10) : NaN;
+	return Number.isInteger(parsed) && parsed > 0 && parsed < 65536 ? parsed : 7420;
+})();
+
+// Persisted sessionId -> token map. Mirrors claudeHooks.ts: a JSON file under
+// ~/.sandcastle, atomic-written on change and reloaded at startup. Restoring it
+// means a reattached shell's OLD bearer token still authenticates after a
+// restart (the shell's baked-in SANDCASTLE_MCP_TOKEN is unchanged).
+const SANDCASTLE_DIR = join(os.homedir(), ".sandcastle");
+const TOKENS_FILE = join(SANDCASTLE_DIR, "mcp-tokens.json");
+
 type SessionReg = {
 	sessionId: string;
 	webContentsId: number;
@@ -49,6 +68,10 @@ type RendererResult = { ok: boolean; data?: unknown; reason?: string };
 
 const sessionsById = new Map<string, SessionReg>();
 const sessionByToken = new Map<string, string>();
+// sessionId -> token restored from disk at startup. A reattached shell carries
+// its OLD baked-in token; re-registering its session reuses this so the token
+// still resolves. Consumed (deleted) on the first registerSession for that id.
+const restoredTokens = new Map<string, string>();
 // Keyed by the MCP-level session id (assigned on `initialize`), not our PTY id.
 const mcpConnections = new Map<string, McpConn>();
 // Pending renderer round-trips. We track the owning sessionId so a session
@@ -62,6 +85,50 @@ let httpServer: Server | null = null;
 let baseUrl: string | null = null;
 let assets: InjectionAssets | null = null;
 let responseListenerBound = false;
+
+// ── Token persistence (mirrors claudeHooks.ts atomic-write pattern) ──────────
+
+const writeFileAtomic = async (file: string, contents: string): Promise<void> => {
+	const tmp = `${file}.${process.pid}.tmp`;
+	await fs.writeFile(tmp, contents, "utf8");
+	await fs.rename(tmp, file);
+};
+
+// Persist only the durable sessionId -> token mapping. webContentsId is NOT
+// persisted: it's the id of a window from a previous run and is meaningless
+// after restart. A restored entry resolves a reattached shell's old token to
+// its sessionId; the live SessionReg.webContentsId is then re-populated when
+// pty.ts re-registers the reattached session (registerSession early-keeps the
+// restored token — see below).
+const persistTokens = async (): Promise<void> => {
+	try {
+		const map: Record<string, string> = {};
+		for (const [sessionId, reg] of sessionsById) map[sessionId] = reg.token;
+		await fs.mkdir(SANDCASTLE_DIR, { recursive: true });
+		await writeFileAtomic(TOKENS_FILE, `${JSON.stringify(map, null, 2)}\n`);
+	} catch (err) {
+		console.warn("[sandcastle] failed to persist MCP tokens:", err);
+	}
+};
+
+// Restore sessionId -> token from disk. The window these sessions belonged to is
+// gone, so we seed sessionByToken (token resolution) and a "restored token"
+// lookup that registerSession consults to re-mint the SAME token for a
+// reattached session, keeping the shell's baked-in bearer valid.
+const restoreTokens = async (): Promise<void> => {
+	restoredTokens.clear();
+	try {
+		const raw = await fs.readFile(TOKENS_FILE, "utf8");
+		const parsed = JSON.parse(raw) as Record<string, unknown>;
+		for (const [sessionId, token] of Object.entries(parsed)) {
+			if (typeof token !== "string" || !token) continue;
+			restoredTokens.set(sessionId, token);
+			sessionByToken.set(token, sessionId);
+		}
+	} catch {
+		// Missing/invalid — start with an empty map.
+	}
+};
 
 const bearerToken = (req: IncomingMessage): string | null => {
 	const header = req.headers.authorization;
@@ -446,6 +513,9 @@ export const registerMcpServer = async (): Promise<void> => {
 	if (httpServer) return;
 	await userEnvReady();
 	assets = await writeInjectionAssets(join(app.getPath("userData"), "mcp"));
+	// Restore the persisted sessionId -> token map BEFORE serving, so a reattached
+	// shell's old bearer token resolves on its very first request after restart.
+	await restoreTokens();
 
 	if (!responseListenerBound) {
 		responseListenerBound = true;
@@ -467,16 +537,18 @@ export const registerMcpServer = async (): Promise<void> => {
 		});
 		// A bind failure must not hang startup (we `await` this before creating the
 		// window). Resolve degraded — baseUrl stays null so registerSession() returns
-		// {} and terminals still work, just without MCP integration.
+		// {} and terminals still work, just without MCP integration. EADDRINUSE
+		// (a stale instance, or the fixed port taken by something else) degrades the
+		// same way rather than crashing; the single-instance lock already prevents
+		// two of our own racing for the port.
 		server.once("error", (err) => {
 			console.error("[sandcastle] MCP server failed to start; integration disabled:", err);
 			resolve();
 		});
-		// Loopback + ephemeral port; bearer token is the real authorization guard.
-		server.listen(0, "127.0.0.1", () => {
-			const addr = server.address();
-			const port = typeof addr === "object" && addr ? addr.port : 0;
-			baseUrl = `http://127.0.0.1:${port}`;
+		// Loopback + PINNED port so the baked-in SANDCASTLE_MCP_URL survives restarts
+		// (Phase 2). Bearer token is the real authorization guard.
+		server.listen(MCP_PORT, "127.0.0.1", () => {
+			baseUrl = `http://127.0.0.1:${MCP_PORT}`;
 			httpServer = server;
 			resolve();
 		});
@@ -510,9 +582,16 @@ export const registerSession = (
 	shell: string,
 ): { env: Record<string, string>; args: string[] } => {
 	if (!baseUrl || !assets) return { env: {}, args: [] };
-	const token = randomBytes(24).toString("base64url");
+	// Reuse the token restored from disk for this (durable) sessionId if present,
+	// so a reattached shell — whose env still carries the OLD baked-in token —
+	// keeps authenticating. Otherwise mint a fresh one. Consume the restored entry
+	// so a later genuine re-create of the same leaf gets a new token.
+	const restored = restoredTokens.get(sessionId);
+	const token = restored ?? randomBytes(24).toString("base64url");
+	restoredTokens.delete(sessionId);
 	sessionsById.set(sessionId, { sessionId, webContentsId, workspaceId, token });
 	sessionByToken.set(token, sessionId);
+	void persistTokens();
 	const env = sessionEnv({ assets, sessionId, workspaceId, token, mcpBaseUrl: baseUrl });
 	const shellInj = shellInjection(shell, assets);
 	return { env: { ...env, ...shellInj.env }, args: shellInj.args };
@@ -533,6 +612,10 @@ export const unregisterSession = (sessionId: string): void => {
 	if (!reg) return;
 	sessionsById.delete(sessionId);
 	sessionByToken.delete(reg.token);
+	// The pane was genuinely closed (killSession), so drop its now-defunct token
+	// from the persisted map to avoid a stale entry lingering across restarts.
+	restoredTokens.delete(sessionId);
+	void persistTokens();
 	closeMcpConnectionsForSession(sessionId);
 	// Fail any in-flight renderer round-trips for this PTY immediately instead of
 	// letting the tool call block until the timeout.
