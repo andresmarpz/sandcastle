@@ -30,9 +30,18 @@ const HttpServerLive = Layer.unwrap(
 
 /**
  * `GET /health` — used by load balancers and the desktop app's connection
- * picker to know the relay is up before establishing the WS.
+ * picker to know the relay is up before establishing the WS. The
+ * `x-sandcastle` header lets the desktop sidecar manager positively identify
+ * THIS server (vs a foreign process that happens to sit on port 7421) before it
+ * adopts the port instead of spawning its own. Body stays `"ok"` for back-compat.
  */
-const HealthRoute = HttpRouter.add("GET", "/health", Effect.succeed(HttpServerResponse.text("ok")));
+const HealthRoute = HttpRouter.add(
+	"GET",
+	"/health",
+	Effect.succeed(
+		HttpServerResponse.setHeader(HttpServerResponse.text("ok"), "x-sandcastle", "relay"),
+	),
+);
 
 /**
  * `GET /rpc` (WebSocket upgrade) — the single application-control surface

@@ -2,6 +2,8 @@ appId: com.sandcastle.desktop
 productName: Sandcastle
 directories:
   buildResources: build
+# Cross-compile the Bun backend sidecar for the target arch right before packing.
+beforePack: scripts/before-pack.cjs
 files:
   - '!**/.vscode/*'
   - '!src/*'
@@ -9,6 +11,17 @@ files:
   - '!{biome.json,dev-app-update.yml,CHANGELOG.md,README.md}'
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+  # The backend binary ships via extraResources (below), not inside the asar —
+  # a packed executable can't be exec'd. Keep it out of the asar entirely.
+  - '!resources/sidecar'
+# The compiled backend sidecar -> Contents/Resources/sidecar/<binary>. Resolved
+# at runtime via join(process.resourcesPath, "sidecar", name). Produced per-arch
+# by the beforePack hook above.
+extraResources:
+  - from: resources/sidecar
+    to: sidecar
+    filter:
+      - '**/*'
 asarUnpack:
   - resources/**
   - "**/node_modules/node-pty/**"

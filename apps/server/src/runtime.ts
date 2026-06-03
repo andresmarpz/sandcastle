@@ -1,4 +1,5 @@
 import { Migrations, projectsLayer, sqliteLayer, workspacesLayer } from "@sandcastle/db";
+import { loadEmbedded } from "@sandcastle/db/migrations.embedded";
 import { Effect, Layer } from "effect";
 
 import { layer as ConfigLive, ServerConfig } from "./config/ConfigService.ts";
@@ -18,8 +19,10 @@ const SqliteLive = Layer.unwrap(
 
 const MigrationsLive = Layer.effectDiscard(
 	Effect.gen(function* () {
-		const migrationsDir = new URL("../../../packages/db/migrations", import.meta.url).pathname;
-		const migrations = yield* Migrations.loadFromDir(migrationsDir);
+		// Embedded (not loadFromDir): the SQL is bundled into the binary so this
+		// works both from source (`bun src/main.ts`) and inside `bun build --compile`,
+		// where a directory path would resolve into the virtual /$bunfs root.
+		const migrations = yield* loadEmbedded();
 		yield* Migrations.apply(migrations).pipe(Effect.orDie);
 	}),
 );

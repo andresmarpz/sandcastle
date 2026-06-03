@@ -6,6 +6,10 @@ out
 *.log*
 *.tsbuildinfo
 
+# Backend sidecar binary, cross-compiled into here by scripts/before-pack.cjs
+# at package time and shipped via electron-builder extraResources.
+resources/sidecar/
+
 # Belt-and-suspenders: TS shouldn't emit next to sources (tsconfigs use noEmit),
 # but ignore likely emit targets so a stray `tsc -b` doesn't leak generated
 # files into the tree. Hand-written *.d.ts files in src/ live at non-colliding
