@@ -125,8 +125,8 @@ const runInitScript = (cwd: string, script: string): Effect.Effect<void> =>
 			);
 		}
 	}).pipe(
-		Effect.catchAll((cause) =>
-			Effect.logWarning(`[workspace] init script error in ${cwd}: ${String(cause)}`),
+		Effect.catchCause((cause) =>
+			Effect.logWarning(`[workspace] init script error in ${cwd}`, cause),
 		),
 	);
 
