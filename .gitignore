@@ -5,3 +5,6 @@ node_modules
 
 # Reference clones (not part of this project — see superset.sh integration work)
 repos/
+
+# Claude Code linked worktrees (each is its own full git worktree — never commit)
+.claude/worktrees/
