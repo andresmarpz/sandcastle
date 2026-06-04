@@ -18,6 +18,7 @@ interface ProjectRow {
 	readonly name: string;
 	readonly root_path: string;
 	readonly is_git: number;
+	readonly init_script: string | null;
 	readonly created_at: string;
 	readonly updated_at: string;
 	readonly deleted_at: string | null;
@@ -28,6 +29,7 @@ const decodeRow = (row: ProjectRow): Project => ({
 	name: row.name,
 	rootPath: row.root_path as AbsolutePath,
 	isGit: row.is_git !== 0,
+	initScript: row.init_script ?? null,
 	createdAt: row.created_at as IsoDateTime,
 	updatedAt: row.updated_at as IsoDateTime,
 	deletedAt: (row.deleted_at ?? null) as IsoDateTime | null,
@@ -55,6 +57,10 @@ export class Projects extends Context.Service<
 			id: ProjectId,
 			name: string,
 		) => Effect.Effect<Project, SqliteError | ProjectNotFound>;
+		readonly setInitScript: (
+			id: ProjectId,
+			initScript: string | null,
+		) => Effect.Effect<Project, SqliteError | ProjectNotFound>;
 		readonly softDelete: (id: ProjectId) => Effect.Effect<void, SqliteError | ProjectNotFound>;
 		readonly reorder: (
 			ids: ReadonlyArray<ProjectId>,
@@ -69,14 +75,14 @@ export const layer: Layer.Layer<Projects, never, Sqlite> = Layer.effect(Projects
 		const list = () =>
 			sqlite
 				.query<ProjectRow>(
-					"SELECT id, name, root_path, is_git, created_at, updated_at, deleted_at FROM projects WHERE deleted_at IS NULL ORDER BY sort_order ASC, created_at ASC",
+					"SELECT id, name, root_path, is_git, init_script, created_at, updated_at, deleted_at FROM projects WHERE deleted_at IS NULL ORDER BY sort_order ASC, created_at ASC",
 				)
 				.pipe(Effect.map((rows) => rows.map(decodeRow)));
 
 		const getById = (id: ProjectId) =>
 			sqlite
 				.queryOne<ProjectRow>(
-					"SELECT id, name, root_path, is_git, created_at, updated_at, deleted_at FROM projects WHERE id = ?",
+					"SELECT id, name, root_path, is_git, init_script, created_at, updated_at, deleted_at FROM projects WHERE id = ?",
 					[id as string],
 				)
 				.pipe(Effect.map((row) => (row === null ? null : decodeRow(row))));
@@ -84,7 +90,7 @@ export const layer: Layer.Layer<Projects, never, Sqlite> = Layer.effect(Projects
 		const getActiveByRootPath = (rootPath: AbsolutePath) =>
 			sqlite
 				.queryOne<ProjectRow>(
-					"SELECT id, name, root_path, is_git, created_at, updated_at, deleted_at FROM projects WHERE root_path = ? AND deleted_at IS NULL",
+					"SELECT id, name, root_path, is_git, init_script, created_at, updated_at, deleted_at FROM projects WHERE root_path = ? AND deleted_at IS NULL",
 					[rootPath as string],
 				)
 				.pipe(Effect.map((row) => (row === null ? null : decodeRow(row))));
@@ -118,6 +124,7 @@ export const layer: Layer.Layer<Projects, never, Sqlite> = Layer.effect(Projects
 					name: input.name,
 					root_path: input.rootPath as string,
 					is_git: input.isGit ? 1 : 0,
+					init_script: null,
 					created_at: now,
 					updated_at: now,
 					deleted_at: null,
@@ -130,6 +137,23 @@ export const layer: Layer.Layer<Projects, never, Sqlite> = Layer.effect(Projects
 				const result = yield* sqlite.run(
 					"UPDATE projects SET name = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL",
 					[name, now, id as string],
+				);
+				if (result.changes === 0) {
+					return yield* Effect.fail(new ProjectNotFound({ projectId: id as string }));
+				}
+				const row = yield* getById(id);
+				if (row === null) {
+					return yield* Effect.fail(new ProjectNotFound({ projectId: id as string }));
+				}
+				return row;
+			});
+
+		const setInitScript = (id: ProjectId, initScript: string | null) =>
+			Effect.gen(function* () {
+				const now = new Date().toISOString();
+				const result = yield* sqlite.run(
+					"UPDATE projects SET init_script = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL",
+					[initScript, now, id as string],
 				);
 				if (result.changes === 0) {
 					return yield* Effect.fail(new ProjectNotFound({ projectId: id as string }));
@@ -207,6 +231,7 @@ export const layer: Layer.Layer<Projects, never, Sqlite> = Layer.effect(Projects
 			getActiveByRootPath,
 			create,
 			rename,
+			setInitScript,
 			softDelete,
 			reorder,
 		});

@@ -90,6 +90,46 @@ const removeWorktreeBestEffort = (projectRoot: string, worktreePath: string): Ef
 		}
 	});
 
+// Runs a project's init script (e.g. `pnpm install`, `just init`) once inside a
+// freshly created worktree. Always invoked detached (see `create`): a slow
+// install must not block the create RPC, and a non-zero exit must not tear the
+// worktree back down — the workspace is already usable, so we only log the
+// outcome. A login shell (`bash -lc`) keeps the user's PATH (nvm/corepack/…) in
+// scope so tools like `pnpm`/`just` resolve the same as in a real terminal.
+const runInitScript = (cwd: string, script: string): Effect.Effect<void> =>
+	Effect.gen(function* () {
+		yield* Effect.logInfo(`[workspace] running init script in ${cwd}`);
+		const out = yield* Effect.tryPromise({
+			try: async () => {
+				const proc = Bun.spawn(["bash", "-lc", script], {
+					cwd,
+					stdout: "pipe",
+					stderr: "pipe",
+				});
+				const [stdout, stderr, code] = await Promise.all([
+					new Response(proc.stdout).text(),
+					new Response(proc.stderr).text(),
+					proc.exited,
+				]);
+				return { code, stdout, stderr } satisfies ProcOutput;
+			},
+			catch: (cause) => toInternal(cause),
+		});
+		if (out.code === 0) {
+			yield* Effect.logInfo(`[workspace] init script finished (exit 0) in ${cwd}`);
+		} else {
+			yield* Effect.logWarning(
+				`[workspace] init script exited ${out.code} in ${cwd}: ${
+					out.stderr.trim() || out.stdout.trim() || "(no output)"
+				}`,
+			);
+		}
+	}).pipe(
+		Effect.catchAll((cause) =>
+			Effect.logWarning(`[workspace] init script error in ${cwd}: ${String(cause)}`),
+		),
+	);
+
 export interface WorkspaceServiceShape {
 	readonly list: (
 		projectId: ProjectId,
@@ -281,6 +321,17 @@ export const layer: Layer.Layer<
 								: Effect.void,
 						),
 					);
+
+				// A fresh worktree has no node_modules/build artifacts; kick off the
+				// project's init script in it so deps/hooks get set up. Detached, so
+				// creation returns immediately and a failing/slow script never blocks
+				// or rolls back the workspace. The local workspace IS the project root
+				// (already set up by the user), so it's intentionally skipped.
+				if (kind === "worktree" && project.initScript !== null) {
+					yield* Effect.forkDetach(runInitScript(path, project.initScript), {
+						startImmediately: true,
+					});
+				}
 
 				return toWire(inserted);
 			});

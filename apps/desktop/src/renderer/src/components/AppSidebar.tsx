@@ -20,12 +20,14 @@ import {
 	PaletteIcon,
 	PlusIcon,
 	QuestionIcon,
+	TerminalWindowIcon,
 } from "@phosphor-icons/react";
 import type { Project, ProjectId, Workspace } from "@sandcastle/contracts";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { Cause } from "effect";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import EditInitScriptDialog from "@/components/EditInitScriptDialog";
 import NewProjectDialog from "@/components/NewProjectDialog";
 import NewWorkspaceDialog from "@/components/NewWorkspaceDialog";
 import PersonalizeProjectDialog from "@/components/PersonalizeProjectDialog";
@@ -355,6 +357,7 @@ function ProjectItem({
 	const [menuOpen, setMenuOpen] = useState(false);
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [personalizeOpen, setPersonalizeOpen] = useState(false);
+	const [initScriptOpen, setInitScriptOpen] = useState(false);
 	const params = useParams({ strict: false }) as { wsId?: string; tabId?: string };
 	const activeWsId = params.wsId;
 	const activeTabId = params.tabId;
@@ -434,6 +437,15 @@ function ProjectItem({
 							<DropdownMenuItem
 								onClick={() => {
 									setMenuOpen(false);
+									setInitScriptOpen(true);
+								}}
+							>
+								<TerminalWindowIcon />
+								Initialization script
+							</DropdownMenuItem>
+							<DropdownMenuItem
+								onClick={() => {
+									setMenuOpen(false);
 									setPersonalizeOpen(true);
 								}}
 							>
@@ -481,6 +493,13 @@ function ProjectItem({
 					projectName={project.name}
 					open={dialogOpen}
 					onOpenChange={setDialogOpen}
+				/>
+				<EditInitScriptDialog
+					projectId={project.id}
+					projectName={project.name}
+					currentScript={project.initScript}
+					open={initScriptOpen}
+					onOpenChange={setInitScriptOpen}
 				/>
 				<PersonalizeProjectDialog
 					projectName={project.name}

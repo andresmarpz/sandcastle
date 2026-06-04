@@ -30,6 +30,7 @@ const toWire = (p: ProjectEntity): ProjectWire => ({
 	name: p.name,
 	rootPath: AbsolutePath.make(p.rootPath),
 	isGit: p.isGit,
+	initScript: p.initScript,
 	createdAt: IsoDateTime.make(p.createdAt),
 	updatedAt: IsoDateTime.make(p.updatedAt),
 });
@@ -73,6 +74,10 @@ export interface ProjectServiceShape {
 	readonly rename: (
 		projectId: ProjectId,
 		name: string,
+	) => Effect.Effect<ProjectWire, ProjectNotFound | InternalError>;
+	readonly setInitScript: (
+		projectId: ProjectId,
+		initScript: string | null,
 	) => Effect.Effect<ProjectWire, ProjectNotFound | InternalError>;
 	readonly delete: (projectId: ProjectId) => Effect.Effect<void, ProjectNotFound | InternalError>;
 	readonly reorder: (
@@ -167,6 +172,19 @@ export const layer: Layer.Layer<ProjectService, never, ProjectsRepo | Workspaces
 					Effect.map(toWire),
 				);
 
+			const setInitScript: ProjectServiceShape["setInitScript"] = (projectId, initScript) => {
+				// Treat blank input as "no script" so the worktree-create path can skip
+				// it with a simple null check rather than guarding on whitespace.
+				const normalized = initScript !== null && initScript.trim().length > 0 ? initScript : null;
+				return projects.setInitScript(projectId, normalized).pipe(
+					Effect.catchTag("ProjectNotFound", (e: { projectId: string }) =>
+						Effect.fail(new ProjectNotFound({ projectId: e.projectId })),
+					),
+					Effect.catchTag("SqliteError", (cause: SqliteError) => Effect.fail(toInternal(cause))),
+					Effect.map(toWire),
+				);
+			};
+
 			const del: ProjectServiceShape["delete"] = (projectId) =>
 				Effect.gen(function* () {
 					const project = yield* projects.getById(projectId).pipe(Effect.mapError(toInternal));
@@ -217,6 +235,6 @@ export const layer: Layer.Layer<ProjectService, never, ProjectsRepo | Workspaces
 					Effect.catchTag("SqliteError", (cause: SqliteError) => Effect.fail(toInternal(cause))),
 				);
 
-			return ProjectService.of({ list, create, rename, delete: del, reorder });
+			return ProjectService.of({ list, create, rename, setInitScript, delete: del, reorder });
 		}),
 	);
