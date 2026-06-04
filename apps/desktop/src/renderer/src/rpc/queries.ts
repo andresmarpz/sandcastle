@@ -10,7 +10,7 @@ import { Client } from "@/rpc/client";
  * 1. **Identity.** Query atoms are family-memoized by structural key equality
  *    (tag + payload + reactivityKeys + timeToLive + serializationKey). Anything
  *    that wants the *same* cache node — the components that render it, the MCP
- *    bridge that imperatively refreshes it, the startup prefetcher that warms
+ *    bridge that imperatively refreshes it, the startup orchestrator that warms
  *    it — must reconstruct the call identically. If a call site drifts (e.g.
  *    omits `timeToLive`), it silently resolves to a *different* node: a second
  *    fetch, a second cache entry, and refreshes that miss. Route every read
@@ -23,7 +23,7 @@ import { Client } from "@/rpc/client";
  *    and back would re-fetch from `Initial` and flash a loader. keepAlive keeps
  *    the last `Success` resident for the session; `AsyncResult` carries the
  *    stale value (with `waiting: true`) across refreshes, giving us
- *    stale-while-revalidate for free. `lib/prefetch.ts` warms these at startup
+ *    stale-while-revalidate for free. `lib/startup.ts` warms these at startup
  *    and revalidates them on window focus.
  */
 
