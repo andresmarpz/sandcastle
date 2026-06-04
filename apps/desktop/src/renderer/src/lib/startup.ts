@@ -8,6 +8,7 @@ import { whenTerminalReady } from "@/lib/terminalRegistry";
 import { router } from "@/router";
 import { projectsListQuery, workspaceGetQuery, workspacesListQuery } from "@/rpc/queries";
 import { appRegistry } from "@/rpc/registry";
+import { usePrStatusStore } from "@/stores/prStatus";
 import { useStartupStore } from "@/stores/startup";
 import { type TabId, useTabsStore } from "@/stores/tabs";
 
@@ -16,10 +17,12 @@ import { type TabId, useTabsStore } from "@/stores/tabs";
  *
  * On launch it: warms the projects/workspaces read graph (gating), re-establishes
  * the session-lifetime keep-warm + focus-revalidation subscriptions, restores the
- * last-active workspace, reaps dead PTYs and reattaches surviving ones, waits for
- * the landing workspace's active terminals to first-paint, then flips the startup
- * phase to `ready` so `main.tsx` lifts the LoadingScreen. A hard boot timeout
- * guarantees the overlay always lifts, even with a down server or a silent shell.
+ * last-active workspace, reaps dead PTYs and reattaches surviving ones, then —
+ * concurrently — warms every worktree's sidebar PR badge and waits for the
+ * landing workspace's active terminals to first-paint, before flipping the
+ * startup phase to `ready` so `main.tsx` lifts the LoadingScreen. A hard boot
+ * timeout guarantees the overlay always lifts, even with a down server or a
+ * silent shell.
  *
  * The query atoms are family-memoized + keepAlive (see `rpc/queries.ts`), so
  * everything warmed here against the shared `appRegistry` is the exact node the
@@ -28,7 +31,13 @@ import { type TabId, useTabsStore } from "@/stores/tabs";
 
 // How long the data-warm cascade may run before we give up and reveal anyway.
 const DATA_TIMEOUT_MS = 4000;
-// Absolute failsafe: the loading screen always lifts within this window.
+// Per-step insurance bound on the PR-badge warm — matches `gh`'s own per-call
+// timeout (one round-trip). The absolute boot failsafe below still caps the
+// user-visible wait; this only stops `runStartup`'s chain hanging on a wedged
+// IPC channel that never replies.
+const PR_TIMEOUT_MS = 8000;
+// Absolute failsafe: the loading screen always lifts within this window, even if
+// a gating step (data, PRs, terminal paint) is still running.
 const BOOT_TIMEOUT_MS = 6000;
 
 const delay = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
@@ -140,6 +149,49 @@ const warmServerData = async (): Promise<void> => {
 	await Effect.runPromise(cascade.pipe(Effect.timeout(DATA_TIMEOUT_MS), Effect.ignore));
 };
 
+// ── gating: warm PR badges ───────────────────────────────────────────────────
+// Each worktree row in the sidebar shows a PR badge fetched over IPC (main owns
+// the `gh` call + caching, capped at 4 concurrent spawns). Left ungated these
+// trickle in one by one *after* the loading screen lifts. So once the read graph
+// is warm we resolve every worktree's PR status into the renderer cache up front
+// and gate the reveal on it — bounded, with the boot failsafe backstopping a
+// total hang. Reads the already-warmed projects/workspaces straight from the
+// registry (no re-fetch); writes feed the same `prStatus` store the rows read.
+
+const allWorktreeWorkspaces = (): Workspace[] => {
+	const projects = appRegistry.get(projectsListQuery());
+	if (projects._tag !== "Success") return [];
+	const out: Workspace[] = [];
+	for (const project of projects.value) {
+		const list = appRegistry.get(workspacesListQuery(project.id));
+		if (list._tag !== "Success") continue;
+		for (const ws of list.value) {
+			if (ws.kind === "worktree" && ws.branch !== null) out.push(ws);
+		}
+	}
+	return out;
+};
+
+const warmPrStatuses = async (): Promise<void> => {
+	const github = window.api?.github;
+	if (!github) return;
+	const workspaces = allWorktreeWorkspaces();
+	if (workspaces.length === 0) return;
+	const setStatus = usePrStatusStore.getState().set;
+	const loads = workspaces.map((ws) => {
+		const repoPath = ws.path as string;
+		return github
+			.prStatus({ repoPath, branch: ws.branch as string })
+			.then((status) => setStatus(repoPath, status))
+			.catch(() => {
+				// `gh` unreachable for this worktree — leave it unresolved; the row's
+				// own focus revalidation will retry later. Never blocks the reveal.
+			});
+	});
+	// Bounded: a slow/hung `gh` can't trap the user behind the loading screen.
+	await Promise.race([Promise.all(loads), delay(PR_TIMEOUT_MS)]);
+};
+
 // ── landing-workspace restore ────────────────────────────────────────────────
 
 type Landing = { wsId: WorkspaceId; tabId: TabId; activeLeafIds: string[] };
@@ -222,13 +274,17 @@ export const runStartup = async (): Promise<void> => {
 		const excluded = landing ? landingWorkspaceLeaves(landing.wsId as string) : [];
 		await protectAndReattachPtys(excluded);
 
-		// 5. Await the landing workspace's active-tab terminals' first paint.
-		if (landing && landing.activeLeafIds.length > 0) {
-			await Promise.race([
-				Promise.all(landing.activeLeafIds.map((id) => whenTerminalReady(id))),
-				delay(BOOT_TIMEOUT_MS),
-			]);
-		}
+		// 5. Both gating, both independent: warm every worktree's PR badge AND
+		//    await the landing workspace's terminals' first paint. Race them in
+		//    parallel so bring-up is bounded by the slower of the two, not the sum.
+		const landingPaint =
+			landing && landing.activeLeafIds.length > 0
+				? Promise.race([
+						Promise.all(landing.activeLeafIds.map((id) => whenTerminalReady(id))),
+						delay(BOOT_TIMEOUT_MS),
+					])
+				: Promise.resolve();
+		await Promise.all([warmPrStatuses(), landingPaint]);
 	} catch {
 		// Best-effort: any unexpected failure still reveals the app below.
 	} finally {
