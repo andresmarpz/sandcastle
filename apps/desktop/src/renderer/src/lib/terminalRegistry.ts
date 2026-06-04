@@ -11,6 +11,11 @@ type CreateOptions = {
 	cwd?: string;
 	shell?: string;
 	workspaceId?: string;
+	// When false, attaching does NOT focus the xterm. The persistent TerminalHost
+	// mounts every tab of the active workspace (hidden tabs included); only the
+	// visible active tab should self-focus, else a hidden tab steals focus on
+	// mount. Defaults to true to preserve the single-pane attach behavior.
+	autoFocus?: boolean;
 };
 
 export type RendererType = "webgl" | "canvas" | "dom";
@@ -26,6 +31,10 @@ type Instance = {
 	currentContainer: HTMLElement | null;
 	resizeObserver: ResizeObserver;
 	ptyResizeTimer: ReturnType<typeof setTimeout> | null;
+	// Per-terminal failsafe that resolves the readiness signal even if the shell
+	// never emits output (silent / wedged / reattached-quiescent). Cleared on
+	// dispose. See markTerminalReady / whenTerminalReady.
+	readyFailsafe: ReturnType<typeof setTimeout> | null;
 	ipcUnsubs: Array<() => void>;
 	disposed: boolean;
 	lastSentCols: number;
@@ -113,6 +122,48 @@ const buildTheme = (mode: TerminalThemeMode): ITheme => {
 let currentTheme: ITheme = buildTheme("dark");
 
 const instances = new Map<string, Instance>();
+
+// --- First-paint readiness ---------------------------------------------------
+// The startup orchestrator awaits a terminal's first paint before lifting the
+// loading screen. Readiness is tracked per leaf INDEPENDENTLY of instance
+// lifetime, so `whenTerminalReady` can be awaited before the <Terminal> even
+// mounts — the promise simply resolves once the leaf paints (first PTY output
+// after create), or on create failure, or after a per-terminal failsafe.
+// Resolution is guarded to fire exactly once (StrictMode double-invoke safe).
+type ReadyDeferred = { promise: Promise<void>; resolve: () => void; settled: boolean };
+
+const readiness = new Map<string, ReadyDeferred>();
+
+const getReadyDeferred = (leafId: string): ReadyDeferred => {
+	let d = readiness.get(leafId);
+	if (!d) {
+		let resolve!: () => void;
+		const promise = new Promise<void>((res) => {
+			resolve = res;
+		});
+		d = { promise, resolve, settled: false };
+		readiness.set(leafId, d);
+	}
+	return d;
+};
+
+const markTerminalReady = (leafId: string): void => {
+	const d = getReadyDeferred(leafId);
+	if (d.settled) return;
+	d.settled = true;
+	d.resolve();
+};
+
+// Resolves once the terminal for `leafId` first paints, or on create failure, or
+// after its per-terminal failsafe — so a silent shell never traps the boot gate.
+// Resolves immediately if already ready. Safe to call before the <Terminal>
+// mounts (the deferred is created on demand).
+export const whenTerminalReady = (leafId: string): Promise<void> =>
+	getReadyDeferred(leafId).promise;
+
+// A reattached-quiescent or otherwise silent shell may never emit output;
+// resolve its readiness anyway after this window so the boot gate can't hang.
+const READY_FAILSAFE_MS = 2000;
 
 // --- Claude activity (byte path) ---------------------------------------------
 // This registry is the single chokepoint where every PTY's output is observed,
@@ -414,6 +465,7 @@ const createInstance = (leafId: string, container: HTMLElement, opts: CreateOpti
 		currentContainer: container,
 		resizeObserver: new ResizeObserver(() => scheduleResize(inst)),
 		ptyResizeTimer: null,
+		readyFailsafe: null,
 		ipcUnsubs: [],
 		disposed: false,
 		lastSentCols: xterm.cols,
@@ -425,11 +477,14 @@ const createInstance = (leafId: string, container: HTMLElement, opts: CreateOpti
 	};
 
 	requestAnimationFrame(() => safeFit(inst));
+	inst.readyFailsafe = setTimeout(() => markTerminalReady(leafId), READY_FAILSAFE_MS);
 
 	inst.ipcUnsubs.push(
 		window.api.terminal.onData(sessionId, (data) => {
 			xterm.write(data);
 			ingestOutput(inst, data);
+			// First paint: the boot gate awaits this. Idempotent after the first.
+			markTerminalReady(leafId);
 		}),
 	);
 	inst.ipcUnsubs.push(
@@ -469,6 +524,8 @@ const createInstance = (leafId: string, container: HTMLElement, opts: CreateOpti
 		})
 		.catch((err: unknown) => {
 			xterm.writeln(`\r\n\x1b[31mFailed to start terminal: ${String(err)}\x1b[0m`);
+			// A failed spawn must still unblock the boot gate.
+			markTerminalReady(leafId);
 		});
 
 	inst.resizeObserver.observe(container);
@@ -496,7 +553,10 @@ export const attachTerminal = (
 		inst.resizeObserver.observe(container);
 		requestAnimationFrame(() => safeFit(inst!));
 	}
-	inst.xterm.focus();
+	// Hidden tabs (autoFocus: false) must not steal focus when their <Terminal>
+	// mounts/reattaches. The visible active tab's focus is then restored by
+	// WorkspaceView's focus-restore effect.
+	if (opts.autoFocus !== false) inst.xterm.focus();
 };
 
 export const detachTerminal = (leafId: string, container: HTMLElement): void => {
@@ -521,6 +581,7 @@ export const disposeTerminal = (leafId: string): void => {
 	// caller (handleClose) before the tree could be updated, leaving the pane
 	// visually alive after the shell had already been killed.
 	if (inst.ptyResizeTimer) clearTimeout(inst.ptyResizeTimer);
+	if (inst.readyFailsafe) clearTimeout(inst.readyFailsafe);
 	try {
 		inst.resizeObserver.disconnect();
 	} catch {}

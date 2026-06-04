@@ -443,6 +443,18 @@ export const registerPtyHandlers = (): void => {
 	ipcMain.on("terminal:active-leaves", (_event, leafIds: string[]) => {
 		void reapOrphanServers(leafIds);
 	});
+
+	// Startup reattach probe: given the leafIds the renderer persisted, return the
+	// subset whose abduco SERVER is still alive, so the renderer can headlessly
+	// reattach exactly those (their shells/processes survived the last quit). This
+	// is a pure filter — unlike terminal:active-leaves it NEVER kills anything.
+	ipcMain.handle("terminal:reattachable", async (_event, leafIds: string[]): Promise<string[]> => {
+		if (!PERSISTENCE_SUPPORTED) return [];
+		const rows = await psSnapshot();
+		if (!rows) return [];
+		const live = new Set(discoverAbducoServers(rows).map((s) => s.name));
+		return leafIds.filter((id) => live.has(sessionName(id)));
+	});
 };
 
 type ProcRow = { pid: number; ppid: number; stat: string; command: string };
