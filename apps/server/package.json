@@ -23,10 +23,10 @@
 		"vitest": "^4.1.7"
 	},
 	"dependencies": {
-		"@effect/platform-bun": "^4.0.0-beta.76",
+		"@effect/platform-bun": "^4.0.0-beta.78",
 		"@sandcastle/contracts": "workspace:*",
 		"@sandcastle/db": "workspace:*",
 		"@sandcastle/entities": "workspace:*",
-		"effect": "^4.0.0-beta.76"
+		"effect": "^4.0.0-beta.78"
 	}
 }
