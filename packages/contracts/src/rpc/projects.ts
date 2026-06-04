@@ -16,6 +16,8 @@ export const Project = Schema.Struct({
 	name: Schema.String,
 	rootPath: AbsolutePath,
 	isGit: Schema.Boolean,
+	// Shell script run in each new worktree workspace on creation; null when unset.
+	initScript: Schema.NullOr(Schema.String),
 	createdAt: IsoDateTime,
 	updatedAt: IsoDateTime,
 });
@@ -55,6 +57,19 @@ export type ProjectsRenamePayload = typeof ProjectsRenamePayload.Type;
 
 export const ProjectsRenameRpc = Rpc.make("projects.rename", {
 	payload: ProjectsRenamePayload,
+	success: Project,
+	error: Schema.Union([ProjectNotFound, InternalError]),
+});
+
+export const ProjectsSetInitScriptPayload = Schema.Struct({
+	projectId: ProjectId,
+	// null (or an empty string, normalized to null server-side) clears the script.
+	initScript: Schema.NullOr(Schema.String),
+});
+export type ProjectsSetInitScriptPayload = typeof ProjectsSetInitScriptPayload.Type;
+
+export const ProjectsSetInitScriptRpc = Rpc.make("projects.setInitScript", {
+	payload: ProjectsSetInitScriptPayload,
 	success: Project,
 	error: Schema.Union([ProjectNotFound, InternalError]),
 });
