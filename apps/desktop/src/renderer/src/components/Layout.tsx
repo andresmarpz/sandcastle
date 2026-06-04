@@ -3,6 +3,7 @@ import { useState } from "react";
 import AppSidebar from "@/components/AppSidebar";
 import DebugOverlay from "@/components/DebugOverlay";
 import SidebarResizeHandle from "@/components/SidebarResizeHandle";
+import TerminalHost from "@/components/TerminalHost";
 import TopBar from "@/components/TopBar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { useActivityBridge } from "@/hooks/useActivityBridge";
@@ -42,7 +43,15 @@ function Layout({ children }: Props): React.JSX.Element {
 				style={{ contain: "layout" } as React.CSSProperties}
 			>
 				<AppSidebar />
-				<SidebarInset className="relative min-w-0 overflow-hidden bg-card">{children}</SidebarInset>
+				<SidebarInset className="relative min-w-0 overflow-hidden bg-card">
+					{/* Persistent, absolutely-positioned terminal layer for the active
+					    workspace. Stays mounted across route changes so tab/workspace
+					    switches never remount terminals. The routed view ({children})
+					    renders over it — WorkspaceView is visually empty, while
+					    ProjectsIndex/SettingsRoute show with the host hidden underneath. */}
+					<TerminalHost />
+					{children}
+				</SidebarInset>
 				<SidebarResizeHandle
 					width={sidebarWidth}
 					onWidthChange={setSidebarWidth}

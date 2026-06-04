@@ -36,6 +36,11 @@ const terminal = {
 	reportActiveLeaves: (leafIds: string[]): void => {
 		ipcRenderer.send("terminal:active-leaves", leafIds);
 	},
+	// Startup reattach: of the given leafIds, return those whose abduco server is
+	// still alive so the renderer can headlessly reattach their surviving shells.
+	// Pure filter — does NOT kill anything (unlike reportActiveLeaves).
+	reattachable: (leafIds: string[]): Promise<string[]> =>
+		ipcRenderer.invoke("terminal:reattachable", leafIds),
 	// Signal sent once on every page load. Lets main reclaim terminal sessions
 	// orphaned by a soft reload (the WebContents is reused, so 'destroyed' never
 	// fires) before the reloaded page registers fresh ones.

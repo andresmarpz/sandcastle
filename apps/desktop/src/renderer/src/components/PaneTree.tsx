@@ -32,6 +32,7 @@ type LeafProps = {
 	onClose: (id: string) => void;
 	onFocus: (id: string) => void;
 	canClose: boolean;
+	autoFocus: boolean;
 };
 
 function LeafPane({
@@ -43,6 +44,7 @@ function LeafPane({
 	onClose,
 	onFocus,
 	canClose,
+	autoFocus,
 }: LeafProps): React.JSX.Element {
 	const handleKeyDown = (e: React.KeyboardEvent): void => {
 		const mod = e.metaKey || e.ctrlKey;
@@ -80,6 +82,7 @@ function LeafPane({
 				cwd={leaf.cwd ?? defaultCwd}
 				workspaceId={workspaceId as string}
 				corners={corners}
+				autoFocus={autoFocus}
 				className="h-full w-full"
 			/>
 			<div className="pointer-events-none absolute top-1.5 right-1.5 z-10 flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
@@ -121,6 +124,7 @@ type RenderCtx = {
 	onClose: (id: string) => void;
 	onFocus: (id: string) => void;
 	rootIsLeaf: boolean;
+	autoFocus: boolean;
 };
 
 type SplitProps = {
@@ -194,6 +198,7 @@ function renderPane(node: Pane, ctx: RenderCtx, corners: Corners): React.ReactNo
 				onClose={ctx.onClose}
 				onFocus={ctx.onFocus}
 				canClose={!ctx.rootIsLeaf}
+				autoFocus={ctx.autoFocus}
 			/>
 		);
 	}
@@ -204,9 +209,18 @@ type Props = {
 	workspaceId: WorkspaceId;
 	tabId: TabId;
 	defaultCwd: string;
+	// Whether this tab is the visible, active tab. Threaded to each Terminal so
+	// only the active tab's panes self-focus on attach (hidden tabs are mounted
+	// too). Defaults true so non-host callers behave as before.
+	autoFocus?: boolean;
 };
 
-function PaneTree({ workspaceId, tabId, defaultCwd }: Props): React.JSX.Element | null {
+function PaneTree({
+	workspaceId,
+	tabId,
+	defaultCwd,
+	autoFocus = true,
+}: Props): React.JSX.Element | null {
 	const navigate = useNavigate();
 	const tabs = useTabsStore((s) => s.byWorkspace[workspaceId as string]?.tabs);
 	const tree = tabs?.find((t) => t.id === tabId)?.tree;
@@ -293,6 +307,7 @@ function PaneTree({ workspaceId, tabId, defaultCwd }: Props): React.JSX.Element 
 		onClose: handleClose,
 		onFocus: handleFocus,
 		rootIsLeaf: tree.kind === "leaf",
+		autoFocus,
 	};
 
 	return <div className="h-full w-full">{renderPane(tree, ctx, ALL_CORNERS)}</div>;

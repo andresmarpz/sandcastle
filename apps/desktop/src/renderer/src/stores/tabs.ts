@@ -35,6 +35,10 @@ export type WorkspaceTabsState = {
 
 type State = {
 	byWorkspace: Record<string, WorkspaceTabsState>;
+	// The workspace the user last had active. Persisted so the startup
+	// orchestrator can restore the landing workspace after a full app restart
+	// (the URL hash does NOT survive a cold start). Written by `setActiveTab`.
+	lastActiveWorkspaceId: string | null;
 };
 
 type Actions = {
@@ -82,6 +86,7 @@ export const useTabsStore = create<State & Actions>()(
 	persist(
 		(set, get) => ({
 			byWorkspace: {},
+			lastActiveWorkspaceId: null,
 
 			getWorkspace: (wsId) => get().byWorkspace[wsId as string] ?? { tabs: [], activeTabId: null },
 
@@ -150,12 +155,17 @@ export const useTabsStore = create<State & Actions>()(
 					const existing = s.byWorkspace[key];
 					if (!existing) return s;
 					if (!existing.tabs.some((t) => t.id === tabId)) return s;
-					if (existing.activeTabId === tabId) return s;
+					// Always record the landing workspace, even when the active tab is
+					// unchanged — switching back to a workspace whose tab didn't change
+					// still makes it the last-active one.
+					const lastChanged = s.lastActiveWorkspaceId !== key;
+					const tabChanged = existing.activeTabId !== tabId;
+					if (!lastChanged && !tabChanged) return s;
 					return {
-						byWorkspace: {
-							...s.byWorkspace,
-							[key]: { ...existing, activeTabId: tabId },
-						},
+						lastActiveWorkspaceId: key,
+						byWorkspace: tabChanged
+							? { ...s.byWorkspace, [key]: { ...existing, activeTabId: tabId } }
+							: s.byWorkspace,
 					};
 				});
 			},
@@ -262,24 +272,37 @@ export const useTabsStore = create<State & Actions>()(
 		}),
 		{
 			name: "sandcastle.tabs.v1",
-			partialize: (s) => ({ byWorkspace: s.byWorkspace }),
+			partialize: (s) => ({
+				byWorkspace: s.byWorkspace,
+				lastActiveWorkspaceId: s.lastActiveWorkspaceId,
+			}),
 			// v1: leaves used to bake in their workspace's path at creation, which
 			// went stale once a tab was teleported into another workspace (the leaf
 			// kept the origin/project-root path and its PTY respawned there). Drop
 			// every persisted leaf cwd so panes re-resolve against their current
 			// workspace path.
-			version: 1,
+			// v2: introduce persisted `lastActiveWorkspaceId` (no-op back-fill).
+			version: 2,
 			migrate: (persisted, version) => {
-				const state = persisted as { byWorkspace?: Record<string, WorkspaceTabsState> };
-				if (version >= 1) return state as State;
-				const byWorkspace: Record<string, WorkspaceTabsState> = {};
-				for (const [wsId, ws] of Object.entries(state.byWorkspace ?? {})) {
-					byWorkspace[wsId] = {
-						...ws,
-						tabs: ws.tabs.map((t) => ({ ...t, tree: stripLeafCwd(t.tree) })),
-					};
+				const state = persisted as {
+					byWorkspace?: Record<string, WorkspaceTabsState>;
+					lastActiveWorkspaceId?: string | null;
+				};
+				let byWorkspace = state.byWorkspace ?? {};
+				if (version < 1) {
+					const stripped: Record<string, WorkspaceTabsState> = {};
+					for (const [wsId, ws] of Object.entries(byWorkspace)) {
+						stripped[wsId] = {
+							...ws,
+							tabs: ws.tabs.map((t) => ({ ...t, tree: stripLeafCwd(t.tree) })),
+						};
+					}
+					byWorkspace = stripped;
 				}
-				return { byWorkspace } as State;
+				return {
+					byWorkspace,
+					lastActiveWorkspaceId: state.lastActiveWorkspaceId ?? null,
+				} as State;
 			},
 		},
 	),

@@ -18,6 +18,10 @@ type TerminalProps = {
 	workspaceId?: string;
 	className?: string;
 	corners?: Corners;
+	// Whether this terminal belongs to the visible, active tab. Only then may it
+	// self-focus on attach — every tab of the active workspace is mounted (hidden
+	// ones via CSS), so without this a hidden tab would steal focus. Defaults true.
+	autoFocus?: boolean;
 };
 
 function Terminal({
@@ -27,6 +31,7 @@ function Terminal({
 	workspaceId,
 	className,
 	corners,
+	autoFocus = true,
 }: TerminalProps): React.JSX.Element {
 	const slotRef = useRef<HTMLDivElement>(null);
 	const { resolvedTheme } = useTheme();
@@ -36,10 +41,16 @@ function Terminal({
 		setTerminalTheme(mode);
 	}, [mode]);
 
+	// `autoFocus` is intentionally NOT a dependency: a tab switch flips it, but the
+	// terminal must attach exactly once (re-running would detach + re-fit a warm
+	// xterm — the opposite of the pure CSS toggle we want). attachTerminal only
+	// reads autoFocus to decide its initial focus; focus on switch is restored by
+	// WorkspaceView.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: attach once; see note
 	useEffect(() => {
 		const container = slotRef.current;
 		if (!container) return;
-		attachTerminal(leafId, container, { cwd, shell, workspaceId });
+		attachTerminal(leafId, container, { cwd, shell, workspaceId, autoFocus });
 		return () => detachTerminal(leafId, container);
 	}, [leafId, cwd, shell, workspaceId]);
 
