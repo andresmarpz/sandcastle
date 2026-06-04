@@ -6,6 +6,7 @@ import {
 	ProjectsListRpc,
 	ProjectsRenameRpc,
 	ProjectsReorderRpc,
+	ProjectsSetInitScriptRpc,
 } from "./projects.ts";
 import {
 	WorkspacesCreateRpc,
@@ -22,6 +23,7 @@ export const SandcastleRpc = RpcGroup.make(
 	ProjectsListRpc,
 	ProjectsCreateRpc,
 	ProjectsRenameRpc,
+	ProjectsSetInitScriptRpc,
 	ProjectsDeleteRpc,
 	ProjectsReorderRpc,
 	WorkspacesListRpc,
