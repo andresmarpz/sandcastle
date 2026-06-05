@@ -1,5 +1,5 @@
-import { CaretDownIcon } from "@phosphor-icons/react";
-import { useEffect, useState } from "react";
+import { CaretDownIcon, SkullIcon } from "@phosphor-icons/react";
+import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -143,6 +143,48 @@ function SettingsRoute(): React.JSX.Element {
 	const keepAliveLoaded = keepAliveMinutes !== undefined;
 	const keepAliveKey = keepAliveLoaded ? presetKeyForMinutes(keepAliveMinutes) : "30";
 
+	// Kill-all escape hatch. Two-step (arm → confirm) so a stray click can't nuke
+	// every running shell. `armed` reverts after a short window; `killing` guards
+	// against double-fire; `result` shows the reaped count briefly afterwards.
+	const [killArmed, setKillArmed] = useState(false);
+	const [killing, setKilling] = useState(false);
+	const [killResult, setKillResult] = useState<string | null>(null);
+	const armTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const resultTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+	useEffect(
+		() => () => {
+			if (armTimer.current) clearTimeout(armTimer.current);
+			if (resultTimer.current) clearTimeout(resultTimer.current);
+		},
+		[],
+	);
+
+	const handleKillAll = (): void => {
+		if (killing) return;
+		if (!killArmed) {
+			setKillArmed(true);
+			setKillResult(null);
+			armTimer.current = setTimeout(() => setKillArmed(false), 4000);
+			return;
+		}
+		if (armTimer.current) clearTimeout(armTimer.current);
+		setKillArmed(false);
+		setKilling(true);
+		void window.api.terminal
+			.killAll()
+			.then((count) => {
+				setKillResult(`Killed ${count} background ${count === 1 ? "process" : "processes"}`);
+			})
+			.catch(() => {
+				setKillResult("Failed to kill processes");
+			})
+			.finally(() => {
+				setKilling(false);
+				resultTimer.current = setTimeout(() => setKillResult(null), 5000);
+			});
+	};
+
 	return (
 		<div className="flex h-full min-h-0 w-full flex-col gap-4 overflow-y-auto p-6">
 			<header className="space-y-1">
@@ -250,6 +292,30 @@ function SettingsRoute(): React.JSX.Element {
 							</DropdownMenuRadioGroup>
 						</DropdownMenuContent>
 					</DropdownMenu>
+				</div>
+
+				<div className="flex items-center justify-between border-t border-border pt-3">
+					<div className="space-y-0.5">
+						<span className="text-xs">Kill all processes</span>
+						<p className="text-xs text-muted-foreground">
+							Force-close every background terminal and reap any leaked sessions. Cannot be undone.
+						</p>
+					</div>
+					<div className="flex shrink-0 items-center gap-2">
+						{killResult ? (
+							<span className="text-xs text-muted-foreground">{killResult}</span>
+						) : null}
+						<Button
+							variant="destructive"
+							size="sm"
+							disabled={killing}
+							onClick={handleKillAll}
+							className="min-w-28 justify-center"
+						>
+							<SkullIcon />
+							{killing ? "Killing…" : killArmed ? "Click to confirm" : "Kill all"}
+						</Button>
+					</div>
 				</div>
 			</Section>
 		</div>

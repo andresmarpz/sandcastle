@@ -430,6 +430,10 @@ export const registerPtyHandlers = (): void => {
 		return getForegroundProcs(ids);
 	});
 
+	// Escape hatch: force-kill every tracked session AND any orphaned/leaked
+	// abduco server. Returns how many abduco servers the sweep reaped.
+	ipcMain.handle("terminal:kill-all", async (): Promise<number> => killAllProcesses());
+
 	// §2.3 background-terminal TTL setting. Mirrors claude:get/set-hooks-enabled.
 	ipcMain.handle("terminal:get-keepalive", () => getKeepAliveMinutes());
 	ipcMain.handle(
@@ -679,6 +683,24 @@ export const detachAllSessions = (): void => {
 
 export const disposeAllSessions = (): void => {
 	for (const id of [...sessions.keys()]) disposeSession(id);
+};
+
+// Escape hatch (Settings → "Kill all processes"): force-tear-down EVERYTHING we
+// own — not just the live, tracked sessions but also any orphaned/leaked abduco
+// servers from tabs force-closed without disposing or shells that survived a
+// crash. We first dispose tracked sessions (clean SIGTERM to each server), then
+// scan ps for ANY abduco server whose name matches our hashed shape and kill it
+// too. Returns the number of abduco servers we found and killed in the sweep so
+// the renderer can report what it cleaned up. Unix-only; a no-op on Windows
+// (no persistence, so disposeAllSessions already covers the live shells).
+export const killAllProcesses = async (): Promise<number> => {
+	disposeAllSessions();
+	if (!PERSISTENCE_SUPPORTED) return 0;
+	const rows = await psSnapshot();
+	if (!rows) return 0;
+	const servers = discoverAbducoServers(rows);
+	for (const server of servers) killAbducoServer(server);
+	return servers.length;
 };
 
 // ── startup reap + heartbeat ────────────────────────────────────────────────
