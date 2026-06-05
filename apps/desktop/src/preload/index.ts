@@ -31,6 +31,9 @@ const terminal = {
 	getKeepAliveMinutes: (): Promise<number | null> => ipcRenderer.invoke("terminal:get-keepalive"),
 	setKeepAliveMinutes: (minutes: number | null): Promise<number | null> =>
 		ipcRenderer.invoke("terminal:set-keepalive", minutes),
+	// Escape hatch: force-kill every tracked session plus any leaked/orphaned
+	// abduco server. Resolves with the number of abduco servers reaped.
+	killAll: (): Promise<number> => ipcRenderer.invoke("terminal:kill-all"),
 	// Report the leafIds still present in the pane tree so main can reap orphaned
 	// abduco servers (leaves closed while the app was down).
 	reportActiveLeaves: (leafIds: string[]): void => {
