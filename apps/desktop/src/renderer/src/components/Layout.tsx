@@ -2,12 +2,14 @@ import { useState } from "react";
 
 import AppSidebar from "@/components/AppSidebar";
 import DebugOverlay from "@/components/DebugOverlay";
+import ReviewPanel from "@/components/ReviewPanel";
 import SidebarResizeHandle from "@/components/SidebarResizeHandle";
 import TerminalHost from "@/components/TerminalHost";
 import TopBar from "@/components/TopBar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { useActivityBridge } from "@/hooks/useActivityBridge";
 import ProjectKeybindings from "@/keybindings/ProjectKeybindings";
+import ReviewKeybindings from "@/keybindings/ReviewKeybindings";
 import SidebarKeybindings from "@/keybindings/SidebarKeybindings";
 import { cn } from "@/lib/utils";
 
@@ -52,6 +54,7 @@ function Layout({ children }: Props): React.JSX.Element {
 					<TerminalHost />
 					{children}
 				</SidebarInset>
+				<ReviewPanel />
 				<SidebarResizeHandle
 					width={sidebarWidth}
 					onWidthChange={setSidebarWidth}
@@ -60,6 +63,7 @@ function Layout({ children }: Props): React.JSX.Element {
 			</main>
 			<ProjectKeybindings />
 			<SidebarKeybindings />
+			<ReviewKeybindings />
 			{import.meta.env.DEV && <DebugOverlay />}
 		</SidebarProvider>
 	);
