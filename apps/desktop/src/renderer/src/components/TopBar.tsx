@@ -1,11 +1,14 @@
+import { GitDiffIcon } from "@phosphor-icons/react";
 import { WorkspaceId } from "@sandcastle/contracts";
 import { useParams } from "@tanstack/react-router";
 
 import CaffeinateButton from "@/components/CaffeinateButton";
 import TabBar from "@/components/TabBar";
 import ThemeSwitcher from "@/components/ThemeSwitcher";
+import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
+import { useReviewPanel } from "@/stores/reviewPanel";
 
 const isMac =
 	typeof navigator !== "undefined" && navigator.platform.toUpperCase().startsWith("MAC");
@@ -25,6 +28,8 @@ function TopBarTabs({
 
 function TopBar(): React.JSX.Element {
 	const params = useParams({ strict: false }) as { wsId?: string; tabId?: string };
+	const reviewOpen = useReviewPanel((s) => s.open);
+	const toggleReview = useReviewPanel((s) => s.toggle);
 
 	return (
 		<header
@@ -40,6 +45,21 @@ function TopBar(): React.JSX.Element {
 				<div className="flex-1" />
 			)}
 			<CaffeinateButton />
+			<Button
+				type="button"
+				variant="ghost"
+				size="icon-sm"
+				aria-label="Toggle Review panel"
+				aria-pressed={reviewOpen}
+				title="Toggle Review panel (Ctrl+Shift+G)"
+				onClick={() => toggleReview()}
+				className={cn(
+					"no-drag text-foreground-tertiary",
+					reviewOpen && "bg-sidebar-accent/60 text-foreground",
+				)}
+			>
+				<GitDiffIcon />
+			</Button>
 			<ThemeSwitcher />
 		</header>
 	);

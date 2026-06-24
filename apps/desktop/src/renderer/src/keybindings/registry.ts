@@ -1,6 +1,6 @@
 import type { Hotkey } from "@tanstack/react-hotkeys";
 
-export type KeybindingGroup = "tabs" | "panes" | "projects" | "sidebar";
+export type KeybindingGroup = "tabs" | "panes" | "projects" | "sidebar" | "review";
 
 export type KeybindingId =
 	| "tab.switch.1"
@@ -30,7 +30,8 @@ export type KeybindingId =
 	| "pane.resize.down"
 	| "pane.resize.left"
 	| "pane.resize.right"
-	| "sidebar.toggle";
+	| "sidebar.toggle"
+	| "review.toggle";
 
 export type KeybindingDef = {
 	id: KeybindingId;
@@ -152,6 +153,14 @@ export const KEYBINDINGS = {
 		name: "Toggle sidebar",
 		description: "Show or hide the application sidebar",
 		group: "sidebar",
+	},
+
+	"review.toggle": {
+		id: "review.toggle",
+		hotkey: "Ctrl+Shift+G",
+		name: "Toggle Review panel",
+		description: "Show or hide the Review panel for inspecting git diffs",
+		group: "review",
 	},
 } as const satisfies Record<KeybindingId, KeybindingDef>;
 
